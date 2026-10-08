@@ -10,7 +10,7 @@ import Testing
     #endif
 
     @Test func loopbackThroughputFromTempFile() async throws {
-        let dir = TempDir()
+        let dir = StreamTempDir()
         let size: Int64 = 200 * 1024 * 1024
         let file = dir.makePatternFile(size: size)
         let server = StreamServer()
@@ -18,11 +18,11 @@ import Testing
         let ep = try await server.register(try FileByteSource(url: file), filename: "big.mkv")
 
         // Warm-up (page cache, connection setup).
-        _ = try await ByteCounter().run(url: ep.url)
+        _ = try await StreamByteCounter().run(url: ep.url)
 
         var best = 0.0
         for _ in 0..<3 {
-            let (bytes, seconds) = try await ByteCounter().run(url: ep.url)
+            let (bytes, seconds) = try await StreamByteCounter().run(url: ep.url)
             #expect(bytes == size)
             best = max(best, Double(bytes) / 1_000_000 / seconds)
         }
@@ -32,16 +32,16 @@ import Testing
 
     @Test func largeRangeBytesAreCorrect() async throws {
         // Integrity check across many chunks of a big range (not just a byte count).
-        let dir = TempDir()
+        let dir = StreamTempDir()
         let size: Int64 = 40 * 1024 * 1024
         let file = dir.makePatternFile(size: size)
         let server = StreamServer(chunkSize: 100_000)  // odd chunk size exercises boundary maths
         defer { Task { await server.stop() } }
         let ep = try await server.register(try FileByteSource(url: file), filename: "big.mkv")
-        let (data, resp) = try await fetch(ep.url, headers: ["Range": "bytes=12345-\(size - 54321)"], session: makeSession())
+        let (data, resp) = try await streamFetch(ep.url, headers: ["Range": "bytes=12345-\(size - 54321)"], session: makeStreamSession())
         #expect(resp.statusCode == 206)
         let expectedCount = Int(size - 54321 - 12345 + 1)
         #expect(data.count == expectedCount)
-        #expect(data == patternBytes(offset: 12345, count: expectedCount))
+        #expect(data == streamPatternBytes(offset: 12345, count: expectedCount))
     }
 }

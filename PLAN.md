@@ -6,7 +6,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ◐ Release-name parser + ≥400-name fixture corpus (≥98% accuracy gate) — `MarqueeCore/Parsing`
 - ☑ Torznab client, Keychain secret store, parallel search coordinator — `MarqueeCore/Indexers`
 - ☑ TMDB client with caching — `MarqueeCore/Metadata`
-- ◐ Loopback HTTP range server + piece-aware byte sources — `MarqueeCore/Streaming`
+- ☑ Loopback HTTP range server + piece-aware byte sources — `MarqueeCore/Streaming`
 - ◐ GRDB schema v1, FTS5 library search, repositories — `MarqueeCore/Persistence`
 - ◐ libtorrent universal build + Swift engine wrapper + loopback swarm test + CI — `TorrentEngine`
 - ◐ Design system + app shell on mock data — `MarqueeUI`, `Marquee`
@@ -27,3 +27,4 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 ## Follow-ups from reviews
 - Metadata: public memberwise inits on domain models (needed for UI mocks/wiring); disk cache size cap + eviction; popular/upcoming/person/collection endpoints.
 - Indexers: fall back to text search when an id search returns nothing; persist auto-disable state; Cardigann YAML definitions (SCOPE §4.3); Keychain store integration test.
+- Streaming: `GrowingFileByteSource` should return the contiguous available prefix instead of waiting for a whole 256 KiB chunk (faster first byte); hash-failed piece handling; idle-connection timeout; serve `[::1]`.

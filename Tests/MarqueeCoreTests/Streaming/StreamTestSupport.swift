@@ -9,7 +9,7 @@ import Synchronization
 private let patternPeriod: [UInt8] = (0..<65536).map { UInt8(truncatingIfNeeded: 7 &* ($0 & 0xFF) &+ ($0 >> 8)) }
 
 /// Deterministic, position-dependent bytes (fast even in debug builds: copies from `patternPeriod`).
-func patternBytes(offset: Int64, count: Int) -> Data {
+func streamPatternBytes(offset: Int64, count: Int) -> Data {
     var out = Data(count: count)
     out.withUnsafeMutableBytes { raw in
         patternPeriod.withUnsafeBytes { table in
@@ -26,7 +26,7 @@ func patternBytes(offset: Int64, count: Int) -> Data {
     return out
 }
 
-final class TempDir: Sendable {
+final class StreamTempDir: Sendable {
     let url: URL
     init() {
         url = FileManager.default.temporaryDirectory.appendingPathComponent("marquee-stream-\(UUID().uuidString)", isDirectory: true)
@@ -43,7 +43,7 @@ final class TempDir: Sendable {
         var off: Int64 = 0
         while off < size {
             let n = Int(min(1 << 20, size - off))
-            try! h.write(contentsOf: patternBytes(offset: off, count: n))
+            try! h.write(contentsOf: streamPatternBytes(offset: off, count: n))
             off += Int64(n)
         }
         return file
@@ -53,7 +53,7 @@ final class TempDir: Sendable {
 // MARK: - Sources for tests
 
 /// Blocks in `read` until cancelled, recording what happened.
-final class ProbeSource: StreamByteSource {
+final class StreamProbeSource: StreamByteSource {
     let length: Int64
     let contentType = "video/mp4"
     private let state = Mutex((started: 0, cancelled: 0))
@@ -84,7 +84,7 @@ final class ProbeSource: StreamByteSource {
 }
 
 /// Source that records prioritize calls and serves pattern bytes from memory.
-final class RecordingPatternSource: StreamByteSource {
+final class StreamRecordingSource: StreamByteSource {
     let length: Int64
     let contentType = "video/mp4"
     private let calls = Mutex<[(Int64, Int)]>([])
@@ -92,13 +92,13 @@ final class RecordingPatternSource: StreamByteSource {
     var prioritizeCalls: [(Int64, Int)] { calls.withLock { $0 } }
     func read(offset: Int64, length requested: Int) async throws -> Data {
         let n = Int(min(Int64(requested), max(0, length - offset)))
-        return patternBytes(offset: offset, count: n)
+        return streamPatternBytes(offset: offset, count: n)
     }
     func prioritize(offset: Int64, length: Int) async { calls.withLock { $0.append((offset, length)) } }
 }
 
 /// Hand-driven stand-in for the torrent engine.
-final class ManualAvailability: PieceAvailabilityProvider {
+final class StreamManualAvailability: PieceAvailabilityProvider {
     private struct State {
         var availability: PieceAvailability
         var continuations: [AsyncStream<Int>.Continuation] = []
@@ -146,14 +146,14 @@ final class ManualAvailability: PieceAvailabilityProvider {
 
 // MARK: - Raw socket client (for malformed / header-forging / keep-alive tests)
 
-struct RawResponse {
+struct StreamRawResponse {
     var status: Int
     var headers: [String: String]
     var body: Data
 }
 
-/// Minimal blocking HTTP/1.1 client over BSD sockets. Always used through `offload`.
-final class RawClient: @unchecked Sendable {
+/// Minimal blocking HTTP/1.1 client over BSD sockets. Always used through `streamOffload`.
+final class StreamRawClient: @unchecked Sendable {
     private var fd: Int32 = -1
     private var pending = Data()
 
@@ -203,7 +203,7 @@ final class RawClient: @unchecked Sendable {
     }
 
     /// Reads one response (head + Content-Length body; no body for HEAD). nil on EOF/timeout before a head.
-    func readResponse(expectBody: Bool = true) -> RawResponse? {
+    func readResponse(expectBody: Bool = true) -> StreamRawResponse? {
         let sep = Data("\r\n\r\n".utf8)
         while pending.range(of: sep) == nil { if !fill() { return nil } }
         let r = pending.range(of: sep)!
@@ -223,7 +223,7 @@ final class RawClient: @unchecked Sendable {
             body = Data(pending.prefix(n))
             pending = Data(pending.dropFirst(min(n, pending.count)))
         }
-        return RawResponse(status: status, headers: headers, body: body)
+        return StreamRawResponse(status: status, headers: headers, body: body)
     }
 
     /// True if the peer has closed (EOF) with nothing more to read.
@@ -234,20 +234,20 @@ final class RawClient: @unchecked Sendable {
 }
 
 /// Runs blocking work off the cooperative pool.
-func offload<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+func streamOffload<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
     await withCheckedContinuation { cont in
         DispatchQueue.global(qos: .userInitiated).async { cont.resume(returning: work()) }
     }
 }
 
-func offloadTry<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+func streamOffloadTry<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
     try await withCheckedThrowingContinuation { cont in
         DispatchQueue.global(qos: .userInitiated).async { cont.resume(with: Result { try work() }) }
     }
 }
 
 /// Polls until `condition` holds or the timeout passes.
-func eventually(timeout: TimeInterval = 5, _ condition: @Sendable () async -> Bool) async -> Bool {
+func streamEventually(timeout: TimeInterval = 5, _ condition: @Sendable () async -> Bool) async -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
         if await condition() { return true }
@@ -258,7 +258,7 @@ func eventually(timeout: TimeInterval = 5, _ condition: @Sendable () async -> Bo
 
 // MARK: - URLSession helpers
 
-func makeSession(maxConnections: Int = 32) -> URLSession {
+func makeStreamSession(maxConnections: Int = 32) -> URLSession {
     let cfg = URLSessionConfiguration.ephemeral
     cfg.httpMaximumConnectionsPerHost = maxConnections
     cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -266,7 +266,7 @@ func makeSession(maxConnections: Int = 32) -> URLSession {
     return URLSession(configuration: cfg)
 }
 
-func fetch(_ url: URL, method: String = "GET", headers: [String: String] = [:], session: URLSession) async throws -> (Data, HTTPURLResponse) {
+func streamFetch(_ url: URL, method: String = "GET", headers: [String: String] = [:], session: URLSession) async throws -> (Data, HTTPURLResponse) {
     var req = URLRequest(url: url)
     req.httpMethod = method
     for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
@@ -275,7 +275,7 @@ func fetch(_ url: URL, method: String = "GET", headers: [String: String] = [:], 
 }
 
 /// Downloads discarding bytes, reporting count and elapsed time.
-final class ByteCounter: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+final class StreamByteCounter: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let total = Mutex<Int64>(0)
     private let done = Mutex<CheckedContinuation<Void, Error>?>(nil)
     private let start = Mutex<ContinuousClock.Instant?>(nil)
