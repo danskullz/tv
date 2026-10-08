@@ -11,6 +11,7 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 - 2026-10-09 **As lightweight and performant as possible**: native Swift only (no Electron/WebView), minimal dependencies, tiny idle cost, budgets in SCOPE.md §5.6 are release gates.
 - 2026-10-09 Must handle full season packs and archives; streaming starts at episode 1 (see SCOPE.md §4.5).
 - 2026-10-09 Ships no indexers or content links (content-agnostic).
+- 2026-10-09 OpenSSL stays in the torrent engine (~5 MB/arch) for HTTPS trackers/web seeds; user approved the size cost.
 
 ## Build, CI & release
 - SwiftPM package: `MarqueeCore` (UI-free logic, depends on GRDB), `MarqueeUI` (design system + views), `Marquee` (app), tests in `Tests/`.
