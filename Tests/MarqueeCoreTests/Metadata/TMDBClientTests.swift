@@ -4,20 +4,18 @@ import Testing
 
 // MARK: - Helpers
 
-func fixture(_ name: String) -> Data {
-    let url = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Fixtures/Metadata/\(name).json")
+private func fixture(_ name: String) -> Data {
+    let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures/Metadata")!
     return try! Data(contentsOf: url)
 }
 
-func utc(_ y: Int, _ m: Int, _ d: Int) -> Date {
+private func utc(_ y: Int, _ m: Int, _ d: Int) -> Date {
     var c = Calendar(identifier: .gregorian)
     c.timeZone = .gmt
     return c.date(from: DateComponents(year: y, month: m, day: d))!
 }
 
-final class MockTransport: MetadataTransport, @unchecked Sendable {
+private final class MockTransport: MetadataTransport, @unchecked Sendable {
     typealias Handler = @Sendable (URLRequest, Int) throws -> MetadataHTTPResponse
     private let lock = NSLock()
     private var _requests: [URLRequest] = []
@@ -38,21 +36,21 @@ final class MockTransport: MetadataTransport, @unchecked Sendable {
     }
 }
 
-final class SleepRecorder: @unchecked Sendable {
+private final class SleepRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var _waits: [TimeInterval] = []
     var waits: [TimeInterval] { lock.withLock { _waits } }
     func record(_ t: TimeInterval) { lock.withLock { _waits.append(t) } }
 }
 
-final class Clock: @unchecked Sendable {
+private final class Clock: @unchecked Sendable {
     private let lock = NSLock()
     private var _now = Date(timeIntervalSince1970: 1_800_000_000)
     var now: Date { lock.withLock { _now } }
     func advance(_ t: TimeInterval) { lock.withLock { _now = _now.addingTimeInterval(t) } }
 }
 
-func makeClient(
+private func makeClient(
     _ transport: MockTransport,
     credential: TMDBCredential = .readAccessToken("tok"),
     language: String = "en-US",
@@ -64,7 +62,7 @@ func makeClient(
                sleep: { sleeper.record($0) }, now: { clock.now })
 }
 
-func query(_ req: URLRequest) -> [String: String] {
+private func query(_ req: URLRequest) -> [String: String] {
     let items = URLComponents(url: req.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
     return Dictionary(items.map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { a, _ in a })
 }
@@ -72,7 +70,7 @@ func query(_ req: URLRequest) -> [String: String] {
 // MARK: - Auth & request building
 
 @Suite("TMDB requests")
-struct MetadataTMDBRequestTests {
+private struct MetadataTMDBRequestTests {
     @Test func bearerTokenIsSentAsHeader() async throws {
         let t = MockTransport(fixture: "search_movie")
         _ = try await makeClient(t).searchMovies("matrix")
@@ -188,7 +186,7 @@ struct MetadataTMDBRequestTests {
 // MARK: - Decoding
 
 @Suite("TMDB decoding")
-struct MetadataTMDBDecodingTests {
+private struct MetadataTMDBDecodingTests {
     @Test func multiSearchMapsTypesAndSkipsJunk() async throws {
         let page = try await makeClient(MockTransport(fixture: "search_multi")).search("dune")
         #expect(page.totalPages == 3 && page.totalResults == 52)
@@ -318,7 +316,7 @@ struct MetadataTMDBDecodingTests {
 // MARK: - Images
 
 @Suite("Image paths")
-struct MetadataImagePathTests {
+private struct MetadataImagePathTests {
     @Test func buildsURLs() {
         let p = ImagePath("/abc.jpg")
         #expect(p.url(size: .w500)?.absoluteString == "https://image.tmdb.org/t/p/w500/abc.jpg")
@@ -332,7 +330,7 @@ struct MetadataImagePathTests {
 // MARK: - Errors
 
 @Suite("TMDB errors")
-struct MetadataTMDBErrorTests {
+private struct MetadataTMDBErrorTests {
     private func status(_ code: Int, headers: [String: String] = [:], body: Data = Data()) -> MockTransport {
         MockTransport { _, _ in MetadataHTTPResponse(status: code, headers: headers, body: body) }
     }
@@ -401,7 +399,7 @@ struct MetadataTMDBErrorTests {
 // MARK: - Caching
 
 @Suite("TMDB caching")
-struct MetadataTMDBCacheTests {
+private struct MetadataTMDBCacheTests {
     @Test func secondCallIsServedFromMemory() async throws {
         let t = MockTransport(fixture: "movie_details")
         let client = makeClient(t)
