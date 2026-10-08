@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server title="Limited Tracker"/>
+  <searching>
+    <search available="yes" supportedParams="q"/>
+    <tv-search available="yes" supportedParams="q"/>
+    <movie-search available="yes" supportedParams="q"/>
+  </searching>
+  <categories>
+    <category id="1000" name="Console"/>
+  </categories>
+</caps>

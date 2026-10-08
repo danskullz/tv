@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <title>Example Torznab</title>
+    <item>
+      <title>Example.Show.S01E01.1080p.WEB-DL-GRP</title>
+      <guid>ok-1</guid>
+      <link>https://indexer.example.invalid/dl/1/file.torrent</link>
+      <size>1234567890</size>
+      <torznab:attr name="seeders" value="42"/>
+    </item>
+    <item>
+      <title>Example.Show.S01E02.1080p.WEB-DL-GRP</title>
+      <guid>cut-off
+      <link>https://indexer.example.invalid/dl/2/file.t

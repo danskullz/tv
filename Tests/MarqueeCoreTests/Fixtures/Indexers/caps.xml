@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server version="1.0" title="Example Torznab" strapline="Test fixture" email="admin@example.invalid" url="https://indexer.example.invalid/" image="https://indexer.example.invalid/logo.png"/>
+  <limits max="100" default="50"/>
+  <registration available="no" open="no"/>
+  <searching>
+    <search available="yes" supportedParams="q"/>
+    <tv-search available="yes" supportedParams="q,season,ep,imdbid,tvdbid,tmdbid,tvmazeid"/>
+    <movie-search available="yes" supportedParams="q,imdbid,tmdbid,year"/>
+    <music-search available="no" supportedParams="q"/>
+    <book-search available="no" supportedParams="q"/>
+  </searching>
+  <categories>
+    <category id="2000" name="Movies">
+      <subcat id="2010" name="Movies/Foreign"/>
+      <subcat id="2040" name="Movies/HD"/>
+      <subcat id="2045" name="Movies/UHD"/>
+    </category>
+    <category id="3000" name="Audio">
+      <subcat id="3010" name="Audio/MP3"/>
+    </category>
+    <category id="5000" name="TV">
+      <subcat id="5030" name="TV/SD"/>
+      <subcat id="5040" name="TV/HD"/>
+      <subcat id="5045" name="TV/UHD"/>
+    </category>
+    <category id="100001" name="Anime (custom)"/>
+  </categories>
+  <genres>
+    <genre id="1" categoryid="5000" name="Drama"/>
+  </genres>
+</caps>

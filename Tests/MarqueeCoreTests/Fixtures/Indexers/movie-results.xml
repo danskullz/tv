@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:newznab="http://www.newznab.com/DTD/2010/feeds/attributes/">
+  <channel>
+    <title>Example Newznab-style Torznab</title>
+    <newznab:response offset="0" total="2"/>
+    <item>
+      <title>Example.Movie.2021.2160p.UHD.BluRay.x265.HDR-GRP</title>
+      <guid>movie-3001</guid>
+      <pubDate>Fri, 15 Mar 2024 18:45:00 +0000</pubDate>
+      <size>45097156608</size>
+      <link>https://indexer.example.invalid/dl/3001/file.torrent?apikey=SECRETKEY123</link>
+      <comments>https://indexer.example.invalid/details/3001</comments>
+      <enclosure url="https://indexer.example.invalid/dl/3001/file.torrent?apikey=SECRETKEY123" length="45097156608" type="application/x-bittorrent"/>
+      <newznab:attr name="category" value="2000"/>
+      <newznab:attr name="category" value="2045"/>
+      <newznab:attr name="seeders" value="320"/>
+      <newznab:attr name="leechers" value="40"/>
+      <newznab:attr name="infohash" value="aabbccddeeff00112233445566778899aabbccdd"/>
+      <newznab:attr name="imdbid" value="tt1375666"/>
+      <newznab:attr name="tmdbid" value="27205"/>
+      <newznab:attr name="grabs" value="890"/>
+    </item>
+    <item>
+      <title>Example Movie (2021) 1080p x264</title>
+      <guid>movie-3002</guid>
+      <pubDate>Thu, 14 Mar 2024 12:00:00 +0000</pubDate>
+      <size>2147483648</size>
+      <link>https://indexer.example.invalid/dl/3002/file.torrent?apikey=SECRETKEY123</link>
+      <newznab:attr name="category" value="2040"/>
+      <newznab:attr name="seeders" value="3"/>
+      <newznab:attr name="peers" value="9"/>
+      <newznab:attr name="imdbid" value="1375666"/>
+    </item>
+  </channel>
+</rss>
