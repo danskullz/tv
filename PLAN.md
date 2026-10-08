@@ -8,7 +8,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☑ TMDB client with caching — `MarqueeCore/Metadata`
 - ☑ Loopback HTTP range server + piece-aware byte sources — `MarqueeCore/Streaming`
 - ☑ GRDB schema v1, FTS5 library search, repositories — `MarqueeCore/Persistence`
-- ◐ libtorrent universal build + Swift engine wrapper + loopback swarm test + CI — `TorrentEngine`
+- ☑ libtorrent universal build + Swift engine wrapper + loopback swarm test + CI — `TorrentEngine`
 - ☑ Design system + app shell on mock data — `MarqueeUI`, `Marquee`
 
 ## Wave 2 — streaming critical path
@@ -31,3 +31,4 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - Persistence: repositories for indexers/profiles/custom formats/root folders/blocklist/health/subtitles/release+grab; monitor-mode episode selection; SubtitleProfile + Notification tables; title runtime/genres; pack corrections keyed by infoHash only; observe() swallows query errors.
 - Parser: corpus is author-written (100% overstates real-world accuracy) — grow it from real indexer results; title-ending years without a release year (Wonder.Woman.1984), DD/MM date ambiguity, bare group tags, `DDP5 1` channels, bare 3–4 digit episodes without a trailing quality tag.
 - UI: `-initialDetail` launch hook doesn't sync sidebar selection; Discover/Calendar placeholders; settings don't persist; no UI-model tests (FuzzyIndex, Formatters); macOS 15 fallback unverified.
+- TorrentEngine: measure idle CPU with libtorrent's internal tick (`tick_interval`) against §5.6 and pause/sleep the session when idle; OpenSSL costs ~5 MB/arch (kept for HTTPS trackers); libtorrent tarball SHA is trust-on-first-use; first CI run of the deps job unverified.
