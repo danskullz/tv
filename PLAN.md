@@ -14,7 +14,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 ## Wave 2 — streaming critical path
 - ☐ Season-pack file→episode mapper + ordered streaming plan (priority gradient, cross-file deadlines) — `Packs`
 - ☐ Quality engine: profiles, custom formats, scoring, streamability score, "why this release" — `Quality`
-- ☐ libmpv LGPL universal build + Metal player view (`PlaybackEngine` protocol)
+- ◐ libmpv LGPL universal build + Metal player view (`PlaybackEngine` protocol)
 - ☐ Torrent engine ↔ stream server bridge (piece deadlines follow playhead)
 - ☐ Helper daemon (`SMAppService` login item) + XPC
 
