@@ -23,3 +23,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☐ Importer/renamer (APFS clone/hardlink, templates), monitoring + RSS
 - ☐ First-run onboarding, settings
 - ☐ End-to-end flow test against fixture swarm + fake indexer
+
+## Follow-ups from reviews
+- Metadata: public memberwise inits on domain models (needed for UI mocks/wiring); disk cache size cap + eviction; popular/upcoming/person/collection endpoints.
+- Indexers: fall back to text search when an id search returns nothing; persist auto-disable state; Cardigann YAML definitions (SCOPE §4.3); Keychain store integration test.
