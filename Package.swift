@@ -1,5 +1,13 @@
 // swift-tools-version:6.0
+import Foundation
 import PackageDescription
+
+// libtorrent, OpenSSL and the Boost headers it needs are built by `scripts/build-libtorrent.sh`
+// into the git-ignored Vendor/libtorrent (universal static libs + headers). Run it once before
+// `swift build` (it is a cache hit after the first time on a machine). The manifest deliberately
+// does not look at the file system: SwiftPM caches manifest evaluations and would not notice the
+// directory appearing or disappearing. Without the build, CTorrentShim fails with a clear #error.
+let libtorrentDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path + "/Vendor/libtorrent"
 
 let package = Package(
     name: "Marquee",
@@ -18,11 +26,35 @@ let package = Package(
             dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
         ),
         .target(name: "MarqueeUI", dependencies: ["MarqueeCore"]),
-        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI"]),
+        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine"]),
         .testTarget(
             name: "MarqueeCoreTests",
             dependencies: ["MarqueeCore"],
             resources: [.copy("Fixtures")]
         ),
-    ]
+
+        // C++ implementation behind a pure-C header; owns the libtorrent link.
+        .target(
+            name: "CTorrentShim",
+            cxxSettings: [
+                // -isystem keeps third-party header warnings out of our build output.
+                .unsafeFlags(["-isystem", libtorrentDir + "/include"]),
+            ],
+            linkerSettings: [
+                // Universal archives: the linker picks the slice for the arch being built, so
+                // `swift build --arch arm64` and `--arch x86_64` both work.
+                .unsafeFlags([
+                    libtorrentDir + "/lib/libtorrent-rasterbar.a",
+                    libtorrentDir + "/lib/libssl.a",
+                    libtorrentDir + "/lib/libcrypto.a",
+                ]),
+                .linkedFramework("CoreFoundation"),
+                .linkedFramework("SystemConfiguration"),
+                .linkedLibrary("c++"),
+            ]
+        ),
+        .target(name: "TorrentEngine", dependencies: ["CTorrentShim"]),
+        .testTarget(name: "TorrentEngineTests", dependencies: ["TorrentEngine"]),
+    ],
+    cxxLanguageStandard: .cxx17
 )

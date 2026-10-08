@@ -12,21 +12,56 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  MARQUEE_DEPS_CACHE: ${{ github.workspace }}/.deps-cache
+
 jobs:
-  test:
+  # Builds universal libtorrent + OpenSSL once; every other job downloads the result.
+  deps:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Compute cache key
+        id: key
+        run: echo "key=$(scripts/build-libtorrent.sh --print-key)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .deps-cache/out
+          key: native-deps-${{ steps.key.outputs.key }}
+      - name: Build libtorrent (skipped on cache hit)
+        run: |
+          command -v ninja >/dev/null || brew install ninja
+          scripts/build-libtorrent.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vendor-libtorrent
+          path: Vendor/libtorrent
+          include-hidden-files: true
+          retention-days: 1
+
+  test:
+    needs: deps
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: vendor-libtorrent
+          path: Vendor/libtorrent
       - run: swift test
 
   build:
-    needs: test
+    needs: [deps, test]
     runs-on: macos-15
     strategy:
       matrix:
         arch: [arm64, x86_64]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: vendor-libtorrent
+          path: Vendor/libtorrent
       - name: Build ${{ matrix.arch }}
         run: swift build -c release --arch ${{ matrix.arch }} --product Marquee
       - uses: actions/upload-artifact@v4
