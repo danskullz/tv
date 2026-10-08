@@ -13,9 +13,18 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 - 2026-10-09 Ships no indexers or content links (content-agnostic).
 
 ## Build, CI & release
-- SwiftPM package: `MarqueeCore` (UI-free logic), `Marquee` (app), tests in `Tests/`. Local machine has only Command Line Tools, so `swift test` cannot run locally (no Testing/XCTest); `swift build` works. Tests run in CI.
+- SwiftPM package: `MarqueeCore` (UI-free logic, depends on GRDB), `MarqueeUI` (design system + views), `Marquee` (app), tests in `Tests/`.
+- 2026-10-09 Xcode 26.5 is installed but not `xcode-select`ed; run tests locally with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test` (do not change xcode-select). Dev machine is an Intel i7 (x86_64), 8 cores.
 - 2026-10-09 GitHub Actions (`.github/workflows/release.yml`) on every push to `main`: test, build arm64 + x86_64, lipo a universal binary, bundle `.app` (`scripts/bundle.sh`), zip all three, publish a new GitHub Release `v0.1.<run_number>`.
 - Signing/notarization (Developer ID) is not wired up yet; builds are ad-hoc signed.
 
+## Code conventions
+- Swift 6 language mode, strict concurrency: value types are `Sendable`, services are `actor`s, UI state is `@Observable` on `@MainActor`.
+- `MarqueeCore` is organized by area folder: `Parsing/`, `Indexers/`, `Metadata/`, `Persistence/`, `Streaming/`, `Quality/`, `Packs/` (add new ones as needed). Tests mirror it under `Tests/MarqueeCoreTests/<Area>/`; fixtures under `Tests/MarqueeCoreTests/Fixtures/<Area>/`, loaded via `Bundle.module`.
+- Tests use Swift Testing (`import Testing`), never hit the live network, and must pass before work is merged.
+- No new dependencies without orchestrator approval; prefer Foundation/Network/system frameworks. Approved: GRDB.
+- Brief doc comments on public API; no comments narrating the obvious.
+
 ## Working style / feedback
+- 2026-10-09 Build mode: the main session acts as orchestrator, delegating to Sonnet 5.5 / Haiku 5.5 subagents at no more than `high` effort, and owns review, integration and quality.
 - 2026-10-09 User wants a complete scope first, then build; prefers decisions made with a recommendation rather than long option lists.
