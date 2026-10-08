@@ -1,0 +1,71 @@
+{
+  "id": 693134,
+  "title": "Dune: Part Two",
+  "original_title": "Dune: Part Two",
+  "tagline": "Long live the fighters.",
+  "overview": "Follow the mythic journey of Paul Atreides as he unites with Chani and the Fremen.",
+  "status": "Released",
+  "runtime": 167,
+  "poster_path": "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+  "backdrop_path": "/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg",
+  "release_date": "2024-02-27",
+  "vote_average": 8.2,
+  "vote_count": 5400,
+  "popularity": 312.5,
+  "original_language": "en",
+  "homepage": "https://www.dunemovie.com",
+  "imdb_id": "tt15239678",
+  "budget": 190000000,
+  "genres": [{"id": 878, "name": "Science Fiction"}, {"id": 12, "name": "Adventure"}],
+  "production_companies": [{"id": 923, "name": "Legendary Pictures", "logo_path": "/8M99Dkt23MjQMTTWukq4m5XsEuo.png", "origin_country": "US"}],
+  "belongs_to_collection": {"id": 726871, "name": "Dune Collection", "poster_path": "/rnTrWwLXZ3Y2ZPDEvc2cyhC3Dpv.jpg", "backdrop_path": null},
+  "external_ids": {"imdb_id": "tt15239678", "wikidata_id": "Q50769409"},
+  "release_dates": {
+    "results": [
+      {"iso_3166_1": "US", "release_dates": [
+        {"certification": "PG-13", "type": 3, "release_date": "2024-03-01T00:00:00.000Z"},
+        {"certification": "", "type": 1, "release_date": "2024-02-26T00:00:00.000Z"},
+        {"certification": "", "type": 4, "release_date": "2024-04-16T00:00:00.000Z"},
+        {"certification": "", "type": 5, "release_date": "2024-05-14T00:00:00.000Z"}
+      ]},
+      {"iso_3166_1": "GB", "release_dates": [
+        {"certification": "12A", "type": 3, "release_date": "2024-02-29T00:00:00.000Z"},
+        {"certification": "", "type": 4, "release_date": "2024-04-15T00:00:00.000Z"}
+      ]},
+      {"iso_3166_1": "FR", "release_dates": [
+        {"certification": "", "type": 2, "release_date": "2024-02-28T00:00:00.000Z"},
+        {"certification": "", "type": 6, "release_date": null}
+      ]}
+    ]
+  },
+  "credits": {
+    "cast": [
+      {"id": 1190668, "name": "Timothée Chalamet", "character": "Paul Atreides", "profile_path": "/BE2sdjpgsa2rNTFa66f7upkaOP.jpg", "order": 0},
+      {"id": 505710, "name": "Zendaya", "character": "Chani", "profile_path": null, "order": 1}
+    ],
+    "crew": [
+      {"id": 137427, "name": "Denis Villeneuve", "job": "Director", "department": "Directing", "profile_path": "/zdDx9Xs93UIrJFWYApYR28J8M6b.jpg"}
+    ]
+  },
+  "videos": {
+    "results": [
+      {"id": "65f0", "key": "Way9Dexny3w", "name": "Official Trailer", "site": "YouTube", "type": "Trailer", "official": true, "published_at": "2024-01-09T15:00:00.000Z"},
+      {"id": "65f1", "key": "abc123", "name": "Featurette", "site": "YouTube", "type": "Featurette", "official": true, "published_at": "2024-02-01T10:00:00.000Z"},
+      {"id": "65f2", "key": "xyz789", "name": "Teaser", "site": "Vimeo", "type": "Trailer", "official": false}
+    ]
+  },
+  "watch/providers": {
+    "results": {
+      "US": {"link": "https://www.themoviedb.org/movie/693134/watch?locale=US", "flatrate": [{"logo_path": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg", "provider_id": 384, "provider_name": "Max", "display_priority": 1}], "rent": [{"logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg", "provider_id": 2, "provider_name": "Apple TV", "display_priority": 4}]},
+      "CA": {"link": "https://www.themoviedb.org/movie/693134/watch?locale=CA", "buy": [{"provider_id": 3, "provider_name": "Google Play Movies", "display_priority": 8}]}
+    }
+  },
+  "recommendations": {
+    "page": 1,
+    "results": [
+      {"id": 438631, "title": "Dune", "release_date": "2021-09-15", "poster_path": "/d5NXSklXo0qyIYkgV94XAgMIckC.jpg", "genre_ids": [878, 12], "vote_average": 7.8}
+    ],
+    "total_pages": 1,
+    "total_results": 1
+  }
+}

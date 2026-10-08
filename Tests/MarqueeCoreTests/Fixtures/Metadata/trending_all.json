@@ -1,0 +1,9 @@
+{
+  "page": 1,
+  "results": [
+    {"id": 1396, "name": "Breaking Bad", "media_type": "tv", "first_air_date": "2008-01-20", "genre_ids": [18, 80], "poster_path": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"},
+    {"id": 693134, "title": "Dune: Part Two", "media_type": "movie", "release_date": "2024-02-27", "genre_ids": [878, 12]}
+  ],
+  "total_pages": 500,
+  "total_results": 10000
+}
