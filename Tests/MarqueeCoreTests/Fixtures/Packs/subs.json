@@ -1,0 +1,495 @@
+[
+ {
+  "name": "subs-sidecar-same-dir",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 4
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E01.1080p.WEB-DL.x264-GRP.mkv",
+    "size": 2649751552
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E01.1080p.WEB-DL.x264-GRP.en.srt",
+    "size": 78848
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E01.1080p.WEB-DL.x264-GRP.eng.forced.srt",
+    "size": 5120
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E02.1080p.WEB-DL.x264-GRP.mkv",
+    "size": 2343567360
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E02.1080p.WEB-DL.x264-GRP.en.srt",
+    "size": 57344
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E02.1080p.WEB-DL.x264-GRP.eng.forced.srt",
+    "size": 5120
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E03.1080p.WEB-DL.x264-GRP.mkv",
+    "size": 1564475392
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E03.1080p.WEB-DL.x264-GRP.en.srt",
+    "size": 95232
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E03.1080p.WEB-DL.x264-GRP.eng.forced.srt",
+    "size": 5120
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E04.1080p.WEB-DL.x264-GRP.mkv",
+    "size": 2580545536
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E04.1080p.WEB-DL.x264-GRP.en.srt",
+    "size": 90112
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E04.1080p.WEB-DL.x264-GRP.eng.forced.srt",
+    "size": 5120
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E01.1080p.WEB-DL.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E01.1080p.WEB-DL.x264-GRP.en.srt": "subtitle S01E01",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E01.1080p.WEB-DL.x264-GRP.eng.forced.srt": "subtitle S01E01",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E02.1080p.WEB-DL.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E02.1080p.WEB-DL.x264-GRP.en.srt": "subtitle S01E02",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E02.1080p.WEB-DL.x264-GRP.eng.forced.srt": "subtitle S01E02",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E03.1080p.WEB-DL.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E03.1080p.WEB-DL.x264-GRP.en.srt": "subtitle S01E03",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E03.1080p.WEB-DL.x264-GRP.eng.forced.srt": "subtitle S01E03",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E04.1080p.WEB-DL.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E04.1080p.WEB-DL.x264-GRP.en.srt": "subtitle S01E04",
+    "Show.Name.S01.1080p.WEB-DL.x264-GRP/Show.Name.S01E04.1080p.WEB-DL.x264-GRP.eng.forced.srt": "subtitle S01E04"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "subs-scene-folder-per-episode",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 4
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E01.720p.BluRay.x264-GRP.mkv",
+    "size": 553648128
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E01.720p.BluRay.x264-GRP/2_English.srt",
+    "size": 120832
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E01.720p.BluRay.x264-GRP/3_French.srt",
+    "size": 114688
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E02.720p.BluRay.x264-GRP.mkv",
+    "size": 689963008
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E02.720p.BluRay.x264-GRP/2_English.srt",
+    "size": 93184
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E02.720p.BluRay.x264-GRP/3_French.srt",
+    "size": 112640
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E03.720p.BluRay.x264-GRP.mkv",
+    "size": 367001600
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E03.720p.BluRay.x264-GRP/2_English.srt",
+    "size": 79872
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E03.720p.BluRay.x264-GRP/3_French.srt",
+    "size": 77824
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E04.720p.BluRay.x264-GRP.mkv",
+    "size": 592445440
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E04.720p.BluRay.x264-GRP/2_English.srt",
+    "size": 97280
+   },
+   {
+    "path": "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E04.720p.BluRay.x264-GRP/3_French.srt",
+    "size": 116736
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E01.720p.BluRay.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E01.720p.BluRay.x264-GRP/2_English.srt": "subtitle S01E01",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E01.720p.BluRay.x264-GRP/3_French.srt": "subtitle S01E01",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E02.720p.BluRay.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E02.720p.BluRay.x264-GRP/2_English.srt": "subtitle S01E02",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E02.720p.BluRay.x264-GRP/3_French.srt": "subtitle S01E02",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E03.720p.BluRay.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E03.720p.BluRay.x264-GRP/2_English.srt": "subtitle S01E03",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E03.720p.BluRay.x264-GRP/3_French.srt": "subtitle S01E03",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Show.Name.S01E04.720p.BluRay.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E04.720p.BluRay.x264-GRP/2_English.srt": "subtitle S01E04",
+    "Show.Name.S01.720p.BluRay.x264-GRP/Subs/Show.Name.S01E04.720p.BluRay.x264-GRP/3_French.srt": "subtitle S01E04"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "subs-flat-subs-folder",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 4
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name S01 BluRay/Show Name S01E01 BluRay.mkv",
+    "size": 2455764992
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E01 BluRay.eng.srt",
+    "size": 82944
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E01 BluRay.spa.srt",
+    "size": 101376
+   },
+   {
+    "path": "Show Name S01 BluRay/Show Name S01E02 BluRay.mkv",
+    "size": 2101346304
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E02 BluRay.eng.srt",
+    "size": 98304
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E02 BluRay.spa.srt",
+    "size": 68608
+   },
+   {
+    "path": "Show Name S01 BluRay/Show Name S01E03 BluRay.mkv",
+    "size": 2250244096
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E03 BluRay.eng.srt",
+    "size": 102400
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E03 BluRay.spa.srt",
+    "size": 62464
+   },
+   {
+    "path": "Show Name S01 BluRay/Show Name S01E04 BluRay.mkv",
+    "size": 2567962624
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E04 BluRay.eng.srt",
+    "size": 51200
+   },
+   {
+    "path": "Show Name S01 BluRay/Subs/Show Name S01E04 BluRay.spa.srt",
+    "size": 77824
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name S01 BluRay/Show Name S01E01 BluRay.mkv": "episode S01E01",
+    "Show Name S01 BluRay/Subs/Show Name S01E01 BluRay.eng.srt": "subtitle S01E01",
+    "Show Name S01 BluRay/Subs/Show Name S01E01 BluRay.spa.srt": "subtitle S01E01",
+    "Show Name S01 BluRay/Show Name S01E02 BluRay.mkv": "episode S01E02",
+    "Show Name S01 BluRay/Subs/Show Name S01E02 BluRay.eng.srt": "subtitle S01E02",
+    "Show Name S01 BluRay/Subs/Show Name S01E02 BluRay.spa.srt": "subtitle S01E02",
+    "Show Name S01 BluRay/Show Name S01E03 BluRay.mkv": "episode S01E03",
+    "Show Name S01 BluRay/Subs/Show Name S01E03 BluRay.eng.srt": "subtitle S01E03",
+    "Show Name S01 BluRay/Subs/Show Name S01E03 BluRay.spa.srt": "subtitle S01E03",
+    "Show Name S01 BluRay/Show Name S01E04 BluRay.mkv": "episode S01E04",
+    "Show Name S01 BluRay/Subs/Show Name S01E04 BluRay.eng.srt": "subtitle S01E04",
+    "Show Name S01 BluRay/Subs/Show Name S01E04 BluRay.spa.srt": "subtitle S01E04"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "subs-ass-anime-sidecars",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 6
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 01 (WEB 1080p) [55CEE5DB].mkv",
+    "size": 1750073344
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 01 (WEB 1080p) [55CEE5DB].en.ass",
+    "size": 71680
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 02 (WEB 1080p) [AC3C5640].mkv",
+    "size": 1184890880
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 02 (WEB 1080p) [AC3C5640].en.ass",
+    "size": 66560
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 03 (WEB 1080p) [25B8FD4B].mkv",
+    "size": 993001472
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 03 (WEB 1080p) [25B8FD4B].en.ass",
+    "size": 72704
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 04 (WEB 1080p) [FBE33B24].mkv",
+    "size": 1599078400
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 04 (WEB 1080p) [FBE33B24].en.ass",
+    "size": 50176
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 05 (WEB 1080p) [74962764].mkv",
+    "size": 1619001344
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 05 (WEB 1080p) [74962764].en.ass",
+    "size": 115712
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 06 (WEB 1080p) [B24445A7].mkv",
+    "size": 1474297856
+   },
+   {
+    "path": "[Group] Show Title (WEB 1080p)/[Group] Show Title - 06 (WEB 1080p) [B24445A7].en.ass",
+    "size": 93184
+   }
+  ],
+  "expect": {
+   "files": {
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 01 (WEB 1080p) [55CEE5DB].mkv": "episode S01E01",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 01 (WEB 1080p) [55CEE5DB].en.ass": "subtitle S01E01",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 02 (WEB 1080p) [AC3C5640].mkv": "episode S01E02",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 02 (WEB 1080p) [AC3C5640].en.ass": "subtitle S01E02",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 03 (WEB 1080p) [25B8FD4B].mkv": "episode S01E03",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 03 (WEB 1080p) [25B8FD4B].en.ass": "subtitle S01E03",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 04 (WEB 1080p) [FBE33B24].mkv": "episode S01E04",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 04 (WEB 1080p) [FBE33B24].en.ass": "subtitle S01E04",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 05 (WEB 1080p) [74962764].mkv": "episode S01E05",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 05 (WEB 1080p) [74962764].en.ass": "subtitle S01E05",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 06 (WEB 1080p) [B24445A7].mkv": "episode S01E06",
+    "[Group] Show Title (WEB 1080p)/[Group] Show Title - 06 (WEB 1080p) [B24445A7].en.ass": "subtitle S01E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "subs-idx-sub-pairs-and-nfo",
+  "note": "",
+  "series": {
+   "title": "Old Show",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E01 DVDRip.avi",
+    "size": 222298112
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E01 DVDRip.idx",
+    "size": 30720
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E01 DVDRip.sub",
+    "size": 8388608
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E02 DVDRip.avi",
+    "size": 196083712
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E02 DVDRip.idx",
+    "size": 30720
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E02 DVDRip.sub",
+    "size": 8388608
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E03 DVDRip.avi",
+    "size": 332398592
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E03 DVDRip.idx",
+    "size": 30720
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01E03 DVDRip.sub",
+    "size": 8388608
+   },
+   {
+    "path": "Old Show S01 DVDRip/Old Show S01 DVDRip.nfo",
+    "size": 4096
+   }
+  ],
+  "expect": {
+   "files": {
+    "Old Show S01 DVDRip/Old Show S01E01 DVDRip.avi": "episode S01E01",
+    "Old Show S01 DVDRip/Old Show S01E01 DVDRip.idx": "subtitle S01E01",
+    "Old Show S01 DVDRip/Old Show S01E01 DVDRip.sub": "subtitle S01E01",
+    "Old Show S01 DVDRip/Old Show S01E02 DVDRip.avi": "episode S01E02",
+    "Old Show S01 DVDRip/Old Show S01E02 DVDRip.idx": "subtitle S01E02",
+    "Old Show S01 DVDRip/Old Show S01E02 DVDRip.sub": "subtitle S01E02",
+    "Old Show S01 DVDRip/Old Show S01E03 DVDRip.avi": "episode S01E03",
+    "Old Show S01 DVDRip/Old Show S01E03 DVDRip.idx": "subtitle S01E03",
+    "Old Show S01 DVDRip/Old Show S01E03 DVDRip.sub": "subtitle S01E03",
+    "Old Show S01 DVDRip/Old Show S01 DVDRip.nfo": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "subs-numbered-names-in-season-folder",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name S01/Show Name S01E01.mkv",
+    "size": 2629828608
+   },
+   {
+    "path": "Show Name S01/Show Name S01E01.srt",
+    "size": 40960
+   },
+   {
+    "path": "Show Name S01/Show Name S01E02.mkv",
+    "size": 1382023168
+   },
+   {
+    "path": "Show Name S01/Show Name S01E02.srt",
+    "size": 96256
+   },
+   {
+    "path": "Show Name S01/Show Name S01E03.mkv",
+    "size": 1623195648
+   },
+   {
+    "path": "Show Name S01/Show Name S01E03.srt",
+    "size": 63488
+   },
+   {
+    "path": "Show Name S01/Show Name S01E99.srt",
+    "size": 108544
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name S01/Show Name S01E01.mkv": "episode S01E01",
+    "Show Name S01/Show Name S01E01.srt": "subtitle S01E01",
+    "Show Name S01/Show Name S01E02.mkv": "episode S01E02",
+    "Show Name S01/Show Name S01E02.srt": "subtitle S01E02",
+    "Show Name S01/Show Name S01E03.mkv": "episode S01E03",
+    "Show Name S01/Show Name S01E03.srt": "subtitle S01E03",
+    "Show Name S01/Show Name S01E99.srt": "subtitle S01E99"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]

@@ -1,0 +1,511 @@
+[
+ {
+  "name": "std-dotted-bluray-s01",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 10
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv",
+    "size": 2526019584
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv",
+    "size": 1392508928
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv",
+    "size": 1206910976
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04.1080p.BluRay.x264-GRP.mkv",
+    "size": 1743781888
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E05.1080p.BluRay.x264-GRP.mkv",
+    "size": 1678770176
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E06.1080p.BluRay.x264-GRP.mkv",
+    "size": 1632632832
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E07.1080p.BluRay.x264-GRP.mkv",
+    "size": 1452277760
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E08.1080p.BluRay.x264-GRP.mkv",
+    "size": 1372585984
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E09.1080p.BluRay.x264-GRP.mkv",
+    "size": 2605711360
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E10.1080p.BluRay.x264-GRP.mkv",
+    "size": 2323644416
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01.1080p.BluRay.x264-GRP.nfo",
+    "size": 3072
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04.1080p.BluRay.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E05.1080p.BluRay.x264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E06.1080p.BluRay.x264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E07.1080p.BluRay.x264-GRP.mkv": "episode S01E07",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E08.1080p.BluRay.x264-GRP.mkv": "episode S01E08",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E09.1080p.BluRay.x264-GRP.mkv": "episode S01E09",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E10.1080p.BluRay.x264-GRP.mkv": "episode S01E10",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01.1080p.BluRay.x264-GRP.nfo": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "std-spaced-web-2160p-s02",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8,
+    "2": 10
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    2
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E01 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 11363418112
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E02 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 9915334656
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E03 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 6564085760
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E04 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 6547308544
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E05 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 7095713792
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E06 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 8169455616
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E07 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 8288993280
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E08 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 10631512064
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E09 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 11461984256
+   },
+   {
+    "path": "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E10 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv",
+    "size": 6518996992
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E01 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E01",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E02 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E02",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E03 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E03",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E04 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E04",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E05 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E05",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E06 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E06",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E07 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E07",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E08 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E08",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E09 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E09",
+    "Show Name S02 (2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP)/Show Name S02E10 2160p WEB-DL x265 HEVC 10bit DDP5 1 Atmos-GRP.mkv": "episode S02E10"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "std-flat-no-folder-hdtv",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01E01.720p.HDTV.x264-GRP.mkv",
+    "size": 579862528
+   },
+   {
+    "path": "Show.Name.S01E02.720p.HDTV.x264-GRP.mkv",
+    "size": 816840704
+   },
+   {
+    "path": "Show.Name.S01E03.720p.HDTV.x264-GRP.mkv",
+    "size": 602931200
+   },
+   {
+    "path": "Show.Name.S01E04.720p.HDTV.x264-GRP.mkv",
+    "size": 848297984
+   },
+   {
+    "path": "Show.Name.S01E05.720p.HDTV.x264-GRP.mkv",
+    "size": 664797184
+   },
+   {
+    "path": "Show.Name.S01E06.720p.HDTV.x264-GRP.mkv",
+    "size": 373293056
+   },
+   {
+    "path": "Show.Name.S01E07.720p.HDTV.x264-GRP.mkv",
+    "size": 537919488
+   },
+   {
+    "path": "Show.Name.S01E08.720p.HDTV.x264-GRP.mkv",
+    "size": 819986432
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01E01.720p.HDTV.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01E02.720p.HDTV.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01E03.720p.HDTV.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01E04.720p.HDTV.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01E05.720p.HDTV.x264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01E06.720p.HDTV.x264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01E07.720p.HDTV.x264-GRP.mkv": "episode S01E07",
+    "Show.Name.S01E08.720p.HDTV.x264-GRP.mkv": "episode S01E08"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "std-scene-sfv-proof",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "3": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    3
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e01.720p.web-dl.dd5.1.h.264-grp.mkv",
+    "size": 731906048
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e02.720p.web-dl.dd5.1.h.264-grp.mkv",
+    "size": 664797184
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e03.720p.web-dl.dd5.1.h.264-grp.mkv",
+    "size": 533725184
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e04.720p.web-dl.dd5.1.h.264-grp.mkv",
+    "size": 597688320
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e05.720p.web-dl.dd5.1.h.264-grp.mkv",
+    "size": 727711744
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e06.720p.web-dl.dd5.1.h.264-grp.mkv",
+    "size": 476053504
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03.720p.web-dl.dd5.1.h.264-grp.nfo",
+    "size": 3072
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03.720p.web-dl.dd5.1.h.264-grp.sfv",
+    "size": 600
+   },
+   {
+    "path": "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/Proof/show.name.s03.proof.jpg",
+    "size": 491520
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e01.720p.web-dl.dd5.1.h.264-grp.mkv": "episode S03E01",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e02.720p.web-dl.dd5.1.h.264-grp.mkv": "episode S03E02",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e03.720p.web-dl.dd5.1.h.264-grp.mkv": "episode S03E03",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e04.720p.web-dl.dd5.1.h.264-grp.mkv": "episode S03E04",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e05.720p.web-dl.dd5.1.h.264-grp.mkv": "episode S03E05",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03e06.720p.web-dl.dd5.1.h.264-grp.mkv": "episode S03E06",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03.720p.web-dl.dd5.1.h.264-grp.nfo": "nonMedia",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/show.name.s03.720p.web-dl.dd5.1.h.264-grp.sfv": "nonMedia",
+    "Show.Name.S03.720p.WEB-DL.DD5.1.H.264-GRP/Proof/show.name.s03.proof.jpg": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "std-1x01-avi-titles",
+  "note": "",
+  "series": {
+   "title": "Old Show",
+   "seasons": {
+    "1": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x01 - Pilot.avi",
+    "size": 258998272
+   },
+   {
+    "path": "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x02 - The Letter.avi",
+    "size": 182452224
+   },
+   {
+    "path": "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x03 - Night Train.avi",
+    "size": 252706816
+   },
+   {
+    "path": "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x04 - Second Thoughts.avi",
+    "size": 383778816
+   },
+   {
+    "path": "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x05 - Cold Open.avi",
+    "size": 249561088
+   },
+   {
+    "path": "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x06 - Homecoming.avi",
+    "size": 318767104
+   }
+  ],
+  "expect": {
+   "files": {
+    "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x01 - Pilot.avi": "episode S01E01",
+    "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x02 - The Letter.avi": "episode S01E02",
+    "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x03 - Night Train.avi": "episode S01E03",
+    "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x04 - Second Thoughts.avi": "episode S01E04",
+    "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x05 - Cold Open.avi": "episode S01E05",
+    "Old Show - Season 1 (DVDRip XviD)/Old Show - 1x06 - Homecoming.avi": "episode S01E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "std-tracker-junk-txt",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 5
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e01.720p.web.h264-grp.mkv",
+    "size": 650117120
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e02.720p.web.h264-grp.mkv",
+    "size": 413138944
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e03.720p.web.h264-grp.mkv",
+    "size": 859832320
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e04.720p.web.h264-grp.mkv",
+    "size": 942669824
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e05.720p.web.h264-grp.mkv",
+    "size": 500170752
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/RARBG.txt",
+    "size": 30
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/Torrent downloaded from example tracker.txt",
+    "size": 100
+   },
+   {
+    "path": "Show.Name.S01.720p.WEB.h264-GRP/RARBG_DO_NOT_MIRROR.exe",
+    "size": 1048576
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e01.720p.web.h264-grp.mkv": "episode S01E01",
+    "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e02.720p.web.h264-grp.mkv": "episode S01E02",
+    "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e03.720p.web.h264-grp.mkv": "episode S01E03",
+    "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e04.720p.web.h264-grp.mkv": "episode S01E04",
+    "Show.Name.S01.720p.WEB.h264-GRP/show.name.s01e05.720p.web.h264-grp.mkv": "episode S01E05",
+    "Show.Name.S01.720p.WEB.h264-GRP/RARBG.txt": "nonMedia",
+    "Show.Name.S01.720p.WEB.h264-GRP/Torrent downloaded from example tracker.txt": "nonMedia",
+    "Show.Name.S01.720p.WEB.h264-GRP/RARBG_DO_NOT_MIRROR.exe": "nonMedia!"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [
+    "suspicious:Show.Name.S01.720p.WEB.h264-GRP/RARBG_DO_NOT_MIRROR.exe"
+   ]
+  }
+ },
+ {
+  "name": "std-year-in-folder",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 10
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E01 - Episode Title 1 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 1966080000
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E02 - Episode Title 2 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 1322254336
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E03 - Episode Title 3 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 2338324480
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E04 - Episode Title 4 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 1782579200
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E05 - Episode Title 5 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 2502950912
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E06 - Episode Title 6 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 2480930816
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E07 - Episode Title 7 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 1929379840
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E08 - Episode Title 8 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 2392850432
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E09 - Episode Title 9 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 1565523968
+   },
+   {
+    "path": "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E10 - Episode Title 10 (1080p AMZN WEB-DL x265 Silence).mkv",
+    "size": 2665480192
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E01 - Episode Title 1 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E01",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E02 - Episode Title 2 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E02",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E03 - Episode Title 3 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E03",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E04 - Episode Title 4 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E04",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E05 - Episode Title 5 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E05",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E06 - Episode Title 6 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E06",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E07 - Episode Title 7 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E07",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E08 - Episode Title 8 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E08",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E09 - Episode Title 9 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E09",
+    "Show Name (2019) Season 1 S01 (1080p AMZN WEB-DL x265 HEVC 10bit AAC 5.1 Silence)/Show Name (2019) - S01E10 - Episode Title 10 (1080p AMZN WEB-DL x265 Silence).mkv": "episode S01E10"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]

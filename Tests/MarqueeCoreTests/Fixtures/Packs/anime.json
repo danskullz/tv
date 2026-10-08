@@ -1,0 +1,608 @@
+[
+ {
+  "name": "anime-batch-abs-crc-single-season",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 12
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 01 (BD 1080p HEVC) [30BEB45F].mkv",
+    "size": 1047527424
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 02 (BD 1080p HEVC) [A8B317FA].mkv",
+    "size": 1323302912
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 03 (BD 1080p HEVC) [6C6FA611].mkv",
+    "size": 1444937728
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 04 (BD 1080p HEVC) [A56C0941].mkv",
+    "size": 1008730112
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 05 (BD 1080p HEVC) [DC96925E].mkv",
+    "size": 1210056704
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 06 (BD 1080p HEVC) [310C0C00].mkv",
+    "size": 1519386624
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 07 (BD 1080p HEVC) [72D8567D].mkv",
+    "size": 1396703232
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 08 (BD 1080p HEVC) [2EF91276].mkv",
+    "size": 1439694848
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 09 (BD 1080p HEVC) [EC5B227C].mkv",
+    "size": 1418723328
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 10 (BD 1080p HEVC) [19108BE5].mkv",
+    "size": 1643118592
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 11 (BD 1080p HEVC) [D605E770].mkv",
+    "size": 1043333120
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p)/[Group] Show Title - 12 (BD 1080p HEVC) [D9441FA5].mkv",
+    "size": 1121976320
+   }
+  ],
+  "expect": {
+   "files": {
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 01 (BD 1080p HEVC) [30BEB45F].mkv": "episode S01E01",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 02 (BD 1080p HEVC) [A8B317FA].mkv": "episode S01E02",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 03 (BD 1080p HEVC) [6C6FA611].mkv": "episode S01E03",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 04 (BD 1080p HEVC) [A56C0941].mkv": "episode S01E04",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 05 (BD 1080p HEVC) [DC96925E].mkv": "episode S01E05",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 06 (BD 1080p HEVC) [310C0C00].mkv": "episode S01E06",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 07 (BD 1080p HEVC) [72D8567D].mkv": "episode S01E07",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 08 (BD 1080p HEVC) [2EF91276].mkv": "episode S01E08",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 09 (BD 1080p HEVC) [EC5B227C].mkv": "episode S01E09",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 10 (BD 1080p HEVC) [19108BE5].mkv": "episode S01E10",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 11 (BD 1080p HEVC) [D605E770].mkv": "episode S01E11",
+    "[Group] Show Title (BD 1080p)/[Group] Show Title - 12 (BD 1080p HEVC) [D9441FA5].mkv": "episode S01E12"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "anime-abs-two-seasons-complete",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 12,
+    "2": 12
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1,
+    2
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 01 [680AC07A].mkv",
+    "size": 1459617792
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 02 [0F02BAD0].mkv",
+    "size": 1350565888
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 03 [63F2AE24].mkv",
+    "size": 1431306240
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 04 [490617F2].mkv",
+    "size": 1691353088
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 05 [B7E99ACA].mkv",
+    "size": 1109393408
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 06 [309D258C].mkv",
+    "size": 1176502272
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 07 [F7FD5646].mkv",
+    "size": 1565523968
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 08 [504867BA].mkv",
+    "size": 997195776
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 09 [958CA9BA].mkv",
+    "size": 1482686464
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 10 [87F7E1FB].mkv",
+    "size": 1004535808
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 11 [2F923996].mkv",
+    "size": 1582301184
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 12 [DCA02EEC].mkv",
+    "size": 1376780288
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 13 [98326856].mkv",
+    "size": 1608515584
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 14 [14FCDD54].mkv",
+    "size": 1649410048
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 15 [85D51695].mkv",
+    "size": 1223688192
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 16 [B758588D].mkv",
+    "size": 1199570944
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 17 [43FF5011].mkv",
+    "size": 1084227584
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 18 [4CCC9BC2].mkv",
+    "size": 1282408448
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 19 [EF8C485B].mkv",
+    "size": 953155584
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 20 [FF002D4D].mkv",
+    "size": 1022361600
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 21 [89A2688B].mkv",
+    "size": 1486880768
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 22 [43E42CAF].mkv",
+    "size": 1318060032
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 23 [E1805081].mkv",
+    "size": 1205862400
+   },
+   {
+    "path": "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 24 [5E9953D2].mkv",
+    "size": 1112539136
+   }
+  ],
+  "expect": {
+   "files": {
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 01 [680AC07A].mkv": "episode S01E01",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 02 [0F02BAD0].mkv": "episode S01E02",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 03 [63F2AE24].mkv": "episode S01E03",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 04 [490617F2].mkv": "episode S01E04",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 05 [B7E99ACA].mkv": "episode S01E05",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 06 [309D258C].mkv": "episode S01E06",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 07 [F7FD5646].mkv": "episode S01E07",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 08 [504867BA].mkv": "episode S01E08",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 09 [958CA9BA].mkv": "episode S01E09",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 10 [87F7E1FB].mkv": "episode S01E10",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 11 [2F923996].mkv": "episode S01E11",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 12 [DCA02EEC].mkv": "episode S01E12",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 13 [98326856].mkv": "episode S02E01",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 14 [14FCDD54].mkv": "episode S02E02",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 15 [85D51695].mkv": "episode S02E03",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 16 [B758588D].mkv": "episode S02E04",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 17 [43FF5011].mkv": "episode S02E05",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 18 [4CCC9BC2].mkv": "episode S02E06",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 19 [EF8C485B].mkv": "episode S02E07",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 20 [FF002D4D].mkv": "episode S02E08",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 21 [89A2688B].mkv": "episode S02E09",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 22 [43E42CAF].mkv": "episode S02E10",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 23 [E1805081].mkv": "episode S02E11",
+    "[Group] Show Title Complete (BD 1080p)/[Group] Show Title - 24 [5E9953D2].mkv": "episode S02E12"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "anime-season2-batch-continuing-numbers",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 12,
+    "2": 12
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    2
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 13 (BD 1080p) [8768A84F].mkv",
+    "size": 1659895808
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 14 (BD 1080p) [A9D3D7C7].mkv",
+    "size": 1087373312
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 15 (BD 1080p) [43B409EF].mkv",
+    "size": 1058013184
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 16 (BD 1080p) [27CB6F2A].mkv",
+    "size": 1245708288
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 17 (BD 1080p) [9AD620AB].mkv",
+    "size": 1713373184
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 18 (BD 1080p) [57C700AA].mkv",
+    "size": 1680867328
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 19 (BD 1080p) [7D106C60].mkv",
+    "size": 998244352
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 20 (BD 1080p) [46D483F3].mkv",
+    "size": 946864128
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 21 (BD 1080p) [FAD409E2].mkv",
+    "size": 1116733440
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 22 (BD 1080p) [BDC14F1F].mkv",
+    "size": 1535115264
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 23 (BD 1080p) [B4A69F3C].mkv",
+    "size": 1545601024
+   },
+   {
+    "path": "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 24 (BD 1080p) [0279B6A6].mkv",
+    "size": 1024458752
+   }
+  ],
+  "expect": {
+   "files": {
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 13 (BD 1080p) [8768A84F].mkv": "episode S02E01",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 14 (BD 1080p) [A9D3D7C7].mkv": "episode S02E02",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 15 (BD 1080p) [43B409EF].mkv": "episode S02E03",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 16 (BD 1080p) [27CB6F2A].mkv": "episode S02E04",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 17 (BD 1080p) [9AD620AB].mkv": "episode S02E05",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 18 (BD 1080p) [57C700AA].mkv": "episode S02E06",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 19 (BD 1080p) [7D106C60].mkv": "episode S02E07",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 20 (BD 1080p) [46D483F3].mkv": "episode S02E08",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 21 (BD 1080p) [FAD409E2].mkv": "episode S02E09",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 22 (BD 1080p) [BDC14F1F].mkv": "episode S02E10",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 23 (BD 1080p) [B4A69F3C].mkv": "episode S02E11",
+    "[Group] Show Title S2 (BD 1080p)/[Group] Show Title - 24 (BD 1080p) [0279B6A6].mkv": "episode S02E12"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "anime-sxxexx-dual-audio",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 13
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1685061632
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E02.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1103101952
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E03.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1528823808
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E04.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 981467136
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E05.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1340080128
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E06.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1568669696
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E07.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1536163840
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E08.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1102053376
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E09.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1405091840
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E10.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1080033280
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E11.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 987758592
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E12.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1274019840
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E13.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv",
+    "size": 1334837248
+   },
+   {
+    "path": "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Fonts/font1.ttf",
+    "size": 409600
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E01",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E02.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E02",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E03.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E03",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E04.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E04",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E05.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E05",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E06.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E06",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E07.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E07",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E08.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E08",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E09.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E09",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E10.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E10",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E11.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E11",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E12.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E12",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Show.Title.S01E13.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP.mkv": "episode S01E13",
+    "Show.Title.S01.1080p.BluRay.Dual.Audio.FLAC2.0.x265-GRP/Fonts/font1.ttf": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "anime-versions-v2-and-ova",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 12
+   },
+   "specials": 2,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 01 [BD 1080p][DC570131].mkv",
+    "size": 1327497216
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 02 [BD 1080p][1A50AEC3].mkv",
+    "size": 1780482048
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 03 [BD 1080p][DFED2C43].mkv",
+    "size": 1609564160
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 04 [BD 1080p][BFDDC3D9].mkv",
+    "size": 1197473792
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 05v2 [BD 1080p][DD56CC94].mkv",
+    "size": 1133510656
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 06 [BD 1080p][E1A47E10].mkv",
+    "size": 969932800
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 07 [BD 1080p][ECAB3301].mkv",
+    "size": 1385168896
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 08 [BD 1080p][CF8D446A].mkv",
+    "size": 1229979648
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 09 [BD 1080p][B386F7A4].mkv",
+    "size": 1353711616
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 10 [BD 1080p][DF465290].mkv",
+    "size": 1448083456
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 11 [BD 1080p][38F16A81].mkv",
+    "size": 1437597696
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/[Group] Show Title - 12 [BD 1080p][598336E3].mkv",
+    "size": 1188036608
+   },
+   {
+    "path": "[Group] Show Title [BD 1080p]/Specials/[Group] Show Title - S00E01 [BD 1080p][39118497].mkv",
+    "size": 333447168
+   }
+  ],
+  "expect": {
+   "files": {
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 01 [BD 1080p][DC570131].mkv": "episode S01E01",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 02 [BD 1080p][1A50AEC3].mkv": "episode S01E02",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 03 [BD 1080p][DFED2C43].mkv": "episode S01E03",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 04 [BD 1080p][BFDDC3D9].mkv": "episode S01E04",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 05v2 [BD 1080p][DD56CC94].mkv": "episode S01E05",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 06 [BD 1080p][E1A47E10].mkv": "episode S01E06",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 07 [BD 1080p][ECAB3301].mkv": "episode S01E07",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 08 [BD 1080p][CF8D446A].mkv": "episode S01E08",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 09 [BD 1080p][B386F7A4].mkv": "episode S01E09",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 10 [BD 1080p][DF465290].mkv": "episode S01E10",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 11 [BD 1080p][38F16A81].mkv": "episode S01E11",
+    "[Group] Show Title [BD 1080p]/[Group] Show Title - 12 [BD 1080p][598336E3].mkv": "episode S01E12",
+    "[Group] Show Title [BD 1080p]/Specials/[Group] Show Title - S00E01 [BD 1080p][39118497].mkv": "special S00E01"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "anime-no-group-underscore",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 12
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_01_[1080p].mkv",
+    "size": 1150287872
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_02_[1080p].mkv",
+    "size": 1371537408
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_03_[1080p].mkv",
+    "size": 1296039936
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_04_[1080p].mkv",
+    "size": 1242562560
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_05_[1080p].mkv",
+    "size": 1018167296
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_06_[1080p].mkv",
+    "size": 1773142016
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_07_[1080p].mkv",
+    "size": 1242562560
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_08_[1080p].mkv",
+    "size": 1320157184
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_09_[1080p].mkv",
+    "size": 1631584256
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_10_[1080p].mkv",
+    "size": 1490026496
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_11_[1080p].mkv",
+    "size": 1372585984
+   },
+   {
+    "path": "Show_Title_[1080p]/Show_Title_-_12_[1080p].mkv",
+    "size": 1672478720
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show_Title_[1080p]/Show_Title_-_01_[1080p].mkv": "episode S01E01",
+    "Show_Title_[1080p]/Show_Title_-_02_[1080p].mkv": "episode S01E02",
+    "Show_Title_[1080p]/Show_Title_-_03_[1080p].mkv": "episode S01E03",
+    "Show_Title_[1080p]/Show_Title_-_04_[1080p].mkv": "episode S01E04",
+    "Show_Title_[1080p]/Show_Title_-_05_[1080p].mkv": "episode S01E05",
+    "Show_Title_[1080p]/Show_Title_-_06_[1080p].mkv": "episode S01E06",
+    "Show_Title_[1080p]/Show_Title_-_07_[1080p].mkv": "episode S01E07",
+    "Show_Title_[1080p]/Show_Title_-_08_[1080p].mkv": "episode S01E08",
+    "Show_Title_[1080p]/Show_Title_-_09_[1080p].mkv": "episode S01E09",
+    "Show_Title_[1080p]/Show_Title_-_10_[1080p].mkv": "episode S01E10",
+    "Show_Title_[1080p]/Show_Title_-_11_[1080p].mkv": "episode S01E11",
+    "Show_Title_[1080p]/Show_Title_-_12_[1080p].mkv": "episode S01E12"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]

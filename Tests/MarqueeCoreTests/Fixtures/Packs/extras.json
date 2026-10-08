@@ -1,0 +1,487 @@
+[
+ {
+  "name": "extras-sample-folder",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv",
+    "size": 1302331392
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv",
+    "size": 1250951168
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv",
+    "size": 2573205504
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04.1080p.BluRay.x264-GRP.mkv",
+    "size": 1642070016
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E05.1080p.BluRay.x264-GRP.mkv",
+    "size": 1774190592
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E06.1080p.BluRay.x264-GRP.mkv",
+    "size": 1324351488
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E07.1080p.BluRay.x264-GRP.mkv",
+    "size": 1652555776
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E08.1080p.BluRay.x264-GRP.mkv",
+    "size": 1369440256
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Sample/show.name.s01e01.sample.mkv",
+    "size": 46137344
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Sample/Sample.mkv",
+    "size": 38797312
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04.1080p.BluRay.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E05.1080p.BluRay.x264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E06.1080p.BluRay.x264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E07.1080p.BluRay.x264-GRP.mkv": "episode S01E07",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E08.1080p.BluRay.x264-GRP.mkv": "episode S01E08",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Sample/show.name.s01e01.sample.mkv": "sample",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Sample/Sample.mkv": "sample"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "extras-featurettes-folders",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name Season 1 1080p BluRay/Show Name S01E01.mkv",
+    "size": 2126512128
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Show Name S01E02.mkv",
+    "size": 2517630976
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Show Name S01E03.mkv",
+    "size": 1936719872
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Show Name S01E04.mkv",
+    "size": 1502609408
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Show Name S01E05.mkv",
+    "size": 1948254208
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Show Name S01E06.mkv",
+    "size": 1915748352
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Featurettes/Making Of.mkv",
+    "size": 212860928
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Featurettes/Cast Interviews.mkv",
+    "size": 336592896
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Extras/Deleted Scenes.mkv",
+    "size": 228589568
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Extras/Gag Reel.mkv",
+    "size": 344981504
+   },
+   {
+    "path": "Show Name Season 1 1080p BluRay/Trailers/Season 1 Trailer.mkv",
+    "size": 25165824
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name Season 1 1080p BluRay/Show Name S01E01.mkv": "episode S01E01",
+    "Show Name Season 1 1080p BluRay/Show Name S01E02.mkv": "episode S01E02",
+    "Show Name Season 1 1080p BluRay/Show Name S01E03.mkv": "episode S01E03",
+    "Show Name Season 1 1080p BluRay/Show Name S01E04.mkv": "episode S01E04",
+    "Show Name Season 1 1080p BluRay/Show Name S01E05.mkv": "episode S01E05",
+    "Show Name Season 1 1080p BluRay/Show Name S01E06.mkv": "episode S01E06",
+    "Show Name Season 1 1080p BluRay/Featurettes/Making Of.mkv": "extra",
+    "Show Name Season 1 1080p BluRay/Featurettes/Cast Interviews.mkv": "extra",
+    "Show Name Season 1 1080p BluRay/Extras/Deleted Scenes.mkv": "extra",
+    "Show Name Season 1 1080p BluRay/Extras/Gag Reel.mkv": "extra",
+    "Show Name Season 1 1080p BluRay/Trailers/Season 1 Trailer.mkv": "extra"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "extras-sample-prefix-names",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP.mkv",
+    "size": 550502400
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP.mkv",
+    "size": 939524096
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP.mkv",
+    "size": 629145600
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP.mkv",
+    "size": 542113792
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E05.720p.HDTV.x264-GRP.mkv",
+    "size": 862978048
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E06.720p.HDTV.x264-GRP.mkv",
+    "size": 773849088
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/sample-show.name.s01e02.720p.hdtv.x264-grp.mkv",
+    "size": 38797312
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E05.720p.HDTV.x264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E06.720p.HDTV.x264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01.720p.HDTV.x264-GRP/sample-show.name.s01e02.720p.hdtv.x264-grp.mkv": "sample"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "extras-specials-folder-s00",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8
+   },
+   "specials": 3,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv",
+    "size": 2527068160
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv",
+    "size": 2630877184
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv",
+    "size": 2348810240
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04.1080p.BluRay.x264-GRP.mkv",
+    "size": 1624244224
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E05.1080p.BluRay.x264-GRP.mkv",
+    "size": 2623537152
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E06.1080p.BluRay.x264-GRP.mkv",
+    "size": 1849688064
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E07.1080p.BluRay.x264-GRP.mkv",
+    "size": 1272971264
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E08.1080p.BluRay.x264-GRP.mkv",
+    "size": 1645215744
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Specials/Show.Name.S00E01.Behind.The.Scenes.1080p.BluRay.x264-GRP.mkv",
+    "size": 377487360
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Specials/Show.Name.S00E02.Behind.The.Scenes.1080p.BluRay.x264-GRP.mkv",
+    "size": 165675008
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Extras/Bloopers.mkv",
+    "size": 373293056
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04.1080p.BluRay.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E05.1080p.BluRay.x264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E06.1080p.BluRay.x264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E07.1080p.BluRay.x264-GRP.mkv": "episode S01E07",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E08.1080p.BluRay.x264-GRP.mkv": "episode S01E08",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Specials/Show.Name.S00E01.Behind.The.Scenes.1080p.BluRay.x264-GRP.mkv": "special S00E01",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Specials/Show.Name.S00E02.Behind.The.Scenes.1080p.BluRay.x264-GRP.mkv": "special S00E02",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Extras/Bloopers.mkv": "extra"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "extras-size-sample-unlabelled",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E01.1080p.WEB.h264-GRP.mkv",
+    "size": 1830813696
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E02.1080p.WEB.h264-GRP.mkv",
+    "size": 2014314496
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E03.1080p.WEB.h264-GRP.mkv",
+    "size": 1728053248
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E04.1080p.WEB.h264-GRP.mkv",
+    "size": 1294991360
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E05.1080p.WEB.h264-GRP.mkv",
+    "size": 1606418432
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E06.1080p.WEB.h264-GRP.mkv",
+    "size": 2370830336
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E07.1080p.WEB.h264-GRP.mkv",
+    "size": 2694840320
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E08.1080p.WEB.h264-GRP.mkv",
+    "size": 32505856
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E01.1080p.WEB.h264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E02.1080p.WEB.h264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E03.1080p.WEB.h264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E04.1080p.WEB.h264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E05.1080p.WEB.h264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E06.1080p.WEB.h264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E07.1080p.WEB.h264-GRP.mkv": "episode S01E07",
+    "Show.Name.S01.1080p.WEB.h264-GRP/Show.Name.S01E08.1080p.WEB.h264-GRP.mkv": "sample"
+   },
+   "gaps": [
+    "S01E08"
+   ],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "extras-nced-ncop-anime",
+  "note": "",
+  "series": {
+   "title": "Show Title",
+   "seasons": {
+    "1": 12
+   },
+   "specials": 0,
+   "absolute": true,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 01 (BD 1080p HEVC FLAC) [508EBAD7].mkv",
+    "size": 1647312896
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 02 (BD 1080p HEVC FLAC) [7FCD9EB1].mkv",
+    "size": 1633681408
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 03 (BD 1080p HEVC FLAC) [757750A9].mkv",
+    "size": 1227882496
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 04 (BD 1080p HEVC FLAC) [23BED01D].mkv",
+    "size": 1742733312
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 05 (BD 1080p HEVC FLAC) [95A76D79].mkv",
+    "size": 1569718272
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 06 (BD 1080p HEVC FLAC) [663F1C97].mkv",
+    "size": 1178599424
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 07 (BD 1080p HEVC FLAC) [7E570DDF].mkv",
+    "size": 1754267648
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 08 (BD 1080p HEVC FLAC) [1C11F735].mkv",
+    "size": 1616904192
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 09 (BD 1080p HEVC FLAC) [AE340454].mkv",
+    "size": 1583349760
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 10 (BD 1080p HEVC FLAC) [10435A10].mkv",
+    "size": 1352663040
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 11 (BD 1080p HEVC FLAC) [F143262F].mkv",
+    "size": 1673527296
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 12 (BD 1080p HEVC FLAC) [B88139B9].mkv",
+    "size": 1675624448
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/Extras/[Group] Show Title - NCOP (BD 1080p HEVC FLAC) [C0398710].mkv",
+    "size": 362807296
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/Extras/[Group] Show Title - NCED (BD 1080p HEVC FLAC) [A4161293].mkv",
+    "size": 186646528
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/Extras/[Group] Show Title - PV 01 (BD 1080p HEVC FLAC) [4B22D308].mkv",
+    "size": 31457280
+   },
+   {
+    "path": "[Group] Show Title (BD 1080p HEVC FLAC)/Scans/Cover.jpg",
+    "size": 2097152
+   }
+  ],
+  "expect": {
+   "files": {
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 01 (BD 1080p HEVC FLAC) [508EBAD7].mkv": "episode S01E01",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 02 (BD 1080p HEVC FLAC) [7FCD9EB1].mkv": "episode S01E02",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 03 (BD 1080p HEVC FLAC) [757750A9].mkv": "episode S01E03",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 04 (BD 1080p HEVC FLAC) [23BED01D].mkv": "episode S01E04",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 05 (BD 1080p HEVC FLAC) [95A76D79].mkv": "episode S01E05",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 06 (BD 1080p HEVC FLAC) [663F1C97].mkv": "episode S01E06",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 07 (BD 1080p HEVC FLAC) [7E570DDF].mkv": "episode S01E07",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 08 (BD 1080p HEVC FLAC) [1C11F735].mkv": "episode S01E08",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 09 (BD 1080p HEVC FLAC) [AE340454].mkv": "episode S01E09",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 10 (BD 1080p HEVC FLAC) [10435A10].mkv": "episode S01E10",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 11 (BD 1080p HEVC FLAC) [F143262F].mkv": "episode S01E11",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/[Group] Show Title - 12 (BD 1080p HEVC FLAC) [B88139B9].mkv": "episode S01E12",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/Extras/[Group] Show Title - NCOP (BD 1080p HEVC FLAC) [C0398710].mkv": "extra",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/Extras/[Group] Show Title - NCED (BD 1080p HEVC FLAC) [A4161293].mkv": "extra",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/Extras/[Group] Show Title - PV 01 (BD 1080p HEVC FLAC) [4B22D308].mkv": "extra",
+    "[Group] Show Title (BD 1080p HEVC FLAC)/Scans/Cover.jpg": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]

@@ -1,0 +1,512 @@
+[
+ {
+  "name": "odd-episode-nn-in-season-folder",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 6,
+    "2": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name Season 1/Episode 01.mkv",
+    "size": 1975517184
+   },
+   {
+    "path": "Show Name Season 1/Episode 02.mkv",
+    "size": 2643460096
+   },
+   {
+    "path": "Show Name Season 1/Episode 03.mkv",
+    "size": 1480589312
+   },
+   {
+    "path": "Show Name Season 1/Episode 04.mkv",
+    "size": 2669674496
+   },
+   {
+    "path": "Show Name Season 1/Episode 05.mkv",
+    "size": 1612709888
+   },
+   {
+    "path": "Show Name Season 1/Episode 06.mkv",
+    "size": 1290797056
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name Season 1/Episode 01.mkv": "episode S01E01",
+    "Show Name Season 1/Episode 02.mkv": "episode S01E02",
+    "Show Name Season 1/Episode 03.mkv": "episode S01E03",
+    "Show Name Season 1/Episode 04.mkv": "episode S01E04",
+    "Show Name Season 1/Episode 05.mkv": "episode S01E05",
+    "Show Name Season 1/Episode 06.mkv": "episode S01E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "odd-nn-dash-title",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 6,
+    "2": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    2
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name S02 1080p/01 - Aftermath.mkv",
+    "size": 2043674624
+   },
+   {
+    "path": "Show Name S02 1080p/02 - The Vault.mkv",
+    "size": 2027945984
+   },
+   {
+    "path": "Show Name S02 1080p/03 - Hostile.mkv",
+    "size": 1863319552
+   },
+   {
+    "path": "Show Name S02 1080p/04 - Paper Trail.mkv",
+    "size": 2318401536
+   },
+   {
+    "path": "Show Name S02 1080p/05 - Reckoning.mkv",
+    "size": 2153775104
+   },
+   {
+    "path": "Show Name S02 1080p/06 - Home.mkv",
+    "size": 2045771776
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name S02 1080p/01 - Aftermath.mkv": "episode S02E01",
+    "Show Name S02 1080p/02 - The Vault.mkv": "episode S02E02",
+    "Show Name S02 1080p/03 - Hostile.mkv": "episode S02E03",
+    "Show Name S02 1080p/04 - Paper Trail.mkv": "episode S02E04",
+    "Show Name S02 1080p/05 - Reckoning.mkv": "episode S02E05",
+    "Show Name S02 1080p/06 - Home.mkv": "episode S02E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "odd-show-1x03-avi",
+  "note": "",
+  "series": {
+   "title": "Old Show",
+   "seasons": {
+    "1": 5
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Old Show 1x01.avi",
+    "size": 173015040
+   },
+   {
+    "path": "Old Show 1x02.avi",
+    "size": 211812352
+   },
+   {
+    "path": "Old Show 1x03.avi",
+    "size": 380633088
+   },
+   {
+    "path": "Old Show 1x04.avi",
+    "size": 269484032
+   },
+   {
+    "path": "Old Show 1x05.avi",
+    "size": 261095424
+   }
+  ],
+  "expect": {
+   "files": {
+    "Old Show 1x01.avi": "episode S01E01",
+    "Old Show 1x02.avi": "episode S01E02",
+    "Old Show 1x03.avi": "episode S01E03",
+    "Old Show 1x04.avi": "episode S01E04",
+    "Old Show 1x05.avi": "episode S01E05"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "odd-executables-and-links",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01.720p.mkv",
+    "size": 387973120
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02.720p.mkv",
+    "size": 774897664
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03.720p.mkv",
+    "size": 878706688
+   },
+   {
+    "path": "Show.Name.S01.720p/Download Codec Pack.exe",
+    "size": 2097152
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E04.mkv.exe",
+    "size": 629145600
+   },
+   {
+    "path": "Show.Name.S01.720p/Click here for more.lnk",
+    "size": 1024
+   },
+   {
+    "path": "Show.Name.S01.720p/readme.txt",
+    "size": 400
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E04.720p.mkv.torrent",
+    "size": 40960
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p/Show.Name.S01E01.720p.mkv": "episode S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E02.720p.mkv": "episode S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E03.720p.mkv": "episode S01E03",
+    "Show.Name.S01.720p/Download Codec Pack.exe": "nonMedia!",
+    "Show.Name.S01.720p/Show.Name.S01E04.mkv.exe": "nonMedia!",
+    "Show.Name.S01.720p/Click here for more.lnk": "nonMedia!",
+    "Show.Name.S01.720p/readme.txt": "nonMedia",
+    "Show.Name.S01.720p/Show.Name.S01E04.720p.mkv.torrent": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [
+    "suspicious:Show.Name.S01.720p/Download Codec Pack.exe",
+    "suspicious:Show.Name.S01.720p/Show.Name.S01E04.mkv.exe"
+   ]
+  }
+ },
+ {
+  "name": "odd-season-from-folder-only-e-prefix",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 6,
+    "2": 6,
+    "3": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    3
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name/Season 3/E01.mkv",
+    "size": 1166016512
+   },
+   {
+    "path": "Show Name/Season 3/E02.mkv",
+    "size": 1908408320
+   },
+   {
+    "path": "Show Name/Season 3/E03.mkv",
+    "size": 1794113536
+   },
+   {
+    "path": "Show Name/Season 3/E04.mkv",
+    "size": 1990197248
+   },
+   {
+    "path": "Show Name/Season 3/E05.mkv",
+    "size": 2053111808
+   },
+   {
+    "path": "Show Name/Season 3/E06.mkv",
+    "size": 2308964352
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name/Season 3/E01.mkv": "episode S03E01",
+    "Show Name/Season 3/E02.mkv": "episode S03E02",
+    "Show Name/Season 3/E03.mkv": "episode S03E03",
+    "Show Name/Season 3/E04.mkv": "episode S03E04",
+    "Show Name/Season 3/E05.mkv": "episode S03E05",
+    "Show Name/Season 3/E06.mkv": "episode S03E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "odd-obfuscated-names-folder-per-episode",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/video.mkv",
+    "size": 602931200
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/video.mkv",
+    "size": 890241024
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/video.mkv",
+    "size": 601882624
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/video.mkv": "episode S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/video.mkv": "episode S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/video.mkv": "episode S01E03"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "odd-episode-title-only",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 4
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {
+    "S01E01": "Pilot",
+    "S01E02": "The Heist",
+    "S01E03": "Double Cross",
+    "S01E04": "Last Stand"
+   },
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name Season 1/Pilot.mkv",
+    "size": 1738539008
+   },
+   {
+    "path": "Show Name Season 1/The Heist.mkv",
+    "size": 2088763392
+   },
+   {
+    "path": "Show Name Season 1/Double Cross.mkv",
+    "size": 2195718144
+   },
+   {
+    "path": "Show Name Season 1/Last Stand.mkv",
+    "size": 1215299584
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name Season 1/Pilot.mkv": "episode S01E01",
+    "Show Name Season 1/The Heist.mkv": "episode S01E02",
+    "Show Name Season 1/Double Cross.mkv": "episode S01E03",
+    "Show Name Season 1/Last Stand.mkv": "episode S01E04"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "odd-foreign-show-mixed-in",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 4
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name S01 Mixed Bundle/Show.Name.S01E01.1080p.mkv",
+    "size": 1988100096
+   },
+   {
+    "path": "Show Name S01 Mixed Bundle/Show.Name.S01E02.1080p.mkv",
+    "size": 1874853888
+   },
+   {
+    "path": "Show Name S01 Mixed Bundle/Show.Name.S01E03.1080p.mkv",
+    "size": 2588934144
+   },
+   {
+    "path": "Show Name S01 Mixed Bundle/Show.Name.S01E04.1080p.mkv",
+    "size": 2610954240
+   },
+   {
+    "path": "Show Name S01 Mixed Bundle/Totally.Different.Series.S01E01.1080p.mkv",
+    "size": 371195904
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name S01 Mixed Bundle/Show.Name.S01E01.1080p.mkv": "episode S01E01",
+    "Show Name S01 Mixed Bundle/Show.Name.S01E02.1080p.mkv": "episode S01E02",
+    "Show Name S01 Mixed Bundle/Show.Name.S01E03.1080p.mkv": "episode S01E03",
+    "Show Name S01 Mixed Bundle/Show.Name.S01E04.1080p.mkv": "episode S01E04",
+    "Show Name S01 Mixed Bundle/Totally.Different.Series.S01E01.1080p.mkv": "dup episode S01E01"
+   },
+   "gaps": [],
+   "conflicts": [
+    "S01E01"
+   ],
+   "warnings": [
+    "titleMismatch"
+   ]
+  }
+ },
+ {
+  "name": "odd-user-style-title-with-year-and-region",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 5
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": [
+    "Show Name US"
+   ]
+  },
+  "files": [
+   {
+    "path": "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E01.1080p.WEB.H264-GRP.mkv",
+    "size": 2021654528
+   },
+   {
+    "path": "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E02.1080p.WEB.H264-GRP.mkv",
+    "size": 2708471808
+   },
+   {
+    "path": "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E03.1080p.WEB.H264-GRP.mkv",
+    "size": 1507852288
+   },
+   {
+    "path": "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E04.1080p.WEB.H264-GRP.mkv",
+    "size": 2156920832
+   },
+   {
+    "path": "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E05.1080p.WEB.H264-GRP.mkv",
+    "size": 1427111936
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E01.1080p.WEB.H264-GRP.mkv": "episode S01E01",
+    "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E02.1080p.WEB.H264-GRP.mkv": "episode S01E02",
+    "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E03.1080p.WEB.H264-GRP.mkv": "episode S01E03",
+    "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E04.1080p.WEB.H264-GRP.mkv": "episode S01E04",
+    "Show.Name.US.2021.S01.1080p.WEB.H264/Show.Name.US.2021.S01E05.1080p.WEB.H264-GRP.mkv": "episode S01E05"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]

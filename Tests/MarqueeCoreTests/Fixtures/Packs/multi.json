@@ -1,0 +1,224 @@
+[
+ {
+  "name": "multi-e01e02-and-singles",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01E02.720p.HDTV.x264-GRP.mkv",
+    "size": 1849688064
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP.mkv",
+    "size": 577765376
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP.mkv",
+    "size": 757071872
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E05.720p.HDTV.x264-GRP.mkv",
+    "size": 829423616
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E06.720p.HDTV.x264-GRP.mkv",
+    "size": 441450496
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E07.720p.HDTV.x264-GRP.mkv",
+    "size": 721420288
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E08.720p.HDTV.x264-GRP.mkv",
+    "size": 703594496
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01E02.720p.HDTV.x264-GRP.mkv": "multi S01E01+S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP.mkv": "episode S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E05.720p.HDTV.x264-GRP.mkv": "episode S01E05",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E06.720p.HDTV.x264-GRP.mkv": "episode S01E06",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E07.720p.HDTV.x264-GRP.mkv": "episode S01E07",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E08.720p.HDTV.x264-GRP.mkv": "episode S01E08"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "multi-dash-ranges",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 8
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show Name S01 1080p WEB-DL/Show Name S01E01.mkv",
+    "size": 2577399808
+   },
+   {
+    "path": "Show Name S01 1080p WEB-DL/Show Name S01E02.mkv",
+    "size": 1420820480
+   },
+   {
+    "path": "Show Name S01 1080p WEB-DL/Show Name S01E03.mkv",
+    "size": 2699034624
+   },
+   {
+    "path": "Show Name S01 1080p WEB-DL/Show Name S01E04.mkv",
+    "size": 1798307840
+   },
+   {
+    "path": "Show Name S01 1080p WEB-DL/Show Name S01E05-E06.mkv",
+    "size": 4483710976
+   },
+   {
+    "path": "Show Name S01 1080p WEB-DL/Show Name S01E07-08.mkv",
+    "size": 3634364416
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show Name S01 1080p WEB-DL/Show Name S01E01.mkv": "episode S01E01",
+    "Show Name S01 1080p WEB-DL/Show Name S01E02.mkv": "episode S01E02",
+    "Show Name S01 1080p WEB-DL/Show Name S01E03.mkv": "episode S01E03",
+    "Show Name S01 1080p WEB-DL/Show Name S01E04.mkv": "episode S01E04",
+    "Show Name S01 1080p WEB-DL/Show Name S01E05-E06.mkv": "multi S01E05+S01E06",
+    "Show Name S01 1080p WEB-DL/Show Name S01E07-08.mkv": "multi S01E07+S01E08"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "multi-triple-finale",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv",
+    "size": 2584739840
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv",
+    "size": 2030043136
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv",
+    "size": 1853882368
+   },
+   {
+    "path": "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04-E06.1080p.BluRay.x264-GRP.mkv",
+    "size": 6052380672
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E01.1080p.BluRay.x264-GRP.mkv": "episode S01E01",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E02.1080p.BluRay.x264-GRP.mkv": "episode S01E02",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E03.1080p.BluRay.x264-GRP.mkv": "episode S01E03",
+    "Show.Name.S01.1080p.BluRay.x264-GRP/Show.Name.S01E04-E06.1080p.BluRay.x264-GRP.mkv": "multi S01E04+S01E05+S01E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "multi-1x01-1x02-style",
+  "note": "",
+  "series": {
+   "title": "Old Show",
+   "seasons": {
+    "1": 6
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Old Show Season 1 DVDRip/Old Show 1x01-02 - Pilot.avi",
+    "size": 734003200
+   },
+   {
+    "path": "Old Show Season 1 DVDRip/Old Show 1x03.avi",
+    "size": 367001600
+   },
+   {
+    "path": "Old Show Season 1 DVDRip/Old Show 1x04.avi",
+    "size": 367001600
+   },
+   {
+    "path": "Old Show Season 1 DVDRip/Old Show 1x05.avi",
+    "size": 367001600
+   },
+   {
+    "path": "Old Show Season 1 DVDRip/Old Show 1x06.avi",
+    "size": 367001600
+   }
+  ],
+  "expect": {
+   "files": {
+    "Old Show Season 1 DVDRip/Old Show 1x01-02 - Pilot.avi": "multi S01E01+S01E02",
+    "Old Show Season 1 DVDRip/Old Show 1x03.avi": "episode S01E03",
+    "Old Show Season 1 DVDRip/Old Show 1x04.avi": "episode S01E04",
+    "Old Show Season 1 DVDRip/Old Show 1x05.avi": "episode S01E05",
+    "Old Show Season 1 DVDRip/Old Show 1x06.avi": "episode S01E06"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]

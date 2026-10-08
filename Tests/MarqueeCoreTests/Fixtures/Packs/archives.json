@@ -1,0 +1,640 @@
+[
+ {
+  "name": "rar-scene-per-episode-folders",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 4
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r03",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r04",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.nfo",
+    "size": 4096
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.sfv",
+    "size": 400
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r03",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r04",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.nfo",
+    "size": 4096
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.sfv",
+    "size": 400
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r03",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r04",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.nfo",
+    "size": 4096
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.sfv",
+    "size": 400
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r03",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r04",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.nfo",
+    "size": 4096
+   },
+   {
+    "path": "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.sfv",
+    "size": 400
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.rar": "archive S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r00": "archive S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r01": "archive S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r02": "archive S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r03": "archive S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.r04": "archive S01E01",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.nfo": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E01.720p.HDTV.x264-GRP/grp-show.name.s01e01.sfv": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.rar": "archive S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r00": "archive S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r01": "archive S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r02": "archive S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r03": "archive S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.r04": "archive S01E02",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.nfo": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E02.720p.HDTV.x264-GRP/grp-show.name.s01e02.sfv": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.rar": "archive S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r00": "archive S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r01": "archive S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r02": "archive S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r03": "archive S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.r04": "archive S01E03",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.nfo": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E03.720p.HDTV.x264-GRP/grp-show.name.s01e03.sfv": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.rar": "archive S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r00": "archive S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r01": "archive S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r02": "archive S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r03": "archive S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.r04": "archive S01E04",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.nfo": "nonMedia",
+    "Show.Name.S01.720p.HDTV.x264-GRP/Show.Name.S01E04.720p.HDTV.x264-GRP/grp-show.name.s01e04.sfv": "nonMedia"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [],
+   "archiveSets": 4
+  }
+ },
+ {
+  "name": "rar-partnn-per-episode",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e01.part01.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e01.part02.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e01.part03.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e01.part04.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e02.part01.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e02.part02.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e02.part03.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e02.part04.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e03.part01.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e03.part02.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e03.part03.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.1080p.WEB/show.name.s01e03.part04.rar",
+    "size": 15728640
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.1080p.WEB/show.name.s01e01.part01.rar": "archive S01E01",
+    "Show.Name.S01.1080p.WEB/show.name.s01e01.part02.rar": "archive S01E01",
+    "Show.Name.S01.1080p.WEB/show.name.s01e01.part03.rar": "archive S01E01",
+    "Show.Name.S01.1080p.WEB/show.name.s01e01.part04.rar": "archive S01E01",
+    "Show.Name.S01.1080p.WEB/show.name.s01e02.part01.rar": "archive S01E02",
+    "Show.Name.S01.1080p.WEB/show.name.s01e02.part02.rar": "archive S01E02",
+    "Show.Name.S01.1080p.WEB/show.name.s01e02.part03.rar": "archive S01E02",
+    "Show.Name.S01.1080p.WEB/show.name.s01e02.part04.rar": "archive S01E02",
+    "Show.Name.S01.1080p.WEB/show.name.s01e03.part01.rar": "archive S01E03",
+    "Show.Name.S01.1080p.WEB/show.name.s01e03.part02.rar": "archive S01E03",
+    "Show.Name.S01.1080p.WEB/show.name.s01e03.part03.rar": "archive S01E03",
+    "Show.Name.S01.1080p.WEB/show.name.s01e03.part04.rar": "archive S01E03"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [],
+   "archiveSets": 3
+  }
+ },
+ {
+  "name": "rar-flat-dir-one-set-per-episode",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 5
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e01.hdtv-grp.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e01.hdtv-grp.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e01.hdtv-grp.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e02.hdtv-grp.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e02.hdtv-grp.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e02.hdtv-grp.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e03.hdtv-grp.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e03.hdtv-grp.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e03.hdtv-grp.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e04.hdtv-grp.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e04.hdtv-grp.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e04.hdtv-grp.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e05.hdtv-grp.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e05.hdtv-grp.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.HDTV/show.name.s01e05.hdtv-grp.r01",
+    "size": 15728640
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.HDTV/show.name.s01e01.hdtv-grp.rar": "archive S01E01",
+    "Show.Name.S01.HDTV/show.name.s01e01.hdtv-grp.r00": "archive S01E01",
+    "Show.Name.S01.HDTV/show.name.s01e01.hdtv-grp.r01": "archive S01E01",
+    "Show.Name.S01.HDTV/show.name.s01e02.hdtv-grp.rar": "archive S01E02",
+    "Show.Name.S01.HDTV/show.name.s01e02.hdtv-grp.r00": "archive S01E02",
+    "Show.Name.S01.HDTV/show.name.s01e02.hdtv-grp.r01": "archive S01E02",
+    "Show.Name.S01.HDTV/show.name.s01e03.hdtv-grp.rar": "archive S01E03",
+    "Show.Name.S01.HDTV/show.name.s01e03.hdtv-grp.r00": "archive S01E03",
+    "Show.Name.S01.HDTV/show.name.s01e03.hdtv-grp.r01": "archive S01E03",
+    "Show.Name.S01.HDTV/show.name.s01e04.hdtv-grp.rar": "archive S01E04",
+    "Show.Name.S01.HDTV/show.name.s01e04.hdtv-grp.r00": "archive S01E04",
+    "Show.Name.S01.HDTV/show.name.s01e04.hdtv-grp.r01": "archive S01E04",
+    "Show.Name.S01.HDTV/show.name.s01e05.hdtv-grp.rar": "archive S01E05",
+    "Show.Name.S01.HDTV/show.name.s01e05.hdtv-grp.r00": "archive S01E05",
+    "Show.Name.S01.HDTV/show.name.s01e05.hdtv-grp.r01": "archive S01E05"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [],
+   "archiveSets": 5
+  }
+ },
+ {
+  "name": "rar-7z-zip-mixed-formats",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01/Show.Name.S01E01.1080p.7z.001",
+    "size": 20971520
+   },
+   {
+    "path": "Show.Name.S01/Show.Name.S01E01.1080p.7z.002",
+    "size": 20971520
+   },
+   {
+    "path": "Show.Name.S01/Show.Name.S01E01.1080p.7z.003",
+    "size": 20971520
+   },
+   {
+    "path": "Show.Name.S01/Show.Name.S01E02.1080p.z01",
+    "size": 20971520
+   },
+   {
+    "path": "Show.Name.S01/Show.Name.S01E02.1080p.z02",
+    "size": 20971520
+   },
+   {
+    "path": "Show.Name.S01/Show.Name.S01E02.1080p.zip",
+    "size": 12582912
+   },
+   {
+    "path": "Show.Name.S01/Show.Name.S01E03.1080p.mkv",
+    "size": 2150629376
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01/Show.Name.S01E01.1080p.7z.001": "archive S01E01",
+    "Show.Name.S01/Show.Name.S01E01.1080p.7z.002": "archive S01E01",
+    "Show.Name.S01/Show.Name.S01E01.1080p.7z.003": "archive S01E01",
+    "Show.Name.S01/Show.Name.S01E02.1080p.z01": "archive S01E02",
+    "Show.Name.S01/Show.Name.S01E02.1080p.z02": "archive S01E02",
+    "Show.Name.S01/Show.Name.S01E02.1080p.zip": "archive S01E02",
+    "Show.Name.S01/Show.Name.S01E03.1080p.mkv": "episode S01E03"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [],
+   "archiveSets": 2
+  }
+ },
+ {
+  "name": "rar-incomplete-missing-volume",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r03",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r03",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.r03",
+    "size": 15728640
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.rar": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r00": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r01": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r02": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01/show.name.s01e01.r03": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.rar": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r00": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r01": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r02": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03/show.name.s01e03.r03": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.rar": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.r00": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.r02": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E02/show.name.s01e02.r03": "archive S01E02"
+   },
+   "gaps": [
+    "S01E02"
+   ],
+   "conflicts": [],
+   "warnings": [
+    "incompleteArchive"
+   ],
+   "archiveSets": 3
+  }
+ },
+ {
+  "name": "rar-obfuscated-names-episode-in-folder",
+  "note": "",
+  "series": {
+   "title": "Show Name",
+   "seasons": {
+    "1": 3
+   },
+   "specials": 0,
+   "absolute": false,
+   "daily": [],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    1
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.r02",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.rar",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.r00",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.r01",
+    "size": 15728640
+   },
+   {
+    "path": "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.r02",
+    "size": 15728640
+   }
+  ],
+  "expect": {
+   "files": {
+    "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.rar": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.r00": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.r01": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E01.720p.WEB.x264-GRP/a1b2c3d1.r02": "archive S01E01",
+    "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.rar": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.r00": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.r01": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E02.720p.WEB.x264-GRP/a1b2c3d2.r02": "archive S01E02",
+    "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.rar": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.r00": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.r01": "archive S01E03",
+    "Show.Name.S01.720p/Show.Name.S01E03.720p.WEB.x264-GRP/a1b2c3d3.r02": "archive S01E03"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": [],
+   "archiveSets": 3
+  }
+ }
+]

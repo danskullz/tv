@@ -1,0 +1,320 @@
+[
+ {
+  "name": "daily-month-pack-dotted",
+  "note": "",
+  "series": {
+   "title": "The Daily Show",
+   "seasons": {},
+   "specials": 0,
+   "absolute": false,
+   "daily": [
+    {
+     "date": "2024-03-04",
+     "season": 2024,
+     "episode": 1
+    },
+    {
+     "date": "2024-03-05",
+     "season": 2024,
+     "episode": 2
+    },
+    {
+     "date": "2024-03-06",
+     "season": 2024,
+     "episode": 3
+    },
+    {
+     "date": "2024-03-07",
+     "season": 2024,
+     "episode": 4
+    },
+    {
+     "date": "2024-03-11",
+     "season": 2024,
+     "episode": 5
+    },
+    {
+     "date": "2024-03-12",
+     "season": 2024,
+     "episode": 6
+    },
+    {
+     "date": "2024-03-13",
+     "season": 2024,
+     "episode": 7
+    },
+    {
+     "date": "2024-03-14",
+     "season": 2024,
+     "episode": 8
+    }
+   ],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    2024
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.04.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 942669824
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.05.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 722468864
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.06.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 396361728
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.07.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 490733568
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.11.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 646971392
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.12.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 557842432
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.13.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 651165696
+   },
+   {
+    "path": "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.14.Guest.Name.720p.WEB.h264-GRP.mkv",
+    "size": 407896064
+   }
+  ],
+  "expect": {
+   "files": {
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.04.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E01",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.05.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E02",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.06.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E03",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.07.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E04",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.11.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E05",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.12.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E06",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.13.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E07",
+    "The.Daily.Show.2024.03.WEB.h264/The.Daily.Show.2024.03.14.Guest.Name.720p.WEB.h264-GRP.mkv": "episode S2024E08"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "daily-iso-dates-spaced",
+  "note": "",
+  "series": {
+   "title": "Late Night",
+   "seasons": {},
+   "specials": 0,
+   "absolute": false,
+   "daily": [
+    {
+     "date": "2024-03-04",
+     "season": 2024,
+     "episode": 1
+    },
+    {
+     "date": "2024-03-05",
+     "season": 2024,
+     "episode": 2
+    },
+    {
+     "date": "2024-03-06",
+     "season": 2024,
+     "episode": 3
+    },
+    {
+     "date": "2024-03-07",
+     "season": 2024,
+     "episode": 4
+    },
+    {
+     "date": "2024-03-11",
+     "season": 2024,
+     "episode": 5
+    },
+    {
+     "date": "2024-03-12",
+     "season": 2024,
+     "episode": 6
+    },
+    {
+     "date": "2024-03-13",
+     "season": 2024,
+     "episode": 7
+    },
+    {
+     "date": "2024-03-14",
+     "season": 2024,
+     "episode": 8
+    }
+   ],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    2024
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-04 - Some Guest.mkv",
+    "size": 483393536
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-05 - Some Guest.mkv",
+    "size": 832569344
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-06 - Some Guest.mkv",
+    "size": 737148928
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-07 - Some Guest.mkv",
+    "size": 703594496
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-11 - Some Guest.mkv",
+    "size": 834666496
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-12 - Some Guest.mkv",
+    "size": 915406848
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-13 - Some Guest.mkv",
+    "size": 490733568
+   },
+   {
+    "path": "Late Night 2024-03/Late Night - 2024-03-14 - Some Guest.mkv",
+    "size": 780140544
+   }
+  ],
+  "expect": {
+   "files": {
+    "Late Night 2024-03/Late Night - 2024-03-04 - Some Guest.mkv": "episode S2024E01",
+    "Late Night 2024-03/Late Night - 2024-03-05 - Some Guest.mkv": "episode S2024E02",
+    "Late Night 2024-03/Late Night - 2024-03-06 - Some Guest.mkv": "episode S2024E03",
+    "Late Night 2024-03/Late Night - 2024-03-07 - Some Guest.mkv": "episode S2024E04",
+    "Late Night 2024-03/Late Night - 2024-03-11 - Some Guest.mkv": "episode S2024E05",
+    "Late Night 2024-03/Late Night - 2024-03-12 - Some Guest.mkv": "episode S2024E06",
+    "Late Night 2024-03/Late Night - 2024-03-13 - Some Guest.mkv": "episode S2024E07",
+    "Late Night 2024-03/Late Night - 2024-03-14 - Some Guest.mkv": "episode S2024E08"
+   },
+   "gaps": [],
+   "conflicts": [],
+   "warnings": []
+  }
+ },
+ {
+  "name": "daily-pack-with-gap",
+  "note": "",
+  "series": {
+   "title": "The Daily Show",
+   "seasons": {},
+   "specials": 0,
+   "absolute": false,
+   "daily": [
+    {
+     "date": "2024-03-04",
+     "season": 2024,
+     "episode": 1
+    },
+    {
+     "date": "2024-03-05",
+     "season": 2024,
+     "episode": 2
+    },
+    {
+     "date": "2024-03-06",
+     "season": 2024,
+     "episode": 3
+    },
+    {
+     "date": "2024-03-07",
+     "season": 2024,
+     "episode": 4
+    },
+    {
+     "date": "2024-03-11",
+     "season": 2024,
+     "episode": 5
+    },
+    {
+     "date": "2024-03-12",
+     "season": 2024,
+     "episode": 6
+    },
+    {
+     "date": "2024-03-13",
+     "season": 2024,
+     "episode": 7
+    },
+    {
+     "date": "2024-03-14",
+     "season": 2024,
+     "episode": 8
+    }
+   ],
+   "titles": {},
+   "unaired": [],
+   "targetSeasons": [
+    2024
+   ],
+   "aliases": []
+  },
+  "files": [
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.04.1080p.WEB.h264-GRP.mkv",
+    "size": 2390753280
+   },
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.05.1080p.WEB.h264-GRP.mkv",
+    "size": 1561329664
+   },
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.06.1080p.WEB.h264-GRP.mkv",
+    "size": 1699741696
+   },
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.07.1080p.WEB.h264-GRP.mkv",
+    "size": 1247805440
+   },
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.11.1080p.WEB.h264-GRP.mkv",
+    "size": 2674917376
+   },
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.13.1080p.WEB.h264-GRP.mkv",
+    "size": 2089811968
+   },
+   {
+    "path": "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.14.1080p.WEB.h264-GRP.mkv",
+    "size": 1156579328
+   }
+  ],
+  "expect": {
+   "files": {
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.04.1080p.WEB.h264-GRP.mkv": "episode S2024E01",
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.05.1080p.WEB.h264-GRP.mkv": "episode S2024E02",
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.06.1080p.WEB.h264-GRP.mkv": "episode S2024E03",
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.07.1080p.WEB.h264-GRP.mkv": "episode S2024E04",
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.11.1080p.WEB.h264-GRP.mkv": "episode S2024E05",
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.13.1080p.WEB.h264-GRP.mkv": "episode S2024E07",
+    "The.Daily.Show.2024.03.1080p.WEB/The.Daily.Show.2024.03.14.1080p.WEB.h264-GRP.mkv": "episode S2024E08"
+   },
+   "gaps": [
+    "S2024E06"
+   ],
+   "conflicts": [],
+   "warnings": []
+  }
+ }
+]
