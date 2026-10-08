@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Living instructions for any AI agent working in this repo. **Keep this file current:** whenever the user gives a durable instruction, preference, decision or feedback (positive or negative), add or revise an entry below in the same turn (a hook in `.claude/` reminds agents on every prompt). Date entries `YYYY-MM-DD`, replace superseded ones rather than stacking, keep it terse. Full product spec: [SCOPE.md](SCOPE.md).
+Living instructions for any AI agent working in this repo. **Keep this file current:** whenever the user gives a durable instruction, preference, decision or feedback (positive or negative), add or revise an entry below in the same turn (a hook in `.claude/` reminds agents on every prompt). Date entries `YYYY-MM-DD`, replace superseded ones rather than stacking, keep it terse. Full product spec: [SCOPE.md](SCOPE.md). Execution tracker: [PLAN.md](PLAN.md) (update status when work merges).
 
 ## Project
 Marquee (working title): native macOS app combining the *arr suite with a built-in torrent engine and streaming player. Repo: git@github.com:danskullz/tv.git
