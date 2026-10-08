@@ -4,7 +4,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 
 ## Wave 1 — Phase 0 spikes + independent foundations
 - ◐ Release-name parser + ≥400-name fixture corpus (≥98% accuracy gate) — `MarqueeCore/Parsing`
-- ◐ Torznab client, Keychain secret store, parallel search coordinator — `MarqueeCore/Indexers`
+- ☑ Torznab client, Keychain secret store, parallel search coordinator — `MarqueeCore/Indexers`
 - ☑ TMDB client with caching — `MarqueeCore/Metadata`
 - ◐ Loopback HTTP range server + piece-aware byte sources — `MarqueeCore/Streaming`
 - ◐ GRDB schema v1, FTS5 library search, repositories — `MarqueeCore/Persistence`
