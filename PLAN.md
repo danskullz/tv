@@ -12,10 +12,10 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☑ Design system + app shell on mock data — `MarqueeUI`, `Marquee`
 
 ## Wave 2 — streaming critical path
-- ◐ Season-pack file→episode mapper + ordered streaming plan (priority gradient, cross-file deadlines) — `Packs`
+- ☑ Season-pack file→episode mapper + ordered streaming plan (priority gradient, cross-file deadlines) — `Packs`
 - ◐ Quality engine: profiles, custom formats, scoring, streamability score, "why this release" — `Quality`
 - ◐ libmpv LGPL universal build + Metal player view (`PlaybackEngine` protocol)
-- ☐ Torrent engine ↔ stream server bridge (piece deadlines follow playhead)
+- ◐ Torrent engine ↔ stream server bridge (piece deadlines follow playhead) — `MarqueeEngine`
 - ☐ Helper daemon (`SMAppService` login item) + XPC
 
 ## Wave 3 — Phase 1 exit: add → search → grab → stream
@@ -32,3 +32,4 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - Parser: corpus is author-written (100% overstates real-world accuracy) — grow it from real indexer results; title-ending years without a release year (Wonder.Woman.1984), DD/MM date ambiguity, bare group tags, `DDP5 1` channels, bare 3–4 digit episodes without a trailing quality tag.
 - UI: `-initialDetail` launch hook doesn't sync sidebar selection; Discover/Calendar placeholders; settings don't persist; no UI-model tests (FuzzyIndex, Formatters); macOS 15 fallback unverified.
 - TorrentEngine: measure idle CPU with libtorrent's internal tick (`tick_interval`) against §5.6 and pause/sleep the session when idle; libtorrent tarball SHA is trust-on-first-use.
+- Packs: corpus is author-written; DD/MM ambiguity, bare 3–4 digit episodes, absolute numbers without folder hint; opaque whole-pack archives disable gap detection; inner-archive byte ranges (stored RAR streaming) not yet implemented.
