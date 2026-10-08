@@ -1,0 +1,64 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+
+  build:
+    needs: test
+    runs-on: macos-15
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.arch }}
+        run: swift build -c release --arch ${{ matrix.arch }} --product Marquee
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.arch }}
+          path: .build/${{ matrix.arch }}-apple-macosx/release/Marquee
+
+  release:
+    needs: build
+    runs-on: macos-15
+    env:
+      VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: bins
+      - name: Package arm64, x86_64 and universal
+        run: |
+          mkdir -p dist
+          lipo -create bins/bin-arm64/Marquee bins/bin-x86_64/Marquee -output bins/Marquee-universal
+          for v in arm64 x86_64 universal; do
+            bin="bins/bin-$v/Marquee"; [ "$v" = universal ] && bin="bins/Marquee-universal"
+            chmod +x "$bin"
+            scripts/bundle.sh "$bin" "dist/Marquee-$v/Marquee.app" "$VERSION"
+            ditto -c -k --keepParent "dist/Marquee-$v/Marquee.app" "dist/Marquee-$VERSION-macos-$v.zip"
+          done
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" dist/*.zip \
+            --title "Marquee $VERSION" \
+            --generate-notes \
+            --prerelease
