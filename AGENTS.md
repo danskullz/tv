@@ -16,7 +16,7 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 ## Build, CI & release
 - SwiftPM package: `MarqueeCore` (UI-free logic, depends on GRDB), `MarqueeUI` (design system + views), `Marquee` (app), tests in `Tests/`.
 - 2026-10-09 Xcode 26.5 is installed but not `xcode-select`ed; run tests locally with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test` (do not change xcode-select). Dev machine is an Intel i7 (x86_64), 8 cores.
-- 2026-10-09 GitHub Actions (`.github/workflows/release.yml`) on every push to `main`: test, build arm64 + x86_64, lipo a universal binary, bundle `.app` (`scripts/bundle.sh`), zip all three, publish a new GitHub Release `v0.1.<run_number>`.
+- 2026-10-09 GitHub Actions (`.github/workflows/release.yml`, `macos-26` runners with the newest Xcode 26 selected — the UI needs the macOS 26 SDK) on every push to `main`: test, build arm64 + x86_64, lipo a universal binary, bundle `.app` (`scripts/bundle.sh`), zip all three, publish a new GitHub Release `v0.1.<run_number>`.
 - 2026-10-09 Native deps: run `scripts/build-libtorrent.sh` once (universal static libtorrent 2.0.15 + OpenSSL 3.5 for TLS + trimmed Boost headers into git-ignored `Vendor/libtorrent`, cached in `~/Library/Caches/Marquee/deps`, idempotent). Run it in every fresh checkout/worktree before `swift build`/`swift test` (instant when the cache is warm; the whole package depends on it). The torrent engine is a C shim (`CTorrentShim`, pure-C header) wrapped by `actor TorrentSession`; BitTorrent protocol encryption uses libtorrent's own RC4/DH, OpenSSL is only for HTTPS trackers/web seeds.
 - Signing/notarization (Developer ID) is not wired up yet; builds are ad-hoc signed.
 

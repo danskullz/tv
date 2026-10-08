@@ -223,7 +223,7 @@ public actor IndexerClient {
         }
     }
 
-    private func redactingErrors<T>(_ key: String?, _ body: () async throws -> T) async throws -> T {
+    private func redactingErrors<T: Sendable>(_ key: String?, _ body: () async throws -> T) async throws -> T {
         do {
             return try await body()
         } catch let error as IndexerError {

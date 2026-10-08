@@ -18,9 +18,14 @@ env:
 jobs:
   # Builds universal libtorrent + OpenSSL once; every other job downloads the result.
   deps:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode 26
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xc/Contents/Developer"
+          swift --version
       - name: Compute cache key
         id: key
         run: echo "key=$(scripts/build-libtorrent.sh --print-key)" >> "$GITHUB_OUTPUT"
@@ -41,9 +46,14 @@ jobs:
 
   test:
     needs: deps
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode 26
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xc/Contents/Developer"
+          swift --version
       - uses: actions/download-artifact@v4
         with:
           name: vendor-libtorrent
@@ -52,12 +62,17 @@ jobs:
 
   build:
     needs: [deps, test]
-    runs-on: macos-15
+    runs-on: macos-26
     strategy:
       matrix:
         arch: [arm64, x86_64]
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode 26
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xc/Contents/Developer"
+          swift --version
       - uses: actions/download-artifact@v4
         with:
           name: vendor-libtorrent
@@ -71,11 +86,16 @@ jobs:
 
   release:
     needs: build
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode 26
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xc/Contents/Developer"
+          swift --version
       - uses: actions/download-artifact@v4
         with:
           path: bins
