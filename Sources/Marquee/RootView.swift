@@ -97,6 +97,8 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .softScrollEdge()
         .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 300)
         .accessibilityLabel(Text("Sidebar"))
     }
@@ -104,6 +106,28 @@ struct SidebarView: View {
     private func row(_ item: SidebarItem) -> some View {
         Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
             .tag(item)
+    }
+}
+
+extension View {
+    /// Screens that open with a full-bleed hero let the artwork run under the toolbar with no edge effect.
+    @ViewBuilder
+    func heroScrollEdge() -> some View {
+        if #available(macOS 26, *) {
+            toolbarBackground(.hidden, for: .windowToolbar).scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            toolbarBackground(.hidden, for: .windowToolbar)
+        }
+    }
+
+    /// Keeps the sidebar one continuous glass surface instead of a separate title-bar band.
+    @ViewBuilder
+    func softScrollEdge() -> some View {
+        if #available(macOS 26, *) {
+            scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            self
+        }
     }
 }
 

@@ -46,7 +46,7 @@ struct HomeScreen: View {
             .padding(.bottom, Tokens.Spacing.xl)
         }
         .ignoresSafeArea(.container, edges: .top)
-        .toolbarBackground(.hidden, for: .windowToolbar)
+        .heroScrollEdge()
         .navigationTitle(Text("Home"))
         .toolbar(removing: .title)
         .followsLiveProgress()

@@ -23,7 +23,7 @@ struct TitleDetailScreen: View {
             }
         }
         .navigationTitle(Text(verbatim: detail?.item.title ?? ""))
-        .toolbarBackground(.hidden, for: .windowToolbar)
+        .heroScrollEdge()
         .toolbar(removing: .title)
         .followsLiveProgress()
         .task(id: id) {

@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Full-bleed backdrop with a scrim into the window background and a glass overlay carrying the title,
-/// metadata and primary actions. Parallax is skipped under Reduce Motion.
+/// Full-bleed backdrop with the title, metadata and primary actions set directly on the artwork over a
+/// legibility scrim. On macOS 26 the artwork extends under the sidebar glass. Parallax is skipped under
+/// Reduce Motion.
 public struct HeroHeader<Actions: View>: View {
     private let title: String
     private let eyebrow: String?
@@ -14,6 +15,7 @@ public struct HeroHeader<Actions: View>: View {
 
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 40
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(
         title: String, eyebrow: String? = nil, metadata: [String] = [], quality: Quality? = nil,
@@ -41,9 +43,10 @@ public struct HeroHeader<Actions: View>: View {
                     .frame(width: geo.size.width, height: height, alignment: .bottom)
                     .clipped()
                     .overlay(scrim)
+                    .extendingUnderSidebar()
                 panel
                     .padding(.horizontal, Tokens.Spacing.gutter)
-                    .padding(.bottom, Tokens.Spacing.l)
+                    .padding(.bottom, Tokens.Spacing.xl)
             }
         }
         .frame(height: height)
@@ -52,12 +55,20 @@ public struct HeroHeader<Actions: View>: View {
 
     private var scrim: some View {
         ZStack {
-            LinearGradient(colors: [.black.opacity(0.35), .clear], startPoint: .top, endPoint: .center)
+            LinearGradient(colors: [.black.opacity(0.3), .clear], startPoint: .top, endPoint: .init(x: 0.5, y: 0.35))
             LinearGradient(
-                stops: [
-                    .init(color: .clear, location: 0.55),
-                    .init(color: Color(nsColor: .windowBackgroundColor), location: 1),
-                ],
+                stops: [.init(color: .black.opacity(0.6), location: 0), .init(color: .clear, location: 0.65)],
+                startPoint: .leading, endPoint: .trailing
+            )
+            // Dark mode melts into the window; light mode keeps a clean edge (a dark-to-white fade smears).
+            LinearGradient(
+                stops: colorScheme == .dark
+                    ? [
+                        .init(color: .clear, location: 0.35),
+                        .init(color: .black.opacity(0.55), location: 0.85),
+                        .init(color: Color(nsColor: .windowBackgroundColor), location: 1),
+                    ]
+                    : [.init(color: .clear, location: 0.35), .init(color: .black.opacity(0.6), location: 1)],
                 startPoint: .top, endPoint: .bottom
             )
         }
@@ -65,23 +76,23 @@ public struct HeroHeader<Actions: View>: View {
     }
 
     private var panel: some View {
-        VStack(alignment: .leading, spacing: Tokens.Spacing.s + 2) {
+        VStack(alignment: .leading, spacing: Tokens.Spacing.s) {
             if let eyebrow {
-                Text(verbatim: eyebrow.uppercased())
-                    .font(.caption.weight(.semibold))
-                    .tracking(1.2)
-                    .foregroundStyle(.white.opacity(0.7))
+                Text(verbatim: eyebrow)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.75))
             }
             Text(verbatim: title)
                 .font(.system(size: titleSize, weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
+                .shadow(color: .black.opacity(0.35), radius: 12, y: 2)
                 .accessibilityAddTraits(.isHeader)
             if !metadata.isEmpty || quality != nil {
                 HStack(spacing: Tokens.Spacing.s) {
                     Text(verbatim: metadata.joined(separator: "  ·  "))
                         .font(Tokens.Typography.metadata)
-                        .foregroundStyle(.white.opacity(0.78))
+                        .foregroundStyle(.white.opacity(0.8))
                     if let quality { QualityBadge(quality) }
                 }
             }
@@ -93,11 +104,20 @@ public struct HeroHeader<Actions: View>: View {
                     .frame(maxWidth: 560, alignment: .leading)
             }
             HStack(spacing: Tokens.Spacing.s + 2) { actions }
-                .padding(.top, 4)
+                .padding(.top, Tokens.Spacing.s)
         }
-        .padding(Tokens.Spacing.l)
-        .frame(maxWidth: 640, alignment: .leading)
-        .marqueeGlass(in: RoundedRectangle(cornerRadius: Tokens.Radius.xl, style: .continuous))
+        .frame(maxWidth: 620, alignment: .leading)
         .environment(\.colorScheme, .dark)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func extendingUnderSidebar() -> some View {
+        if #available(macOS 26, *) {
+            backgroundExtensionEffect()
+        } else {
+            self
+        }
     }
 }
