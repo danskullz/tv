@@ -7,11 +7,16 @@ struct MarqueeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(model)
-                .environment(model.tracker)
-                .environment(model.lifecycle)
-                .frame(minWidth: 900, minHeight: 600)
+            if let url = DebugPlayArgument.url {
+                // Developer hook: `Marquee --play <path-or-url>` (see PlayerDebugView.swift).
+                PlayerDebugView(url: url)
+            } else {
+                RootView()
+                    .environment(model)
+                    .environment(model.tracker)
+                    .environment(model.lifecycle)
+                    .frame(minWidth: 900, minHeight: 600)
+            }
         }
         .defaultSize(width: 1320, height: 840)
         .windowToolbarStyle(.unified)

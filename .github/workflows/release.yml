@@ -44,8 +44,38 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
+  # Builds the LGPL, universal libmpv + FFmpeg dylibs (scripts/build-mpv.sh) once. The finished
+  # output is cached on the script's key (versions + script hash), so it only rebuilds when the
+  # script changes. Build tools only from Homebrew; nothing from Homebrew is linked.
+  deps-mpv:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xc/Contents/Developer"
+          swift --version
+      - name: Compute cache key
+        id: key
+        run: echo "key=$(scripts/build-mpv.sh --print-key)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: .deps-cache/mpv-out
+          key: mpv-deps-${{ steps.key.outputs.key }}
+      - name: Build libmpv + FFmpeg (skipped on cache hit)
+        run: |
+          for t in meson ninja nasm pkg-config; do command -v $t >/dev/null || brew install $t; done
+          scripts/build-mpv.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vendor-mpv
+          path: Vendor/mpv
+          include-hidden-files: true
+          retention-days: 1
+
   test:
-    needs: deps
+    needs: [deps, deps-mpv]
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +88,10 @@ jobs:
         with:
           name: vendor-libtorrent
           path: Vendor/libtorrent
+      - uses: actions/download-artifact@v4
+        with:
+          name: vendor-mpv
+          path: Vendor/mpv
       - run: swift test
 
   build:
@@ -85,10 +119,11 @@ jobs:
           path: .build/${{ matrix.arch }}-apple-macosx/release/Marquee
 
   release:
-    needs: build
+    needs: [build, deps-mpv]
     runs-on: macos-26
     env:
       VERSION: 0.1.${{ github.run_number }}
+      REQUIRE_FRAMEWORKS: 1
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode 26
@@ -98,7 +133,12 @@ jobs:
           swift --version
       - uses: actions/download-artifact@v4
         with:
+          name: vendor-mpv
+          path: Vendor/mpv
+      - uses: actions/download-artifact@v4
+        with:
           path: bins
+          pattern: bin-*
       - name: Package arm64, x86_64 and universal
         run: |
           mkdir -p dist
@@ -106,7 +146,8 @@ jobs:
           for v in arm64 x86_64 universal; do
             bin="bins/bin-$v/Marquee"; [ "$v" = universal ] && bin="bins/Marquee-universal"
             chmod +x "$bin"
-            scripts/bundle.sh "$bin" "dist/Marquee-$v/Marquee.app" "$VERSION"
+            arch="$v"; [ "$v" = universal ] && arch=""
+            BUNDLE_ARCH="$arch" scripts/bundle.sh "$bin" "dist/Marquee-$v/Marquee.app" "$VERSION"
             ditto -c -k --keepParent "dist/Marquee-$v/Marquee.app" "dist/Marquee-$VERSION-macos-$v.zip"
           done
       - name: Publish release

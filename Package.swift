@@ -16,6 +16,7 @@ let package = Package(
         .executable(name: "Marquee", targets: ["Marquee"]),
         .library(name: "MarqueeCore", targets: ["MarqueeCore"]),
         .library(name: "MarqueeUI", targets: ["MarqueeUI"]),
+        .library(name: "MarqueePlayer", targets: ["MarqueePlayer"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
@@ -26,7 +27,17 @@ let package = Package(
             dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
         ),
         .target(name: "MarqueeUI", dependencies: ["MarqueeCore"]),
-        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine", "MarqueeEngine"]),
+        // libmpv headers only (ISC). The LGPL libmpv dylib is built by scripts/build-mpv.sh into
+        // Vendor/mpv and dlopen'd at runtime from Contents/Frameworks; nothing links against it.
+        .target(name: "CMpv"),
+        .target(
+            name: "MarqueePlayer",
+            dependencies: ["CMpv"],
+            // OpenGL is deprecated but is the only render API libmpv offers on macOS; silence the noise.
+            swiftSettings: [.unsafeFlags(["-Xcc", "-DGL_SILENCE_DEPRECATION"])],
+            linkerSettings: [.linkedFramework("OpenGL"), .linkedFramework("QuartzCore")]
+        ),
+        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine", "MarqueeEngine", "MarqueePlayer"]),
         .testTarget(
             name: "MarqueeCoreTests",
             dependencies: ["MarqueeCore"],
@@ -59,6 +70,7 @@ let package = Package(
         // Streaming critical path: joins the torrent engine to the stream server and the pack planner.
         .target(name: "MarqueeEngine", dependencies: ["MarqueeCore", "TorrentEngine"]),
         .testTarget(name: "MarqueeEngineTests", dependencies: ["MarqueeEngine", "MarqueeCore", "TorrentEngine"]),
+        .testTarget(name: "MarqueePlayerTests", dependencies: ["MarqueePlayer"]),
     ],
     cxxLanguageStandard: .cxx17
 )

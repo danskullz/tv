@@ -1,0 +1,8 @@
+// libmpv client + render API headers (ISC-licensed, copied verbatim from mpv 0.41.0).
+// libmpv itself is LGPL-2.1+; it is built by scripts/build-mpv.sh and dlopen'd from Contents/Frameworks.
+module CMpv [system] {
+    header "mpv/client.h"
+    header "mpv/render.h"
+    header "mpv/render_gl.h"
+    export *
+}
