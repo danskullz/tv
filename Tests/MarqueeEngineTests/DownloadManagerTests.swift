@@ -60,6 +60,81 @@ import TorrentEngine
         #expect(try await health.active().map(\.code) == ["diskSpaceLow"])
     }
 
+    @Test func refusesSpaceArithmeticOverflow() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let manager = DownloadManager(
+            engine: FakeManagedTorrentEngine(), torrents: repository,
+            health: GRDBHealthIssueRepository(database),
+            configuration: .init(reservedFreeSpaceBytes: 1), freeSpace: { _ in Int64.max })
+        let request = makeDownloadRequest(hash: String(repeating: "9", count: 40), title: "Overflow", size: .max)
+        do {
+            _ = try await manager.add(request)
+            Issue.record("Expected overflow to refuse the grab even with the maximum reported free space")
+        } catch let error as DownloadManagerError {
+            #expect(error == .insufficientSpace(required: .max, available: .max))
+        }
+        #expect(try await repository.torrent(infoHash: request.release.infoHash!) == nil)
+    }
+
+    @Test func initialBatterySamplePausesNewDownloadsUntilACReturns() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let power = FakePowerSourceMonitor(initialOnBattery: true)
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: GRDBHealthIssueRepository(database),
+            powerSource: power,
+            configuration: .init(reservedFreeSpaceBytes: 0, pauseOnBattery: true),
+            freeSpace: { _ in Int64.max })
+        try await manager.start()
+        let request = makeDownloadRequest(hash: String(repeating: "a", count: 40), title: "Battery")
+        try await addTitle(for: request, to: database)
+        _ = try await manager.add(request)
+        let onBattery = try #require(await repository.torrent(infoHash: request.release.infoHash!))
+        #expect(onBattery.pausedForBattery)
+        #expect(onBattery.state == .paused)
+        #expect(engine.addedHashes.isEmpty)
+
+        await power.emit(false)
+        let onAC = try #require(await repository.torrent(infoHash: request.release.infoHash!))
+        #expect(!onAC.pausedForBattery)
+        #expect(onAC.state == .downloading)
+        #expect(engine.addedHashes == [request.release.infoHash!])
+        await manager.stop()
+        #expect(await power.stopCount == 1)
+    }
+
+    @Test func batteryEventsPauseAndResumeActiveDownloadsAndStopObserver() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let power = FakePowerSourceMonitor(initialOnBattery: false)
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: GRDBHealthIssueRepository(database),
+            powerSource: power,
+            configuration: .init(reservedFreeSpaceBytes: 0, pauseOnBattery: true),
+            freeSpace: { _ in Int64.max })
+        try await manager.start()
+        let request = makeDownloadRequest(hash: String(repeating: "b", count: 40), title: "Power changes")
+        try await addTitle(for: request, to: database)
+        _ = try await manager.add(request)
+
+        await power.emit(true)
+        let paused = try #require(await repository.torrent(infoHash: request.release.infoHash!))
+        #expect(paused.state == .paused)
+        #expect(paused.pausedForBattery)
+        await power.emit(false)
+        let resumed = try #require(await repository.torrent(infoHash: request.release.infoHash!))
+        #expect(resumed.state == .downloading)
+        #expect(!resumed.pausedForBattery)
+
+        await manager.stop()
+        #expect(await power.stopCount == 1)
+        await power.emit(true)
+        #expect(try await repository.torrent(infoHash: request.release.infoHash!)?.state == .downloading)
+    }
+
     @Test func retriesAnErroredTorrentFromItsStoredPayload() async throws {
         let database = try AppDatabase.inMemory()
         let repository = GRDBTorrentRepository(database)
@@ -217,6 +292,31 @@ private func makeDownloadRequest(hash: String, title: String, size: Int64 = 20) 
 private func addTitle(for request: DownloadRequest, to database: AppDatabase) async throws {
     try await GRDBLibraryRepository(database).add(
         Title(id: request.titleId, kind: .movie, title: request.release.title), seasons: [])
+}
+
+private actor FakePowerSourceMonitor: PowerSourceMonitoring {
+    private var onBattery: Bool
+    private var handler: Handler?
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+
+    init(initialOnBattery: Bool) { onBattery = initialOnBattery }
+
+    func start(onChange: @escaping Handler) async throws -> Bool {
+        startCount += 1
+        handler = onChange
+        return onBattery
+    }
+
+    func stop() async {
+        stopCount += 1
+        handler = nil
+    }
+
+    func emit(_ value: Bool) async {
+        onBattery = value
+        if let handler { await handler(value) }
+    }
 }
 
 private final class FakeManagedTorrentEngine: ManagedTorrentEngine, @unchecked Sendable {

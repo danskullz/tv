@@ -314,7 +314,8 @@ final class AppServices {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let manager = DownloadManager(
             engine: SessionDownloadEngine(session), torrents: torrents, health: health,
-            blocklist: blocklist, sleepAssertion: IOPMSleepAssertion())
+            blocklist: blocklist, sleepAssertion: IOPMSleepAssertion(),
+            powerSource: IOKitPowerSourceMonitor())
         try await manager.start()
         downloads = manager
         return manager

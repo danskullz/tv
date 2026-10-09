@@ -136,6 +136,13 @@ public protocol DownloadSleepAssertion: Sendable {
     func setPreventSleep(_ prevent: Bool)
 }
 
+public protocol PowerSourceMonitoring: Sendable {
+    typealias Handler = @Sendable (Bool) async -> Void
+    /// Installs change notifications and returns the sampled current source state.
+    func start(onChange: @escaping Handler) async throws -> Bool
+    func stop() async
+}
+
 public struct NoopDownloadSleepAssertion: DownloadSleepAssertion {
     public init() {}
     public func setPreventSleep(_ prevent: Bool) {}
@@ -143,6 +150,7 @@ public struct NoopDownloadSleepAssertion: DownloadSleepAssertion {
 
 #if os(macOS)
 import IOKit.pwr_mgt
+import IOKit.ps
 
 public final class IOPMSleepAssertion: DownloadSleepAssertion, @unchecked Sendable {
     private let lock = NSLock()
@@ -165,6 +173,72 @@ public final class IOPMSleepAssertion: DownloadSleepAssertion, @unchecked Sendab
 
     deinit { setPreventSleep(false) }
 }
+
+private let iokitPowerSourceCallback: IOPowerSourceCallbackType = { context in
+    guard let context else { return }
+    Unmanaged<IOKitPowerSourceMonitor>.fromOpaque(context).takeUnretainedValue().powerSourceChanged()
+}
+
+/// Reports AC/battery transitions from IOKit. The main run loop owns the notification source;
+/// there is no timer or periodic sampling.
+public final class IOKitPowerSourceMonitor: PowerSourceMonitoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var source: CFRunLoopSource?
+    private var handler: PowerSourceMonitoring.Handler?
+
+    public init() {}
+    deinit { detach() }
+
+    public func start(onChange: @escaping PowerSourceMonitoring.Handler) async throws -> Bool {
+        try attach(onChange)
+        return Self.isOnBattery()
+    }
+
+    public func stop() async { detach() }
+
+    private func attach(_ onChange: @escaping PowerSourceMonitoring.Handler) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        guard source == nil else {
+            handler = onChange
+            return
+        }
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        guard let source = IOPSNotificationCreateRunLoopSource(iokitPowerSourceCallback, context)?.takeRetainedValue() else {
+            throw PowerSourceMonitorError.unavailable
+        }
+        handler = onChange
+        self.source = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+    }
+
+    private func detach() {
+        lock.lock()
+        let source = self.source
+        self.source = nil
+        handler = nil
+        lock.unlock()
+        if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
+    }
+
+    fileprivate func powerSourceChanged() {
+        let onBattery = Self.isOnBattery()
+        lock.lock()
+        let handler = self.handler
+        lock.unlock()
+        if let handler { Task { await handler(onBattery) } }
+    }
+
+    private static func isOnBattery() -> Bool {
+        let snapshot = IOPSCopyPowerSourcesInfo().takeRetainedValue()
+        guard let type = IOPSGetProvidingPowerSourceType(snapshot)?.takeUnretainedValue() else { return false }
+        return CFEqual(type, kIOPMBatteryPowerKey as CFString)
+    }
+}
+
+public enum PowerSourceMonitorError: Error, Sendable {
+    case unavailable
+}
 #endif
 
 public enum DownloadManagerError: Error, Sendable, Equatable {
@@ -185,10 +259,12 @@ public actor DownloadManager {
     private let blocklist: (any BlocklistRepository)?
     private let completionSink: any DownloadCompletionSink
     private let sleepAssertion: any DownloadSleepAssertion
+    private let powerSource: (any PowerSourceMonitoring)?
     private let freeSpace: FreeSpace
     private var configuration: DownloadManagerConfiguration
     private var eventsTask: Task<Void, Never>?
     private var onBattery = false
+    private var powerEventVersion: UInt64 = 0
     private var stopped = false
     private var loadedHashes = Set<String>()
 
@@ -197,6 +273,7 @@ public actor DownloadManager {
         blocklist: (any BlocklistRepository)? = nil,
         completionSink: any DownloadCompletionSink = NoopDownloadCompletionSink(),
         sleepAssertion: any DownloadSleepAssertion = NoopDownloadSleepAssertion(),
+        powerSource: (any PowerSourceMonitoring)? = nil,
         configuration: DownloadManagerConfiguration = .init(), freeSpace: FreeSpace? = nil
     ) {
         self.engine = engine
@@ -205,6 +282,7 @@ public actor DownloadManager {
         self.blocklist = blocklist
         self.completionSink = completionSink
         self.sleepAssertion = sleepAssertion
+        self.powerSource = powerSource
         self.configuration = configuration
         self.freeSpace = freeSpace ?? { Self.systemFreeSpace($0) }
     }
@@ -215,6 +293,13 @@ public actor DownloadManager {
         stopped = false
         try await engine.setGlobalDownloadLimit(configuration.globalDownloadLimit)
         try await engine.setGlobalUploadLimit(configuration.globalUploadLimit)
+        if let powerSource {
+            let startVersion = powerEventVersion
+            let initialOnBattery = try await powerSource.start { [weak self] value in
+                try? await self?.setOnBattery(value)
+            }
+            if powerEventVersion == startVersion { onBattery = initialOnBattery }
+        }
         let stream = engine.events()
         eventsTask = Task { [weak self] in
             for await event in stream {
@@ -222,14 +307,21 @@ public actor DownloadManager {
                 await self?.handle(event)
             }
         }
-        try await restore()
+        do {
+            try await restore()
+        } catch {
+            eventsTask?.cancel()
+            eventsTask = nil
+            await powerSource?.stop()
+            throw error
+        }
     }
 
     public func configure(_ configuration: DownloadManagerConfiguration) async throws {
         self.configuration = configuration
         try await engine.setGlobalDownloadLimit(configuration.globalDownloadLimit)
         try await engine.setGlobalUploadLimit(configuration.globalUploadLimit)
-        try await reconcileQueue()
+        try await applyBatteryPolicy()
     }
 
     /// Refuses insufficient-space grabs before creating a torrent or payload row.
@@ -336,15 +428,23 @@ public actor DownloadManager {
 
     /// Called by the platform's power-source notification; no polling is used.
     public func setOnBattery(_ value: Bool) async throws {
+        powerEventVersion &+= 1
         onBattery = value
-        guard configuration.pauseOnBattery else { return }
+        guard !stopped else { return }
+        try await applyBatteryPolicy()
+    }
+
+    private func applyBatteryPolicy() async throws {
         for var torrent in try await torrents.managedDownloads() where !torrent.pausedByUser {
-            if value && (torrent.state == .downloading || torrent.state == .seeding || torrent.state == .checking) {
+            if configuration.pauseOnBattery && onBattery
+                && (torrent.state == .queued || torrent.state == .downloading
+                    || torrent.state == .seeding || torrent.state == .checking)
+            {
                 if loadedHashes.contains(torrent.infoHash) { try await engine.pause(TorrentID(hex: torrent.infoHash)) }
                 torrent.state = .paused
                 torrent.pausedForBattery = true
                 try await torrents.update(torrent)
-            } else if !value, torrent.pausedForBattery {
+            } else if (!configuration.pauseOnBattery || !onBattery), torrent.pausedForBattery {
                 torrent.pausedForBattery = false
                 torrent.state = .queued
                 try await torrents.update(torrent)
@@ -399,6 +499,7 @@ public actor DownloadManager {
         stopped = true
         eventsTask?.cancel()
         eventsTask = nil
+        await powerSource?.stop()
         await saveResumeData()
         sleepAssertion.setPreventSleep(false)
     }
@@ -469,6 +570,12 @@ public actor DownloadManager {
         var seedsInUse = activeSeeds
         for var torrent in all {
             guard !torrent.pausedByUser, !torrent.pausedForBattery else { continue }
+            if configuration.pauseOnBattery, onBattery, torrent.state == .queued {
+                torrent.state = .paused
+                torrent.pausedForBattery = true
+                try await torrents.update(torrent)
+                continue
+            }
             if torrent.state == .queued {
                 if torrent.progress >= 1 {
                     guard seedsInUse < configuration.maximumActiveSeeds else { continue }
@@ -530,9 +637,10 @@ public actor DownloadManager {
     }
 
     private func enforceFreeSpace(size: Int64?, at path: URL, titleID: UUID, title: String) async throws {
-        guard let available = freeSpace(path), let size else { return }
-        let required = size + configuration.reservedFreeSpaceBytes
-        guard required > available else { return }
+        guard let available = freeSpace(path), let size, size >= 0 else { return }
+        let (sum, overflow) = size.addingReportingOverflow(configuration.reservedFreeSpaceBytes)
+        let required = overflow ? Int64.max : sum
+        guard overflow || required > available else { return }
         _ = try? await health.report(
             code: "diskSpaceLow", severity: .error,
             message: "Not enough free space for \(title). Need \(required) bytes, have \(available).",
