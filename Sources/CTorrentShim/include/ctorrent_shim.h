@@ -142,6 +142,10 @@ int mq_torrent_start_download(mq_session *s, const char *id); /* leaves MQ_ADD_H
 int mq_torrent_remove(mq_session *s, const char *id, int32_t delete_files);
 /* Direct peer connection ("host" is an IP literal), used for tests and manual peers. */
 int mq_torrent_connect_peer(mq_session *s, const char *id, const char *host, uint16_t port);
+/* Per-torrent rate limits in bytes/second (0 = unlimited). Unlike the session-wide limits these also
+ * apply to loopback/LAN peers, which libtorrent 2.x exempts from the global limits. */
+int mq_torrent_set_upload_limit(mq_session *s, const char *id, int32_t bytes_per_second);
+int mq_torrent_set_download_limit(mq_session *s, const char *id, int32_t bytes_per_second);
 /* Asynchronously produces MQ_EVENT_RESUME_DATA (or ..._FAILED) for this torrent. */
 int mq_torrent_request_resume_data(mq_session *s, const char *id);
 
@@ -216,6 +220,11 @@ int mq_torrent_set_piece_priority(mq_session *s, const char *id, int32_t piece, 
 int mq_torrent_set_piece_deadline(mq_session *s, const char *id, int32_t piece,
                                   int32_t deadline_ms);
 int mq_torrent_clear_piece_deadline(mq_session *s, const char *id, int32_t piece);
+/* Batched forms of the two calls above: one lookup for the whole batch instead of one per piece, which
+ * matters when a seek replaces hundreds of deadlines. Out-of-range pieces are skipped. */
+int mq_torrent_set_piece_deadlines(mq_session *s, const char *id, const int32_t *pieces,
+                                   const int32_t *deadlines_ms, size_t count);
+int mq_torrent_clear_piece_deadlines(mq_session *s, const char *id, const int32_t *pieces, size_t count);
 int mq_torrent_clear_all_piece_deadlines(mq_session *s, const char *id);
 /* Asynchronously reads a complete piece -> MQ_EVENT_PIECE_READ / ..._FAILED. */
 int mq_torrent_read_piece(mq_session *s, const char *id, int32_t piece);

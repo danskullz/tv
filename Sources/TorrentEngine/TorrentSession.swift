@@ -108,6 +108,16 @@ public actor TorrentSession {
         try check(mq_torrent_remove(pointer(), id.hex, deleteFiles ? 1 : 0))
     }
 
+    /// Per-torrent rate limits in bytes per second (0 = unlimited). These also apply to loopback and
+    /// LAN peers, which the session-wide limits exempt; tests use them to throttle a local swarm.
+    public func setUploadLimit(_ id: TorrentID, bytesPerSecond: Int) throws {
+        try check(mq_torrent_set_upload_limit(pointer(), id.hex, Int32(clamping: bytesPerSecond)))
+    }
+
+    public func setDownloadLimit(_ id: TorrentID, bytesPerSecond: Int) throws {
+        try check(mq_torrent_set_download_limit(pointer(), id.hex, Int32(clamping: bytesPerSecond)))
+    }
+
     /// Connects to a peer directly (IP literal), bypassing trackers/DHT.
     public func connectPeer(_ id: TorrentID, host: String, port: Int) throws {
         try check(mq_torrent_connect_peer(pointer(), id.hex, host, UInt16(clamping: port)))
@@ -220,6 +230,24 @@ public actor TorrentSession {
 
     public func clearPieceDeadline(_ id: TorrentID, piece: Int) throws {
         try check(mq_torrent_clear_piece_deadline(pointer(), id.hex, Int32(piece)))
+    }
+
+    /// Sets many deadlines with one engine lookup: `deadlines[i].piece` within `deadlines[i].deadline`.
+    /// Prefer this over a loop of `setPieceDeadline` when replacing a whole window (a seek).
+    public func setPieceDeadlines(_ id: TorrentID, _ deadlines: [(piece: Int, deadline: Duration)]) throws {
+        guard !deadlines.isEmpty else { return }
+        let pieces = deadlines.map { Int32(clamping: $0.piece) }
+        let millis = deadlines.map { d -> Int32 in
+            let c = d.deadline.components
+            return Int32(clamping: c.seconds * 1000 + c.attoseconds / 1_000_000_000_000_000)
+        }
+        try check(mq_torrent_set_piece_deadlines(pointer(), id.hex, pieces, millis, pieces.count))
+    }
+
+    public func clearPieceDeadlines(_ id: TorrentID, pieces: [Int]) throws {
+        guard !pieces.isEmpty else { return }
+        let raw = pieces.map { Int32(clamping: $0) }
+        try check(mq_torrent_clear_piece_deadlines(pointer(), id.hex, raw, raw.count))
     }
 
     public func clearAllPieceDeadlines(_ id: TorrentID) throws {

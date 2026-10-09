@@ -26,7 +26,7 @@ let package = Package(
             dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
         ),
         .target(name: "MarqueeUI", dependencies: ["MarqueeCore"]),
-        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine"]),
+        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine", "MarqueeEngine"]),
         .testTarget(
             name: "MarqueeCoreTests",
             dependencies: ["MarqueeCore"],
@@ -55,6 +55,10 @@ let package = Package(
         ),
         .target(name: "TorrentEngine", dependencies: ["CTorrentShim"]),
         .testTarget(name: "TorrentEngineTests", dependencies: ["TorrentEngine"]),
+
+        // Streaming critical path: joins the torrent engine to the stream server and the pack planner.
+        .target(name: "MarqueeEngine", dependencies: ["MarqueeCore", "TorrentEngine"]),
+        .testTarget(name: "MarqueeEngineTests", dependencies: ["MarqueeEngine", "MarqueeCore", "TorrentEngine"]),
     ],
     cxxLanguageStandard: .cxx17
 )

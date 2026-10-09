@@ -780,10 +780,57 @@ int mq_torrent_clear_piece_deadline(mq_session* s, char const* id, int32_t piece
   });
 }
 
+int mq_torrent_set_piece_deadlines(mq_session* s, char const* id, int32_t const* pieces,
+                                   int32_t const* deadlines_ms, size_t count) {
+  return guarded(nullptr, [&]() -> int {
+    if (count && (!pieces || !deadlines_ms)) return static_cast<int>(MQ_ERR_INVALID);
+    MQ_REQUIRE_TORRENT(h, s, id);
+    auto ti = h.torrent_file();
+    if (!ti) return static_cast<int>(MQ_ERR_NO_METADATA);
+    int const num = ti->num_pieces();
+    for (size_t i = 0; i < count; ++i) {
+      if (pieces[i] < 0 || pieces[i] >= num) continue;
+      h.set_piece_deadline(lt::piece_index_t(pieces[i]), deadlines_ms[i] < 0 ? 0 : deadlines_ms[i]);
+    }
+    return static_cast<int>(MQ_OK);
+  });
+}
+
+int mq_torrent_clear_piece_deadlines(mq_session* s, char const* id, int32_t const* pieces, size_t count) {
+  return guarded(nullptr, [&]() -> int {
+    if (count && !pieces) return static_cast<int>(MQ_ERR_INVALID);
+    MQ_REQUIRE_TORRENT(h, s, id);
+    auto ti = h.torrent_file();
+    if (!ti) return static_cast<int>(MQ_ERR_NO_METADATA);
+    int const num = ti->num_pieces();
+    for (size_t i = 0; i < count; ++i) {
+      if (pieces[i] < 0 || pieces[i] >= num) continue;
+      h.reset_piece_deadline(lt::piece_index_t(pieces[i]));
+    }
+    return static_cast<int>(MQ_OK);
+  });
+}
+
 int mq_torrent_clear_all_piece_deadlines(mq_session* s, char const* id) {
   return guarded(nullptr, [&]() -> int {
     MQ_REQUIRE_TORRENT(h, s, id);
     h.clear_piece_deadlines();
+    return static_cast<int>(MQ_OK);
+  });
+}
+
+int mq_torrent_set_upload_limit(mq_session* s, char const* id, int32_t bytes_per_second) {
+  return guarded(nullptr, [&]() -> int {
+    MQ_REQUIRE_TORRENT(h, s, id);
+    h.set_upload_limit(bytes_per_second < 0 ? 0 : bytes_per_second);
+    return static_cast<int>(MQ_OK);
+  });
+}
+
+int mq_torrent_set_download_limit(mq_session* s, char const* id, int32_t bytes_per_second) {
+  return guarded(nullptr, [&]() -> int {
+    MQ_REQUIRE_TORRENT(h, s, id);
+    h.set_download_limit(bytes_per_second < 0 ? 0 : bytes_per_second);
     return static_cast<int>(MQ_OK);
   });
 }
