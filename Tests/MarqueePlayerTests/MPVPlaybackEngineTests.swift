@@ -51,9 +51,10 @@ struct MPVPlaybackEngineTests {
 
         #expect(await playerAwait(engine) { $0.state == .playing })
         #expect(await playerAwait(engine) { ($0.duration ?? 0) > 2.5 })
+        // mpv publishes `seekable` a beat after playback starts; wait for it rather than racing it.
+        #expect(await playerAwait(engine) { $0.isSeekable })
         let snapshot = engine.snapshot
         #expect(abs((snapshot.duration ?? 0) - PlayerTestClip.duration) < 0.3)
-        #expect(snapshot.isSeekable)
 
         // Time advances on its own.
         let start = snapshot.position

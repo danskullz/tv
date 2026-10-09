@@ -13,7 +13,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 
 ## Wave 2 — streaming critical path
 - ☑ Season-pack file→episode mapper + ordered streaming plan (priority gradient, cross-file deadlines) — `Packs`
-- ◐ Quality engine: profiles, custom formats, scoring, streamability score, "why this release" — `Quality`
+- ☑ Quality engine: profiles, custom formats, scoring, streamability score, "why this release" — `Quality`
 - ☑ libmpv LGPL universal build + player view (`PlaybackEngine` protocol; OpenGL render API for now)
 - ☑ Torrent engine ↔ stream server bridge (piece deadlines follow playhead) — `MarqueeEngine`
 - ☐ Helper daemon (`SMAppService` login item) + XPC
@@ -36,3 +36,4 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - Engine (priority): time-to-first-byte is ~5–6 s on loopback because libtorrent issues deadline requests on its tick; implement a progressive deadline window (head + small window first, extend as pieces land) and consider a shorter tick while streaming. Investigate the one unreproduced seek read that returned mismatched bytes (data integrity). Archive episodes throw `archiveStreamingUnsupported`; `fileCompleted` not emitted for already-complete files at add; re-adding an existing hash unhandled.
 - Player: Metal/EDR path (libmpv render API is OpenGL-only; needs a libplacebo/Metal presenter fed by VideoToolbox IOSurfaces) — HDR is tone-mapped to SDR meanwhile; intermittent video-thread stall seen twice with terminal logging on (unexplained); arm64 slice built but never run; `mpv-configuration` embeds the build path.
 - Release/legal (before public release): hardened-runtime library validation vs LGPL relinking (recommend documenting re-sign over disabling library validation); mirror the 8 LGPL source tarballs as release assets; EULA reverse-engineering clause; Acknowledgements screen (FreeType credit). See docs/licenses.md.
+- Quality: persisting `QualityProfileConfig` flattens quality groups (needs a JSON column/repository — data loss otherwise); general-regex custom formats cost ~1.5–3 µs/candidate each (500 candidates ~5–7 ms) — add literal prefilters; stored vs compressed RAR needs torrent metadata; streamability weights need tuning against real swarms; parser doesn't flag `-Sample` suffix.
