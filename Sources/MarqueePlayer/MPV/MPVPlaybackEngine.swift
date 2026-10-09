@@ -208,6 +208,8 @@ public final class MPVPlaybackEngine: PlaybackEngine, @unchecked Sendable {
         _ = api.setPropertyString(h, name, value)
     }
 
+    func setPropertyValue(_ name: String, _ value: String) { setProperty(name, value) }
+
     // MARK: Rendering hook
 
     /// Creates the libmpv render context for an OpenGL surface. The caller's GL context must be current.

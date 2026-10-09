@@ -8,6 +8,9 @@ public final class PlaybackViewModel {
     public private(set) var snapshot: PlaybackSnapshot
     public let engine: any PlaybackEngine
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Called after the snapshot has been updated, for side effects that must not live in a view body
+    /// (progress reports, Now Playing, sleep assertions).
+    @ObservationIgnored public var eventHandler: (@MainActor (PlaybackEvent) -> Void)?
 
     public init(engine: any PlaybackEngine) {
         self.engine = engine
@@ -17,6 +20,7 @@ public final class PlaybackViewModel {
             for await event in stream {
                 guard let self else { return }
                 self.apply(event)
+                self.eventHandler?(event)
             }
         }
     }

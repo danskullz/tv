@@ -8,8 +8,8 @@ struct MarqueeApp: App {
     var body: some Scene {
         WindowGroup {
             if let url = DebugPlayArgument.url {
-                // Developer hook: `Marquee --play <path-or-url>` (see PlayerDebugView.swift).
-                PlayerDebugView(url: url)
+                // Developer hook: `Marquee --play <path-or-url>` (see PlayerDebugLauncher.swift).
+                PlayerDebugLauncher(url: url)
             } else {
                 RootView()
                     .environment(model)
