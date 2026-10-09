@@ -88,6 +88,50 @@ import TorrentEngine
         await manager.stop()
     }
 
+    /// Piece-progress and metadata events carry no queue information: a burst of them must not
+    /// pause, resume, remove or start anything. Completion still advances the queue.
+    @Test func nonQueueEventsDoNotTouchTheEngineOrTheQueue() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let health = GRDBHealthIssueRepository(database)
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: health,
+            configuration: .init(maximumActiveDownloads: 1, maximumActiveSeeds: 1, reservedFreeSpaceBytes: 0),
+            freeSpace: { _ in Int64.max })
+        try await manager.start()
+        let firstHash = String(repeating: "4", count: 40)
+        let secondHash = String(repeating: "5", count: 40)
+        let first = makeDownloadRequest(hash: firstHash, title: "First")
+        let second = makeDownloadRequest(hash: secondHash, title: "Second")
+        try await addTitle(for: first, to: database)
+        try await addTitle(for: second, to: database)
+        _ = try await manager.add(first)
+        _ = try await manager.add(second)
+        #expect(engine.addedHashes == [firstHash])
+
+        let id = TorrentID(hex: firstHash)
+        for piece in 0..<50 {
+            engine.emit(.pieceFinished(id, piece: piece))
+            engine.emit(.metadataReceived(id))
+        }
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(engine.addedHashes == [firstHash])
+        #expect(try await repository.torrent(infoHash: firstHash)?.state == .downloading)
+        #expect(try await repository.torrent(infoHash: secondHash)?.state == .queued)
+
+        engine.emit(.finished(id))
+        var secondRow: Torrent?
+        for _ in 0..<200 {
+            secondRow = try await repository.torrent(infoHash: secondHash)
+            if secondRow?.state == .downloading { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(secondRow?.state == .downloading)
+        #expect(engine.addedHashes == [firstHash, secondHash])
+        await manager.stop()
+    }
+
     @Test func refusesSpaceArithmeticOverflow() async throws {
         let database = try AppDatabase.inMemory()
         let repository = GRDBTorrentRepository(database)

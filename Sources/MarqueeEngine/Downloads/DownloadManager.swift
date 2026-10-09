@@ -676,7 +676,14 @@ public actor DownloadManager {
             await blocklistFailure(infoHash: id.hex, reason: message)
         case .stateChanged(let id, _), .checked(let id), .resumed(let id), .paused(let id):
             await refresh(id)
-        default: break
+        case .removed:
+            break  // rare; a freed queue slot may start something waiting
+        default:
+            // Piece, file-progress, metadata and read events carry no queue information: the rows only
+            // change on transitions (handled above) and completion. Returning here skips two database
+            // round-trips per event, which at hundreds of piece events per second is the difference
+            // between a quiet supervisor and a saturated core (SCOPE.md §5.6).
+            return
         }
         try? await reconcileQueue()
     }
