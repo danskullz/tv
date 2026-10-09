@@ -38,6 +38,7 @@ public actor StreamSessionController {
 
     private var torrent: TorrentID?
     private var started = false
+    private var metadataTimeoutOverride: Duration?
     private var metadata: TorrentMetadata?
     private var mapping: PackMappingResult?
     private var planner: PackStreamPlanner?
@@ -53,6 +54,10 @@ public actor StreamSessionController {
     private var mediaDuration: Double?
     private var downloadRate = 0
     private var rateSampledAt: ContinuousClock.Instant?
+    /// Payload throughput measured from piece completions (EWMA). Joins the deadline-budget
+    /// growth once the container head is on disk, alongside the session's polled rate, so the
+    /// budget tracks what actually arrives without scattering the first request wave.
+    private var throughput = ThroughputSampler()
 
     private var lastStatus: StreamStatus?
     private var lastStatusAt: ContinuousClock.Instant?
@@ -92,6 +97,9 @@ public actor StreamSessionController {
     public var torrentID: TorrentID? { torrent }
     public var pieceAvailability: PieceAvailability { have }
     public var currentEpisodes: [EpisodeRef] { current?.episodes ?? [] }
+    /// Sustained payload throughput (bytes/s) measured from piece completions. Zero until enough
+    /// pieces have landed to form an estimate.
+    public var measuredThroughput: Double { throughput.estimate ?? 0 }
 
     /// Current deadline bookkeeping, for tests and the diagnostics view.
     public struct DeadlineState: Sendable {
@@ -120,6 +128,12 @@ public actor StreamSessionController {
             }
         }
         throw CancellationError()
+    }
+
+    /// Per-attempt metadata bound from the Play pipeline (see `StreamControlling`). Applies to
+    /// the next `start`; the configured default stands when no hint arrives.
+    public func setMetadataTimeout(_ timeout: Duration) {
+        metadataTimeoutOverride = timeout
     }
 
     // MARK: Start
@@ -172,7 +186,7 @@ public actor StreamSessionController {
 
         let metadata: TorrentMetadata
         do {
-            metadata = try await session.waitForMetadata(id, timeout: config.metadataTimeout)
+            metadata = try await session.waitForMetadata(id, timeout: metadataTimeoutOverride ?? config.metadataTimeout)
         } catch TorrentError.timedOut {
             throw StreamControllerError.metadataTimeout
         }
@@ -340,6 +354,7 @@ public actor StreamSessionController {
         case .pieceFinished(let t, let piece) where t == id:
             have.insert(piece)
             lastProgress = .now
+            throughput.add(bytes: pieceBytes(piece), at: lastProgress)
             await scheduler?.markHave(piece)
             await refreshRateIfStale()
             evaluateStatus()
@@ -383,9 +398,34 @@ public actor StreamSessionController {
         rateSampledAt = now
         if let id = torrent, let status = try? await session.status(id) { downloadRate = status.downloadRate }
         if let floor = config.deadlineBudgetBytes {
-            let wanted = Int64(Double(downloadRate) * config.deadlineBudgetSeconds)
+            // The sampler joins growth once the container head is on disk. Growing the deadline
+            // set while the first pieces are still in flight inflates the peer request queue and
+            // delays piece assembly (first byte); until the head lands the polled rate alone grows it.
+            let effective: Double
+            if let measured = throughput.estimate, headComplete() {
+                effective = max(Double(downloadRate), measured)
+            } else {
+                effective = Double(downloadRate)
+            }
+            let wanted = Int64(effective * config.deadlineBudgetSeconds)
             await scheduler?.setBudget(min(max(floor, wanted), max(floor, config.planOptions.windowBytes)))
         }
+    }
+
+    /// Whether the current file's container head is fully downloaded.
+    private func headComplete() -> Bool {
+        guard let item = current else { return false }
+        let length = item.map.fileLength
+        let head = min(config.planOptions.headBytes, length)
+        guard head > 0 else { return true }
+        return have.containsAll(item.map.pieces(forFileRange: 0..<head))
+    }
+
+    /// Payload bytes of a torrent piece (the final piece may be short).
+    private func pieceBytes(_ piece: Int) -> Int64 {
+        guard let metadata, piece >= 0, piece < metadata.pieceCount else { return 0 }
+        let start = Int64(piece) * Int64(metadata.pieceLength)
+        return min(Int64(metadata.pieceLength), max(0, metadata.totalSize - start))
     }
 
     // MARK: Status
@@ -404,7 +444,7 @@ public actor StreamSessionController {
             fileLength: length, playhead: playhead, bytesAhead: ahead, headComplete: headDone, tailComplete: tailDone,
             headBytes: head, downloadRate: downloadRate, estimatedBytesPerSecond: bps)
 
-        if config.readinessPolicy.isReady(input) {
+        if readinessSatisfied(input) {
             publish(.ready)
         } else if have.count == 0 {
             publish(.findingPeers)
@@ -413,6 +453,23 @@ public actor StreamSessionController {
             publish(.buffering(secondsAhead: Double(ahead) / bps, bytesAhead: ahead))
             armWatchdog()
         }
+    }
+
+    /// The policy decides, plus the playback cushion when enabled: starting means head, tail and
+    /// at least `max(head + fixed buffer, estimated bitrate * readyCushionSeconds)` contiguous
+    /// bytes ahead (capped by what remains), i.e. ~15 s of playback. For typical episode sizes
+    /// the bitrate term is smaller than the fixed buffer, so behaviour is unchanged there; it
+    /// only delays start for high-bitrate files that would otherwise rebuffer.
+    private func readinessSatisfied(_ input: ReadinessInput) -> Bool {
+        guard config.readinessPolicy.isReady(input) else { return false }
+        guard config.requirePlaybackCushion, config.readyCushionSeconds > 0 else { return true }
+        let fixed = (config.readinessPolicy as? FixedBufferReadinessPolicy)?.bytesAfterHead ?? (4 << 20)
+        var policy = FixedBufferReadinessPolicy(bytesAfterHead: fixed, cushionSeconds: config.readyCushionSeconds)
+        // A policy that already carries its own cushion wins; the config value only fills the gap.
+        if let own = (config.readinessPolicy as? FixedBufferReadinessPolicy)?.cushionSeconds {
+            policy.cushionSeconds = own
+        }
+        return policy.isReady(input)
     }
 
     private func estimatedBytesPerSecond(length: Int64, episodes: Int) -> Double {
@@ -437,7 +494,9 @@ public actor StreamSessionController {
     // MARK: Stall watchdog
 
     /// One sleeping task while data is awaited: wakes when `stallTimeout` has passed since the last
-    /// piece, reports the stall once and exits. A new piece or playhead move re-arms it.
+    /// piece, reports the stall once and exits. A new piece or playhead move re-arms it. Between
+    /// pieces it wakes every couple of seconds to refresh the rate and re-evaluate, so buffering
+    /// progress surfaces promptly; identical states coalesce in `publish`, so this adds no noise.
     private func armWatchdog() {
         guard watchdog == nil, !stopped else { return }
         watchdog = Task { [weak self] in await self?.watchdogLoop() }
@@ -446,16 +505,19 @@ public actor StreamSessionController {
     private func watchdogLoop() async {
         defer { watchdog = nil }
         while !Task.isCancelled, !stopped {
+            if lastStatus == .ready || lastStatus?.isTerminal == true { return }
             let due = lastProgress + config.stallTimeout
-            if ContinuousClock.now < due {
-                try? await Task.sleep(until: due)
-                continue
+            let now = ContinuousClock.now
+            if now >= due {
+                var peers = 0
+                if let id = torrent, let status = try? await session.status(id) { peers = status.peerCount }
+                publish(.stalled(peers == 0 ? .noPeers : .slowDownload))
+                return
             }
-            guard lastStatus != .ready, lastStatus?.isTerminal != true else { return }
-            var peers = 0
-            if let id = torrent, let status = try? await session.status(id) { peers = status.peerCount }
-            publish(.stalled(peers == 0 ? .noPeers : .slowDownload))
-            return
+            try? await Task.sleep(until: min(due, now + .seconds(2)))
+            if Task.isCancelled || stopped { return }
+            await refreshRateIfStale()
+            evaluateStatus()
         }
     }
 
@@ -520,6 +582,33 @@ public actor StreamSessionController {
 struct PlayheadUpdate: Sendable {
     var fileIndex: Int
     var offset: Int64
+}
+
+/// Sustained payload throughput from piece completions. Event driven: the controller feeds each
+/// finished piece's bytes, and reads the EWMA when growing the deadline budget. No timers, no
+/// threads; a few dozen bytes of state. Arrivals inside a 250 ms window accumulate into one
+/// sample, so libtorrent's bursty request waves self-average instead of spiking the estimate and
+/// scattering deadlines across the whole window.
+struct ThroughputSampler: Sendable {
+    /// Current estimate in bytes/s, or nil before a full window has landed.
+    private(set) var estimate: Double?
+    private var windowStart: ContinuousClock.Instant?
+    private var windowBytes: Int64 = 0
+    private var alpha = 0.3
+    private var minWindow: Duration = .milliseconds(250)
+
+    mutating func add(bytes: Int64, at now: ContinuousClock.Instant) {
+        guard bytes > 0 else { return }
+        if windowStart == nil { windowStart = now }
+        windowBytes += bytes
+        guard let start = windowStart, now - start >= minWindow else { return }
+        let dt = Double((now - start).components.seconds) + Double((now - start).components.attoseconds) / 1e18
+        guard dt > 0 else { return }
+        let instant = min(Double(windowBytes) / dt, 1_000_000_000)
+        estimate = estimate.map { (1 - alpha) * $0 + alpha * instant } ?? instant
+        windowStart = now
+        windowBytes = 0
+    }
 }
 
 private struct PlayheadRelay: PlayheadObserver {

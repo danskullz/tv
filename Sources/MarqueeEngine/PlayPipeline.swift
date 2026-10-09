@@ -66,6 +66,7 @@ public actor PlayPipeline {
 
         var attempts = 0
         var tried = Set<String>()
+        var failedHashes = Set<String>()
         var lastReason = ""
         var totalFound = 0
         var lastSummary = "nothing matched"
@@ -94,9 +95,23 @@ public actor PlayPipeline {
                     wanted: stage.wanted, measuredThroughputBytesPerSecond: config.measuredThroughputBytesPerSecond))
             lastSummary = Self.rejectionSummary(decisions)
 
+            // Resolve the top picks' download links concurrently before committing to attempt #1,
+            // so a dead top pick is skipped without burning a full attempt timeout on it.
+            let warmed = await warmSources(for: ranked, tried: tried, config: config)
+            try Task.checkCancellation()
+
             for score in ranked where !tried.contains(score.decision.id) {
                 if attempts >= config.maxAttempts { break }
                 try Task.checkCancellation()
+                let release = score.decision.candidate.release
+                if let hash = Self.effectiveInfoHash(of: release), failedHashes.contains(hash) {
+                    tried.insert(score.decision.id)
+                    await saveGrab(
+                        id: UUID(), request: request, score: score, decisions: decisions, found: found,
+                        stage: stage, attempt: attempts + 1, outcome: .failed,
+                        failure: "Skipped: the same download already failed on a higher-ranked release.")
+                    continue
+                }
                 tried.insert(score.decision.id)
                 attempts += 1
                 emit(PlayStatus(
@@ -106,11 +121,12 @@ public actor PlayPipeline {
                 do {
                     return try await attempt(
                         score, stage: stage, found: found, decisions: decisions, request: request, config: config,
-                        attempt: attempts, emit: emit)
+                        attempt: attempts, warmed: warmed[score.decision.id], emit: emit)
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch let failure as AttemptFailure {
                     lastReason = failure.reason
+                    if let hash = Self.effectiveInfoHash(of: release) { failedHashes.insert(hash) }
                     if attempts < config.maxAttempts {
                         emit(PlayStatus(
                             .retrying, "That one isn't working. Trying the next best release…", attempt: attempts + 1))
@@ -200,7 +216,7 @@ public actor PlayPipeline {
 
     private func attempt(
         _ score: StreamabilityScore, stage: Stage, found: CoordinatedSearchResult, decisions: [ReleaseDecision],
-        request: PlayRequest, config: PlayPipelineConfiguration, attempt number: Int,
+        request: PlayRequest, config: PlayPipelineConfiguration, attempt number: Int, warmed: WarmSource?,
         emit: @escaping @Sendable (PlayStatus) -> Void
     ) async throws -> PlayStream {
         let decision = score.decision
@@ -211,14 +227,26 @@ public actor PlayPipeline {
             attempt: number, outcome: .grabbed, failure: nil)
 
         let controller = controllers.makeController()
+        let metadataTimeout = config.metadataTimeout(forAttempt: number)
+        await controller.setMetadataTimeout(metadataTimeout)
         var infoHash = release.infoHash
         do {
-            let (source, magnetPeers) = try await torrentSource(for: release)
+            let (source, magnetPeers): (TorrentSource, [PeerEndpoint])
+            switch warmed {
+            case .resolved(let s, let p):
+                (source, magnetPeers) = (s, p)
+            case .failed(let reason):
+                throw AttemptFailure(reason: reason)
+            case nil:
+                (source, magnetPeers) = try await resolveSource(for: release, timeout: config.linkFetchTimeout)
+            }
             let (content, start) = Self.content(for: request, decision: decision)
             emit(PlayStatus(.connecting, "Connecting to peers…", attempt: number))
-            let handle = try await controller.start(
-                source: source, content: content, startEpisode: start, mode: config.streamMode,
-                peers: magnetPeers + config.extraPeers, corrections: [:], episodeOrder: nil)
+            let handle = try await Self.withTimeout(metadataTimeout) {
+                try await controller.start(
+                    source: source, content: content, startEpisode: start, mode: config.streamMode,
+                    peers: magnetPeers + config.extraPeers, corrections: [:], episodeOrder: nil)
+            }
             infoHash = infoHash ?? handle.torrent.hex
 
             let outcome = await awaitReady(
@@ -248,10 +276,11 @@ public actor PlayPipeline {
             throw CancellationError()
         } catch {
             let reason = Self.reason(for: error)
+            let detail = Self.failureDetail(for: error, release: release)
             await controller.stop(removeTorrent: true, deleteFiles: true)
             await saveGrab(
                 id: grabID, request: request, score: score, decisions: decisions, found: found, stage: stage,
-                attempt: number, outcome: .failed, failure: reason)
+                attempt: number, outcome: .failed, failure: reason, failureDetail: detail)
             await blocklistRelease(release, infoHash: infoHash, request: request, reason: reason)
             throw AttemptFailure(reason: reason)
         }
@@ -281,7 +310,15 @@ public actor PlayPipeline {
                     case .ready:
                         return .ready
                     case .stalled(let reason):
-                        return .failed(reason.message)
+                        switch reason {
+                        case .noPeers:
+                            // Nobody is sharing: fail over now instead of waiting out the timeout.
+                            return .failed(reason.message)
+                        case .slowDownload:
+                            // Peers exist but data is slow; it may still recover before the timeout.
+                            emit(PlayStatus(
+                                .buffering, "The download is slow. Still trying…", attempt: attempt, stream: status))
+                        }
                     case .failed(let message):
                         return .failed(message)
                     }
@@ -300,24 +337,111 @@ public actor PlayPipeline {
 
     // MARK: Torrent source
 
-    private func torrentSource(for release: IndexerRelease) async throws -> (TorrentSource, [PeerEndpoint]) {
-        var magnet = release.magnetURL?.absoluteString
-        if magnet == nil, let hash = release.infoHash {
-            let name = release.title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            magnet = "magnet:?xt=urn:btih:\(hash)&dn=\(name)"
-        }
-        if let url = release.downloadURL {
-            do {
-                let data = try await fetchTorrentFile(url)
-                return (.torrentFile(data), magnet.map(Self.peers(inMagnet:)) ?? [])
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                if magnet == nil { throw error }
+    /// A pre-resolved download link from the parallel warm-up: either usable immediately or known
+    /// dead, so the attempt fails over without spending another timeout on it.
+    private enum WarmSource: Sendable {
+        case resolved(TorrentSource, [PeerEndpoint])
+        case failed(String)
+    }
+
+    /// Top-ranked candidates whose links are resolved concurrently per search stage.
+    private static let warmupCount = 3
+
+    /// Resolves download links for the top-ranked untried candidates concurrently, so attempt #1
+    /// starts with its link (or its failure) already known. Link resolution only: libtorrent still
+    /// runs a single torrent at a time.
+    private func warmSources(
+        for ranked: [StreamabilityScore], tried: Set<String>, config: PlayPipelineConfiguration
+    ) async -> [String: WarmSource] {
+        var out: [String: WarmSource] = [:]
+        let top = ranked.filter { !tried.contains($0.decision.id) }.prefix(Self.warmupCount)
+        await withTaskGroup(of: (String, WarmSource)?.self) { group in
+            for score in top {
+                let release = score.decision.candidate.release
+                let id = score.decision.id
+                let timeout = config.linkFetchTimeout
+                group.addTask {
+                    do {
+                        let resolved = try await self.resolveSource(for: release, timeout: timeout)
+                        return (id, .resolved(resolved.0, resolved.1))
+                    } catch is CancellationError {
+                        return nil
+                    } catch {
+                        return (id, .failed(Self.reason(for: error)))
+                    }
+                }
+            }
+            for await entry in group {
+                if let (id, source) = entry { out[id] = source }
             }
         }
-        guard let magnet else { throw AttemptFailure(reason: "The release has no download link.") }
-        return (.magnet(magnet), Self.peers(inMagnet: magnet))
+        return out
+    }
+
+    /// The torrent's identity for same-download dedup: the feed hash, else the magnet hash.
+    static func effectiveInfoHash(of release: IndexerRelease) -> String? {
+        if let hash = release.infoHash.flatMap(InfoHash.normalize) { return hash }
+        if let magnet = release.effectiveMagnetURI { return InfoHash.fromMagnet(magnet) }
+        return nil
+    }
+
+    /// Runs `body`, throwing ``TimeoutError`` when it takes longer than `timeout`. Cancellation
+    /// still throws `CancellationError`.
+    static func withTimeout<T: Sendable>(
+        _ timeout: Duration, _ body: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await body() }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw TimeoutError()
+            }
+            defer { group.cancelAll() }
+            return try await group.next()!
+        }
+    }
+
+    struct TimeoutError: Error {}
+
+    /// Resolves how to start `release`: an explicit magnet link wins (no HTTP fetch, and Torznab
+    /// `.torrent` proxy links are the flaky part), else the `.torrent` URL is downloaded with
+    /// redirect handling (a `Location:` pointing at a magnet link resolves to that magnet), else
+    /// a hash-derived magnet is the fallback so a dead proxy link still streams via DHT.
+    func resolveSource(for release: IndexerRelease) async throws -> (TorrentSource, [PeerEndpoint]) {
+        try await resolveSource(for: release, timeout: .seconds(15))
+    }
+
+    /// As above, but the `.torrent` download is bounded by `timeout`: a slow proxy link falls
+    /// back to the magnet when there is one instead of stalling the attempt.
+    func resolveSource(for release: IndexerRelease, timeout: Duration) async throws -> (TorrentSource, [PeerEndpoint]) {
+        if let magnet = release.magnetURL?.absoluteString, IndexerRelease.isMagnetURI(magnet) {
+            return (.magnet(magnet), Self.peers(inMagnet: magnet))
+        }
+        let fallback = release.effectiveMagnetURI
+        if let url = release.downloadURL {
+            do {
+                let fetch = fetchTorrentFile
+                let data = try await Self.withTimeout(timeout) { try await fetch(url) }
+                return (.torrentFile(data), fallback.map(Self.peers(inMagnet:)) ?? [])
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let redirect as TorrentSourceError where redirect.redirectedMagnet != nil {
+                let magnet = redirect.redirectedMagnet!
+                return (.magnet(magnet), Self.peers(inMagnet: magnet))
+            } catch {
+                if error is TimeoutError, fallback == nil {
+                    throw AttemptFailure(reason: "The indexer's download link took too long to answer. Try another release.")
+                }
+                if let fallback { return (.magnet(fallback), Self.peers(inMagnet: fallback)) }
+                throw error
+            }
+        }
+        guard let fallback else { throw AttemptFailure(reason: "The release has no download link.") }
+        return (.magnet(fallback), Self.peers(inMagnet: fallback))
+    }
+
+    private func torrentSource(for release: IndexerRelease) async throws -> (TorrentSource, [PeerEndpoint]) {
+        try await resolveSource(for: release)
     }
 
     /// `x.pe=host:port` parameters of a magnet link (BEP 9).
@@ -337,19 +461,60 @@ public actor PlayPipeline {
     }
 
     public static let downloadTorrentFile: @Sendable (URL) async throws -> Data = { url in
+        try await PlayPipeline.fetchTorrentData(from: url)
+    }
+
+    /// Largest accepted `.torrent` file (8 MiB; real ones are tens of KB).
+    public static let maxTorrentBytes = 8 << 20
+
+    /// Downloads a `.torrent` file, following HTTP -> HTTP redirects (up to 5 hops) manually so a
+    /// Torznab proxy that redirects to a `magnet:` link surfaces as
+    /// ``TorrentSourceError/redirectToMagnet(_:)`` instead of an opaque failure.
+    public static func fetchTorrentData(from url: URL, maxRedirects: Int = 5) async throws -> Data {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
-            throw URLError(.unsupportedURL)
+            throw TorrentSourceError.unsupportedScheme
         }
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 20
         configuration.waitsForConnectivity = false
-        let session = URLSession(configuration: configuration)
+        let blocker = TorrentRedirectBlocker()
+        let session = URLSession(configuration: configuration, delegate: blocker, delegateQueue: nil)
         defer { session.finishTasksAndInvalidate() }
-        let (data, response) = try await session.data(from: url)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), data.count < 8 << 20,
-            data.first == UInt8(ascii: "d")
-        else { throw URLError(.badServerResponse) }
-        return data
+        var current = url
+        for _ in 0...max(0, maxRedirects) {
+            let data: Data
+            let response: URLResponse
+            do {
+                (data, response) = try await session.data(for: URLRequest(url: current))
+            } catch let error as URLError {
+                if error.code == .cancelled { throw CancellationError() }
+                throw TorrentSourceError.network(error)
+            }
+            guard let http = response as? HTTPURLResponse else { throw TorrentSourceError.notATorrent }
+            if (300..<400).contains(http.statusCode) {
+                let location = http.value(forHTTPHeaderField: "location")
+                    ?? (http.allHeaderFields["Location"] as? String)
+                    ?? (http.allHeaderFields["location"] as? String)
+                guard let location = location?.trimmingCharacters(in: .whitespacesAndNewlines), !location.isEmpty
+                else { throw TorrentSourceError.httpStatus(http.statusCode) }
+                if IndexerRelease.isMagnetURI(location) { throw TorrentSourceError.redirectToMagnet(location) }
+                guard let next = URL(string: location, relativeTo: current)?.absoluteURL,
+                    let nextScheme = next.scheme?.lowercased(), nextScheme == "http" || nextScheme == "https"
+                else { throw TorrentSourceError.unsupportedScheme }
+                current = next
+                continue
+            }
+            guard (200..<300).contains(http.statusCode) else { throw TorrentSourceError.httpStatus(http.statusCode) }
+            try Self.validateTorrentBytes(data)
+            return data
+        }
+        throw TorrentSourceError.httpStatus(310)
+    }
+
+    /// Rejects proxy error pages (HTML/Cloudflare), oversized bodies and non-bencoded payloads.
+    public static func validateTorrentBytes(_ data: Data) throws {
+        guard data.count <= maxTorrentBytes else { throw TorrentSourceError.tooLarge(limit: maxTorrentBytes) }
+        guard data.first == UInt8(ascii: "d") else { throw TorrentSourceError.notATorrent }
     }
 
     // MARK: Content
@@ -391,7 +556,8 @@ public actor PlayPipeline {
 
     private func saveGrab(
         id: UUID, request: PlayRequest, score: StreamabilityScore, decisions: [ReleaseDecision],
-        found: CoordinatedSearchResult, stage: Stage, attempt: Int, outcome: Grab.Outcome, failure: String?
+        found: CoordinatedSearchResult, stage: Stage, attempt: Int, outcome: Grab.Outcome, failure: String?,
+        failureDetail: String? = nil
     ) async {
         let decision = score.decision
         let release = decision.candidate.release
@@ -424,6 +590,7 @@ public actor PlayPipeline {
             ]),
         ]
         if let failure { reason["failure"] = .string(failure) }
+        if let failureDetail { reason["failureDetail"] = .string(failureDetail) }
         let grab = Grab(
             id: id, titleId: request.title.id, episodeId: request.episodeID, releaseTitle: release.title,
             infoHash: release.infoHash, origin: request.origin, outcome: outcome, score: Int(score.total.rounded()),
@@ -457,13 +624,161 @@ public actor PlayPipeline {
             .map { "\($0.value) \(readable[$0.key] ?? $0.key)" }.joined(separator: ", ")
     }
 
-    private static func reason(for error: Error) -> String {
+    static func reason(for error: Error) -> String {
         switch error {
-        case let e as AttemptFailure: e.reason
-        case let e as StreamControllerError: e.plainLanguage
-        case let e as PlayPipelineError: e.plainLanguage
-        default: "The download engine could not start this release."
+        case let e as AttemptFailure: return e.reason
+        case let e as StreamControllerError: return e.plainLanguage
+        case let e as PlayPipelineError: return e.plainLanguage
+        case let e as TorrentSourceError: return e.plainLanguage
+        case let e as TorrentError: return reason(forTorrentError: e)
+        case let e as StreamServerError: return reason(forStreamServerError: e)
+        case let e as URLError: return reason(forURLError: e)
+        case is TimeoutError: return StreamControllerError.metadataTimeout.plainLanguage
+        default:
+            let described = String(describing: error)
+            let typeName = String(describing: type(of: error))
+            let redacted = SecretRedactor.redact(described)
+            // Link-resolution errors from the parallel work have no static dependency here;
+            // match by type name so they still get a specific message with the detail attached.
+            if typeName.contains("TorrentSource") || typeName.contains("LinkResolve")
+                || described.contains("TorrentSourceError")
+            {
+                return "Couldn't get the download link for this release (\(redacted)). Try another release."
+            }
+            if !redacted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "The download engine could not start this release (\(redacted)). Try another release."
+            }
+            return "The download engine could not start this release (\(SecretRedactor.redact(typeName))). Try another release."
         }
+    }
+
+    static func reason(forTorrentError error: TorrentError) -> String {
+        switch error {
+        case .timedOut:
+            return "Timed out waiting for the download engine. Try another release."
+        case .libtorrent(let message):
+            let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                return "The download engine reported a problem. Try another release."
+            }
+            return "The download engine reported a problem (\(SecretRedactor.redact(trimmed))). Try another release."
+        case .invalidArgument:
+            return "The download request was invalid, so the engine refused it. Try another release."
+        case .sessionClosed:
+            return "The download engine had already closed, so this release couldn't start. Try playing again."
+        case .notFound:
+            return "The download disappeared before it could start. Try another release."
+        case .noMetadata:
+            return "Couldn't fetch the release details from the swarm. Try another release."
+        }
+    }
+
+    static func reason(forStreamServerError error: StreamServerError) -> String {
+        switch error {
+        case .failedToStart(let detail):
+            let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                return "Couldn't start the local streaming server. Try playing again."
+            }
+            return "Couldn't start the local streaming server (\(SecretRedactor.redact(trimmed))). Try playing again."
+        case .notRunning:
+            return "The local streaming server isn't running. Try playing again."
+        }
+    }
+
+    static func reason(forURLError error: URLError) -> String {
+        switch error.code {
+        case .timedOut:
+            return "The indexer's download link took too long to answer. Try another release."
+        case .cannotFindHost, .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet,
+            .dnsLookupFailed:
+            return "Couldn't connect to the indexer's download link. Check your connection and try another release."
+        default:
+            return "The indexer's download link gave an unexpected answer. Try another release."
+        }
+    }
+
+    /// Machine detail for the decision log: underlying error + release id + indexer + URL scheme.
+    /// Never includes full URLs or query strings, so no API keys can leak.
+    static func failureDetail(for error: Error, release: IndexerRelease) -> String {
+        let underlying: String
+        if let urlError = error as? URLError {
+            underlying = "URLError(\(urlError.code.rawValue))"
+        } else {
+            underlying = SecretRedactor.redact(String(describing: error))
+        }
+        let scheme: String
+        if let url = release.downloadURL { scheme = (url.scheme ?? "unknown").lowercased() }
+        else if release.magnetURL != nil { scheme = "magnet" }
+        else { scheme = "none" }
+        let indexer = release.indexerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SecretRedactor.redact(
+            "\(underlying) | release: \(release.id) | indexer: \(indexer.isEmpty ? "unknown" : indexer) | link: \(scheme)")
+    }
+}
+
+// MARK: - Torrent link resolution
+
+/// Typed failures from `.torrent` link resolution, so the pipeline can tell a dead proxy link
+/// (try the next release) from a blocked indexer (tell the user) instead of one generic message.
+public enum TorrentSourceError: Error, Sendable, Equatable {
+    /// Not an `http(s)` URL (e.g. a `magnet:` link passed to the file downloader).
+    case unsupportedScheme
+    /// The server answered with a non-2xx status (after following redirects).
+    case httpStatus(Int)
+    /// The body is not a torrent: an HTML error/Cloudflare page or other non-bencoded payload.
+    case notATorrent
+    /// The body is larger than any real `.torrent` file.
+    case tooLarge(limit: Int)
+    /// The `.torrent` URL redirects to a magnet link: start this instead of downloading.
+    case redirectToMagnet(String)
+    /// The host could not be reached at all.
+    case network(URLError)
+
+    /// The magnet link when this error is a magnet redirect, else nil.
+    public var redirectedMagnet: String? {
+        if case .redirectToMagnet(let uri) = self { return uri }
+        return nil
+    }
+
+    /// Plain-language text for the UI and blocklist log.
+    public var plainLanguage: String {
+        switch self {
+        case .unsupportedScheme:
+            return "The release link isn't a supported download link. Try another release."
+        case .httpStatus(let code):
+            return "The indexer's download link failed (HTTP \(code)). Try another release."
+        case .notATorrent:
+            return "The indexer's download wasn't a torrent file — it may need login or be blocked. Try another release."
+        case .tooLarge:
+            return "The indexer's download was too large to be a torrent file. Try another release."
+        case .redirectToMagnet:
+            return "The indexer's download link points at a magnet link. Try another release."
+        case .network(let error):
+            return PlayPipeline.reason(forURLError: error)
+        }
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case (.unsupportedScheme, .unsupportedScheme): return true
+        case (.httpStatus(let a), .httpStatus(let b)): return a == b
+        case (.notATorrent, .notATorrent): return true
+        case (.tooLarge(let a), .tooLarge(let b)): return a == b
+        case (.redirectToMagnet(let a), .redirectToMagnet(let b)): return a == b
+        case (.network(let a), .network(let b)): return a.code == b.code
+        default: return false
+        }
+    }
+}
+
+/// Blocks URLSession's automatic redirect following so `fetchTorrentData` sees each 3xx itself.
+final class TorrentRedirectBlocker: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
     }
 }
 

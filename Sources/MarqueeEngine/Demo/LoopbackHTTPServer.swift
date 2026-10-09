@@ -15,9 +15,15 @@ final class LoopbackHTTPServer: Sendable {
         var status: Int
         var contentType: String
         var body: Data
+        /// Extra headers (e.g. `Location` for redirect tests).
+        var headers: [String: String] = [:]
 
         static func xml(_ text: String, status: Int = 200) -> Response {
             Response(status: status, contentType: "application/xml; charset=utf-8", body: Data(text.utf8))
+        }
+
+        static func redirect(to location: String, status: Int = 302) -> Response {
+            Response(status: status, contentType: "text/plain", body: Data(), headers: ["Location": location])
         }
     }
 
@@ -115,9 +121,10 @@ final class LoopbackHTTPServer: Sendable {
                 response = Response(status: 400, contentType: "text/plain", body: Data("bad request".utf8))
             }
             let reason = response.status == 200 ? "OK" : "Error"
+            var head = "HTTP/1.1 \(response.status) \(reason)\r\nContent-Type: \(response.contentType)\r\n"
+            for (name, value) in response.headers { head += "\(name): \(value)\r\n" }
             var out = Data(
-                ("HTTP/1.1 \(response.status) \(reason)\r\nContent-Type: \(response.contentType)\r\n"
-                    + "Content-Length: \(response.body.count)\r\nConnection: close\r\n\r\n").utf8)
+                (head + "Content-Length: \(response.body.count)\r\nConnection: close\r\n\r\n").utf8)
             out.append(response.body)
             connection.send(content: out, isComplete: true, completion: .contentProcessed { [self] _ in connection.cancel() })
         }

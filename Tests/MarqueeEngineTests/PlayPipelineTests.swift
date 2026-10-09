@@ -27,12 +27,22 @@ private final class PipelineTransport: IndexerTransport, Sendable {
 }
 
 private func pipelineRelease(
-    _ title: String, seeders: Int, size: Int64 = 1_500_000_000, season: Int? = 1, episode: Int? = 1
+    _ title: String, seeders: Int, size: Int64 = 1_500_000_000, season: Int? = 1, episode: Int? = 1,
+    infoHash: String? = nil
 ) -> DemoRelease {
-    let hash = String(format: "%040x", abs(title.hashValue) & 0xFFFF_FFFF)
+    let hash = infoHash ?? String(format: "%040x", abs(title.hashValue) & 0xFFFF_FFFF)
     return DemoRelease(
         kind: .tv, title: title, guid: title, infoHash: hash, size: size, seeders: seeders,
         magnet: "magnet:?xt=urn:btih:\(hash)&dn=\(title)&x.pe=127.0.0.1:6881", season: season, episode: episode)
+}
+
+/// A release served only as a `.torrent` download link (no magnet, no hash): resolving it
+/// downloads the link, so a dead proxy fails link resolution instead of the swarm.
+private func pipelineDownloadRelease(_ title: String, seeders: Int) -> DemoRelease {
+    let hash = String(format: "%040x", abs(title.hashValue) & 0xFFFF_FFFF)
+    return DemoRelease(
+        kind: .tv, title: title, guid: title, infoHash: "", size: 1_500_000_000, seeders: seeders,
+        magnet: "https://indexer0.example.invalid/download/\(hash).torrent", season: 1, episode: 1)
 }
 
 private struct PipelineStart: Sendable {
@@ -47,13 +57,21 @@ private final class PipelineFakeController: StreamControlling, Sendable {
     enum Script: Sendable {
         case ready
         case failStart(StreamControllerError)
+        case failTorrent(TorrentError)
         case stall
+        /// `start` never returns (bounds the metadata timeout).
+        case hangStart
+        /// `start` returns but the stream never becomes ready (bounds the ready timeout).
+        case hangStatus
+        /// A slow-download stall that recovers: must keep waiting, not fail.
+        case slowThenReady
     }
 
     let script: Script
     let onStart: @Sendable (PipelineStart) -> Void
     private let statuses = Broadcaster<StreamStatus>(replayLatest: true, policy: .unbounded)
     private let stops = Mutex<[Bool]>([])
+    private let metadataTimeouts = Mutex<[Duration]>([])
 
     init(script: Script, onStart: @escaping @Sendable (PipelineStart) -> Void) {
         self.script = script
@@ -61,6 +79,10 @@ private final class PipelineFakeController: StreamControlling, Sendable {
     }
 
     var removedOnStop: Bool { stops.withLock { $0.last ?? false } }
+
+    var metadataHints: [Duration] { metadataTimeouts.withLock { $0 } }
+
+    func setMetadataTimeout(_ timeout: Duration) async { metadataTimeouts.withLock { $0.append(timeout) } }
 
     func start(
         source: TorrentSource, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
@@ -70,6 +92,8 @@ private final class PipelineFakeController: StreamControlling, Sendable {
         switch script {
         case .failStart(let error):
             throw error
+        case .failTorrent(let error):
+            throw error
         case .ready:
             statuses.send(.findingPeers)
             statuses.send(.buffering(secondsAhead: 2, bytesAhead: 1000))
@@ -77,6 +101,16 @@ private final class PipelineFakeController: StreamControlling, Sendable {
         case .stall:
             statuses.send(.findingPeers)
             statuses.send(.stalled(.noPeers))
+        case .hangStart:
+            try await Task.sleep(for: .seconds(60))
+            throw StreamControllerError.metadataTimeout
+        case .hangStatus:
+            statuses.send(.findingPeers)
+        case .slowThenReady:
+            statuses.send(.findingPeers)
+            statuses.send(.stalled(.slowDownload))
+            let hub = statuses
+            Task { try? await Task.sleep(for: .milliseconds(100)); hub.send(.ready) }
         }
         return StreamHandle(
             torrent: TorrentID(hex: String(repeating: "ab", count: 20)), episodes: startEpisode.map { [$0] } ?? [],
@@ -116,9 +150,24 @@ private struct PipelineRig {
     let title: Title
 }
 
+private let pipelineDeadFetch: @Sendable (URL) async throws -> Data = { _ in throw URLError(.badURL) }
+
+/// A searcher returning a fixed catalogue for every query: bypasses feed parsing and the
+/// coordinator's cross-release dedup so pipeline-level behaviour can be tested in isolation.
+private struct StaticSearcher: ReleaseSearching {
+    let releases: [IndexerRelease]
+    func search(_ query: TorznabQuery) async -> CoordinatedSearchResult {
+        CoordinatedSearchResult(releases: releases)
+    }
+    func enabledIndexerCount() async -> Int { 1 }
+}
+
 private func pipelineRig(
     scripts: [PipelineFakeController.Script], indexers: Int = 1, maxAttempts: Int = 4,
-    releases: @escaping @Sendable ([String: String]) -> [DemoRelease]
+    releases: @escaping @Sendable ([String: String]) -> [DemoRelease],
+    fetchTorrentFile: (@Sendable (URL) async throws -> Data)? = nil,
+    configuration: PlayPipelineConfiguration? = nil,
+    searcher: (any ReleaseSearching)? = nil
 ) async throws -> PipelineRig {
     let database = try AppDatabase.inMemory()
     let title = try await GRDBLibraryRepository(database).add(
@@ -134,10 +183,12 @@ private func pipelineRig(
     await coordinator.setIndexers(definitions)
     let factory = PipelineFactory(scripts)
     let pipeline = PlayPipeline(
-        search: CoordinatorSearcher(coordinator), controllers: factory, grabs: GRDBGrabRepository(database),
+        search: searcher ?? CoordinatorSearcher(coordinator), controllers: factory, grabs: GRDBGrabRepository(database),
         blocklist: GRDBBlocklistRepository(database), history: GRDBHistoryRepository(database),
-        fetchTorrentFile: { _ in throw URLError(.badURL) },
-        configuration: { PlayPipelineConfiguration(maxAttempts: maxAttempts, readyTimeout: .seconds(5)) })
+        fetchTorrentFile: fetchTorrentFile ?? pipelineDeadFetch,
+        configuration: {
+            configuration ?? PlayPipelineConfiguration(maxAttempts: maxAttempts, readyTimeout: .seconds(5))
+        })
     return PipelineRig(pipeline: pipeline, transport: transport, factory: factory, database: database, title: title)
 }
 
@@ -339,5 +390,279 @@ struct PlayPipelineTests {
         let op = rig.pipeline.begin(pipelineRequest(rig.title))
         op.cancel()
         await #expect(throws: (any Error).self) { _ = try await op.stream() }
+    }
+}
+
+private struct PipelineFakeTorrentSourceError: Error, CustomStringConvertible {
+    var detail: String
+    var description: String { "TorrentSourceError.unreachable(\(detail))" }
+}
+
+@Suite("PlayPipeline failure reasons")
+struct PlayPipelineFailureReasonTests {
+    private static let generic = "The download engine could not start this release."
+
+    @Test("every error type maps to a distinct non-generic message")
+    func distinctMessages() {
+        let messages = [
+            PlayPipeline.reason(for: URLError(.timedOut)),
+            PlayPipeline.reason(for: URLError(.cannotConnectToHost)),
+            PlayPipeline.reason(for: URLError(.badServerResponse)),
+            PlayPipeline.reason(for: TorrentError.timedOut),
+            PlayPipeline.reason(for: TorrentError.libtorrent("invalid torrent: missing info")),
+            PlayPipeline.reason(for: TorrentError.invalidArgument),
+            PlayPipeline.reason(for: TorrentError.sessionClosed),
+            PlayPipeline.reason(for: TorrentError.notFound),
+            PlayPipeline.reason(for: StreamServerError.failedToStart("bind denied")),
+            PlayPipeline.reason(for: StreamServerError.notRunning),
+            PlayPipeline.reason(for: StreamControllerError.engine("disk full")),
+            PlayPipeline.reason(for: PipelineFakeTorrentSourceError(detail: "indexer proxy 403")),
+        ]
+        for message in messages {
+            #expect(!message.isEmpty)
+            #expect(message != Self.generic, "must never be the bare generic: \(message)")
+        }
+        #expect(Set(messages).count == messages.count, "each error type needs a distinct message: \(messages)")
+    }
+
+    @Test("timeout, cannot-connect and bad-response URL errors differ")
+    func urlGroupsDiffer() {
+        let timeout = PlayPipeline.reason(for: URLError(.timedOut))
+        let connect = PlayPipeline.reason(for: URLError(.cannotFindHost))
+        let bad = PlayPipeline.reason(for: URLError(.unsupportedURL))
+        #expect(timeout != connect && connect != bad && timeout != bad)
+    }
+
+    @Test("unknown errors still carry their detail, never the bare generic")
+    func unknownCarriesDetail() {
+        struct Weird: Error {}
+        let message = PlayPipeline.reason(for: Weird())
+        #expect(message != Self.generic)
+        #expect(message.contains("Weird"), "\(message)")
+    }
+
+    @Test("failed grab stores failure plus redacted detail, and the blocklist matches the display")
+    func failedGrabStoresDetail() async throws {
+        let rig = try await pipelineRig(scripts: [.failTorrent(.timedOut), .ready], releases: pipelineCatalogue)
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        #expect(stream.release.title == pipelineSecond)
+
+        let expected = PlayPipeline.reason(for: TorrentError.timedOut)
+        let grabs = try await GRDBGrabRepository(rig.database).grabs(titleId: rig.title.id, limit: 10)
+        let failed = try #require(grabs.first { $0.outcome == .failed })
+        #expect(failed.reason["failure"]?.stringValue == expected)
+        let detail = try #require(failed.reason["failureDetail"]?.stringValue)
+        #expect(detail.contains("release:") && detail.contains("indexer:") && detail.contains("link:"))
+        #expect(!detail.contains("apikey="), "no secrets in failureDetail: \(detail)")
+
+        let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
+        #expect(blocked.first?.reason == expected, "blocklist reason equals the displayed message")
+    }
+
+    @Test("failureDetail redacts API keys from indexer links")
+    func detailRedactsSecrets() {
+        let release = IndexerRelease(
+            indexerID: UUID(), indexerName: "Jackett", title: "Some.Release.S01E01.1080p",
+            guid: "g", downloadURL: URL(string: "https://indexer.example.invalid/dl?id=1&apikey=SECRETKEY")!)
+        let detail = PlayPipeline.failureDetail(for: TorrentError.libtorrent("boom apikey=SECRETKEY"), release: release)
+        #expect(!detail.contains("SECRETKEY"), "\(detail)")
+        #expect(!detail.contains("apikey=SECRETKEY"))
+        #expect(detail.contains("link: https"), "\(detail)")
+    }
+}
+
+private extension JSONValue {
+    var stringValue: String? { if case .string(let value) = self { value } else { nil } }
+}
+
+@Suite("PlayPipeline fast fallback")
+struct PlayPipelineFastFallbackTests {
+    private static let deadLink = "Marquee.Test.Pattern.S01E01.1080p.WEB-DL.H264-DEADLINK"
+    private static let third = "Marquee.Test.Pattern.S01E01.720p.HDTV.x264-CCC"
+
+    /// Dead 1080p proxy link on top, healthy 720p underneath. The dead one must rank first:
+    /// same shape as the main catalogue, one tier above the fallback.
+    private static let deadLinkCatalogue: @Sendable ([String: String]) -> [DemoRelease] = { _ in
+        [pipelineDownloadRelease(Self.deadLink, seeders: 500), pipelineRelease(pipelineSecond, seeders: 40)]
+    }
+
+    private static let shortConfig = PlayPipelineConfiguration(
+        maxAttempts: 4, readyTimeout: .seconds(2), linkFetchTimeout: .seconds(1),
+        metadataTimeoutFirstAttempt: .seconds(1), metadataTimeoutLaterAttempts: .seconds(2))
+
+    @Test("a dead top link fails over in far less than the ready timeout")
+    func deadLinkSkipsFast() async throws {
+        var config = Self.shortConfig
+        config.readyTimeout = .seconds(30)
+        let rig = try await pipelineRig(
+            scripts: [.failStart(.metadataTimeout), .ready], releases: Self.deadLinkCatalogue,
+            configuration: config)
+        let start = ContinuousClock.now
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        let elapsed = ContinuousClock.now - start
+
+        #expect(stream.release.title == pipelineSecond)
+        #expect(elapsed < .seconds(10), "link failure must skip without waiting out the 30 s timeout, took \(elapsed)")
+        #expect(rig.factory.created.withLock(\.count) == 2)
+    }
+
+    @Test("a hanging link download is bounded by the link-fetch timeout")
+    func hangingLinkBounded() async throws {
+        let hangingFetch: @Sendable (URL) async throws -> Data = { url in
+            if url.host == "indexer0.example.invalid" {
+                try await Task.sleep(for: .seconds(60))
+                throw URLError(.timedOut)
+            }
+            throw URLError(.badURL)
+        }
+        let rig = try await pipelineRig(
+            scripts: [.failStart(.metadataTimeout), .ready], releases: Self.deadLinkCatalogue,
+            fetchTorrentFile: hangingFetch, configuration: Self.shortConfig)
+        let start = ContinuousClock.now
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        let elapsed = ContinuousClock.now - start
+
+        #expect(stream.release.title == pipelineSecond)
+        #expect(elapsed < .seconds(10), "1 s link budget must bound the hanging proxy, took \(elapsed)")
+    }
+
+    @Test("a hung controller start fails over on the first-attempt metadata timeout")
+    func hungStartUsesTieredMetadataTimeout() async throws {
+        let rig = try await pipelineRig(
+            scripts: [.hangStart, .ready], releases: pipelineCatalogue, configuration: Self.shortConfig)
+        let start = ContinuousClock.now
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        let elapsed = ContinuousClock.now - start
+
+        #expect(stream.release.title == pipelineSecond)
+        #expect(elapsed < .seconds(10), "1 s first-attempt budget must bound the hung start, took \(elapsed)")
+        let hints = rig.factory.created.withLock { $0.map(\.metadataHints) }
+        #expect(hints.count == 2)
+        #expect(hints[0] == [.seconds(1)], "top pick gets the tight first-attempt bound: \(hints)")
+        #expect(hints[1] == [.seconds(2)], "later attempts get the looser bound: \(hints)")
+        let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
+        #expect(blocked.first?.reason == StreamControllerError.metadataTimeout.plainLanguage)
+    }
+
+    @Test("a stream that never becomes ready fails over on the ready timeout")
+    func hungStatusUsesReadyTimeout() async throws {
+        let rig = try await pipelineRig(
+            scripts: [.hangStatus, .ready], releases: pipelineCatalogue, configuration: Self.shortConfig)
+        let start = ContinuousClock.now
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        let elapsed = ContinuousClock.now - start
+
+        #expect(stream.release.title == pipelineSecond)
+        #expect(elapsed < .seconds(10), "2 s ready budget must bound the hung stream, took \(elapsed)")
+    }
+
+    @Test("several dead picks still fail over within a small total budget")
+    func totalFallbackBudget() async throws {
+        let catalogue: @Sendable ([String: String]) -> [DemoRelease] = { _ in
+            [
+                pipelineDownloadRelease(Self.deadLink, seeders: 500),
+                pipelineRelease(pipelineSecond, seeders: 40),
+                pipelineRelease(Self.third, seeders: 10),
+            ]
+        }
+        let hangingFetch: @Sendable (URL) async throws -> Data = { _ in
+            try await Task.sleep(for: .seconds(60))
+            throw URLError(.timedOut)
+        }
+        var config = Self.shortConfig
+        config.maxAttempts = 3
+        let rig = try await pipelineRig(
+            scripts: [.hangStatus, .hangStatus, .ready], releases: catalogue,
+            fetchTorrentFile: hangingFetch, configuration: config)
+        // The dead link has no magnet or hash fallback, so its hanging fetch fails the
+        // attempt on the 1 s link budget; the next two picks hang in the controller instead.
+        let start = ContinuousClock.now
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        let elapsed = ContinuousClock.now - start
+
+        #expect(stream.release.title == Self.third, "fell through two dead picks to \(stream.release.title)")
+        #expect(elapsed < .seconds(15), "three picks on 1-2 s budgets must stay small, took \(elapsed)")
+    }
+
+    @Test("a no-peers stall fails over immediately, even with a long ready timeout")
+    func noPeersStallShortCircuits() async throws {
+        var config = Self.shortConfig
+        config.readyTimeout = .seconds(20)
+        let rig = try await pipelineRig(
+            scripts: [.stall, .ready], releases: pipelineCatalogue, configuration: config)
+        let start = ContinuousClock.now
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        let elapsed = ContinuousClock.now - start
+
+        #expect(stream.release.title == pipelineSecond)
+        #expect(elapsed < .seconds(10), "no-peers stall must not wait out the 20 s timeout, took \(elapsed)")
+        let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
+        #expect(blocked.first?.reason == StallReason.noPeers.message)
+    }
+
+    @Test("a slow-download stall that recovers still plays the top pick")
+    func slowStallKeepsWaiting() async throws {
+        let rig = try await pipelineRig(scripts: [.slowThenReady], releases: pipelineCatalogue)
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+        #expect(stream.release.title == pipelineTop)
+        #expect(rig.factory.created.withLock(\.count) == 1, "no fallback for a recovering stall")
+    }
+
+    @Test("a repeat of a failed download is skipped without another attempt")
+    func duplicateInfoHashSkipped() async throws {
+        // Same torrent under two guids, injected past the coordinator's same-search dedup (which
+        // would merge them): the second must be skipped once the first fails.
+        let hash = String(repeating: "cd", count: 20)
+        let otherHash = String(repeating: "ab", count: 20)
+        let first = "Marquee.Test.Pattern.S01E01.1080p.WEB-DL.H264-DUP1"
+        let repeatTitle = "Marquee.Test.Pattern.S01E01.1080p.WEB-DL.H264-DUP2"
+        func staticRelease(_ title: String, guid: String, seeders: Int, hash: String) -> IndexerRelease {
+            IndexerRelease(
+                indexerID: UUID(), indexerName: "Static", title: title, guid: guid,
+                magnetURL: URL(string: "magnet:?xt=urn:btih:\(hash)&dn=\(title)&x.pe=127.0.0.1:6881"),
+                infoHash: hash, size: 1_500_000_000, seeders: seeders, peers: seeders + 2)
+        }
+        let searcher = StaticSearcher(releases: [
+            staticRelease(first, guid: "g1", seeders: 300, hash: hash),
+            staticRelease(repeatTitle, guid: "g2", seeders: 200, hash: hash),
+            staticRelease(pipelineSecond, guid: "g3", seeders: 40, hash: otherHash),
+        ])
+        let rig = try await pipelineRig(
+            scripts: [.failStart(.metadataTimeout), .ready], releases: { _ in [] }, searcher: searcher)
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+
+        #expect(stream.release.title == pipelineSecond)
+        #expect(rig.factory.created.withLock(\.count) == 2, "the same-torrent re-post is skipped, not attempted")
+        let grabs = try await GRDBGrabRepository(rig.database).grabs(titleId: rig.title.id, limit: 10)
+        #expect(grabs.count == 3)
+        let skipped = try #require(grabs.first { ($0.reason["failure"]?.stringValue ?? "").contains("already failed") })
+        #expect(skipped.outcome == .failed)
+        #expect(skipped.releaseTitle == first || skipped.releaseTitle == repeatTitle)
+        let attemptedTitle = skipped.releaseTitle == first ? repeatTitle : first
+        let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
+        #expect(blocked.map(\.releaseTitle) == [attemptedTitle], "only the attempted failure is blocklisted: \(blocked)")
+    }
+
+    @Test("withTimeout bounds a hung step and passes a fast one through")
+    func timeoutHelper() async throws {
+        await #expect(throws: PlayPipeline.TimeoutError.self) {
+            try await PlayPipeline.withTimeout(.milliseconds(50)) { try await Task.sleep(for: .seconds(30)) }
+        }
+        let fast = try await PlayPipeline.withTimeout(.seconds(5)) { "ok" }
+        #expect(fast == "ok")
+    }
+
+    @Test("effectiveInfoHash prefers the feed hash, else the magnet hash")
+    func infoHashIdentity() {
+        let feed = IndexerRelease(
+            indexerID: UUID(), title: "x", guid: "g",
+            magnetURL: URL(string: "magnet:?xt=urn:btih:\(String(repeating: "ab", count: 20))"),
+            infoHash: String(repeating: "CD", count: 20))
+        #expect(PlayPipeline.effectiveInfoHash(of: feed) == String(repeating: "cd", count: 20))
+        let magnetOnly = IndexerRelease(
+            indexerID: UUID(), title: "x", guid: "g",
+            magnetURL: URL(string: "magnet:?xt=urn:btih:\(String(repeating: "ab", count: 20))"))
+        #expect(PlayPipeline.effectiveInfoHash(of: magnetOnly) == String(repeating: "ab", count: 20))
+        #expect(PlayPipeline.effectiveInfoHash(of: IndexerRelease(indexerID: UUID(), title: "x", guid: "g")) == nil)
     }
 }

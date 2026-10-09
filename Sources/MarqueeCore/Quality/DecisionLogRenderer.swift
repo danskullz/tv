@@ -17,6 +17,7 @@ public struct DecisionLogSummary: Sendable, Equatable {
     public var streamability: [DecisionLogFactor]
     public var rejectionCounts: [String: Int]
     public var failure: String?
+    public var failureDetail: String?
 }
 
 /// Turns the version-tolerant JSON snapshot stored on a grab into plain, display-ready facts.
@@ -33,7 +34,8 @@ public enum DecisionLogRenderer {
             reasons: value["reasons"]?.arrayValue?.compactMap(\.stringValue) ?? [],
             quality: value["quality"]?.stringValue, profile: value["profile"]?.stringValue,
             formatScore: value["formatScore"]?.intValue, streamabilityScore: value["streamabilityScore"]?.numberValue,
-            streamability: factors, rejectionCounts: rejectionCounts, failure: value["failure"]?.stringValue)
+            streamability: factors, rejectionCounts: rejectionCounts, failure: value["failure"]?.stringValue,
+            failureDetail: value["failureDetail"]?.stringValue)
     }
 }
 

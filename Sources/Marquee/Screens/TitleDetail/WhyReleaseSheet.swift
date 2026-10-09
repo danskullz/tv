@@ -92,6 +92,11 @@ struct WhyReleaseSheet: View {
             if let failure = facts.failure, !failure.isEmpty {
                 Label("This attempt couldn't start: \(failure)", systemImage: "arrow.uturn.backward").font(.callout).foregroundStyle(.orange)
             }
+            if let detail = facts.failureDetail, !detail.isEmpty {
+                DisclosureGroup("Technical details") {
+                    Text(verbatim: detail).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                }.font(.callout).foregroundStyle(.secondary)
+            }
         }
         .padding(16)
         .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -100,7 +105,13 @@ struct WhyReleaseSheet: View {
     private func readable(_ code: String) -> String {
         ["wrongTitle": "different title", "wrongEpisode": "wrong episode", "wrongYear": "wrong year",
          "qualityNotAllowed": "quality outside your profile", "tooFewSeeders": "not enough seeders",
-         "sizeTooSmall": "too small", "sizeTooLarge": "too large", "blocklisted": "blocklisted"] [code] ?? code
+         "sizeTooSmall": "too small", "sizeTooLarge": "too large", "blocklisted": "blocklisted",
+         "packNotWanted": "season packs not wanted", "sample": "samples", "extraContent": "extras",
+         "noDownloadLink": "no download link", "upgradesDisabled": "upgrades turned off",
+         "cutoffMet": "cutoff already met", "notAnUpgrade": "not an upgrade",
+         "upgradeScoreTooSmall": "upgrade score too small", "upgradeScoreReached": "upgrade score already reached",
+         "formatScoreBelowMinimum": "custom format score below minimum",
+         "notEnoughFreeSpace": "not enough free space", "delayed": "held back by delay profile"] [code] ?? code
     }
 
     private func load() async {

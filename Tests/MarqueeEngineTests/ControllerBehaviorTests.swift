@@ -294,4 +294,151 @@ struct ControllerBehaviorTests {
         input.bytesAhead = 2 << 20
         #expect(policy.isReady(input))
     }
+
+    @Test("cushion: high-bitrate files need seconds of playback buffered, small ones are unchanged")
+    func readinessCushion() {
+        // An 8 GiB movie at ~1.3 MB/s needs ~19.5 MB for a 15 s cushion, not just 6 MB.
+        let legacy = FixedBufferReadinessPolicy(bytesAfterHead: 4 << 20)
+        let cushioned = FixedBufferReadinessPolicy(bytesAfterHead: 4 << 20, cushionSeconds: 15)
+        var input = ReadinessInput(
+            fileLength: 8 << 30, playhead: 0, bytesAhead: 6 << 20, headComplete: true, tailComplete: true,
+            headBytes: 2 << 20, downloadRate: 0, estimatedBytesPerSecond: 1_301_505)
+        #expect(legacy.isReady(input), "legacy policy still starts on the fixed buffer")
+        #expect(!cushioned.isReady(input), "6 MB is only ~5 s at this bitrate")
+        input.bytesAhead = 20 << 20
+        #expect(cushioned.isReady(input))
+        // A small episode: the 15 s cushion (~70 KB) is below the fixed buffer, so no later start.
+        input = ReadinessInput(
+            fileLength: 12 << 20, playhead: 0, bytesAhead: 6 << 20, headComplete: true, tailComplete: true,
+            headBytes: 2 << 20, downloadRate: 0, estimatedBytesPerSecond: 4_800)
+        #expect(cushioned.isReady(input))
+        // Near EOF the cushion is capped by what remains.
+        input = ReadinessInput(
+            fileLength: 8 << 30, playhead: (8 << 30) - (1 << 20), bytesAhead: 1 << 20, headComplete: true,
+            tailComplete: true, headBytes: 2 << 20, downloadRate: 0, estimatedBytesPerSecond: 1_301_505)
+        #expect(cushioned.isReady(input))
+        input.headComplete = false
+        #expect(!cushioned.isReady(input))
+    }
+
+    @Test("stream controller defaults: 15 s cushion on, 20 s watchdog, 2 s budget growth")
+    func controllerTuningDefaults() throws {
+        let scratch = try EngineScratch()
+        let config = StreamControllerConfiguration(savePath: try scratch.directory("download"))
+        #expect(config.readyCushionSeconds == 15)
+        #expect(config.requirePlaybackCushion)
+        #expect(config.stallTimeout == .seconds(20))
+        #expect(config.deadlineBudgetSeconds == 2)
+        #expect(config.deadlineBudgetBytes == 1 << 20)
+    }
+
+    @Test("throughput sampler: windows accumulate, then an EWMA of arrival rate")
+    func throughputSampler() {
+        var sampler = ThroughputSampler()
+        let t0 = ContinuousClock.now
+        func check(_ actual: Double?, _ expected: Double, _ what: String = "") {
+            #expect(actual != nil, "estimate present \(what)")
+            #expect(abs((actual ?? 0) - expected) < max(1, expected / 1_000_000), "estimate ≈ \(expected) \(what)")
+        }
+        #expect(sampler.estimate == nil)
+        sampler.add(bytes: 32_000, at: t0)
+        #expect(sampler.estimate == nil, "a partial window is not a sample yet")
+        sampler.add(bytes: 32_000, at: t0 + .milliseconds(250))
+        check(sampler.estimate, 256_000, "first window")
+        sampler.add(bytes: 16_000, at: t0 + .milliseconds(500))
+        let second = 0.7 * 256_000 + 0.3 * 64_000
+        check(sampler.estimate, second, "EWMA moves toward the new rate")
+        // A 10 ms burst accumulates instead of spiking; the next full window samples it.
+        sampler.add(bytes: 16_000, at: t0 + .milliseconds(510))
+        check(sampler.estimate, second, "partial window leaves the estimate alone")
+        sampler.add(bytes: 16_000, at: t0 + .milliseconds(750))
+        check(sampler.estimate, 0.7 * second + 0.3 * 128_000, "burst averaged over its window")
+        sampler.add(bytes: 0, at: t0 + .seconds(5))
+        check(sampler.estimate, 0.7 * second + 0.3 * 128_000, "empty pieces are ignored")
+    }
+
+    @Test("deadline scheduler puts the head and tail ahead of the window")
+    func headAndTailFirst() async throws {
+        let scratch = try EngineScratch()
+        let seedDir = try scratch.directory("seed")
+        let pack = try EnginePack.make(in: seedDir)
+        let leecher = try await engineMakeLeecher()
+        let id = try await leecher.addTorrent(
+            data: pack.torrent, savePath: try scratch.directory("download").path, options: .holdDownload)
+        let metadata = try await leecher.metadata(id)
+        let files = metadata.files.map { PackFile(index: $0.index, path: $0.path, size: $0.size, offset: $0.offset) }
+        let mapping = PackFileMapper.map(files: files, series: EnginePack.series())
+        var options = StreamPlanOptions()
+        options.rolloverBytes = 2 << 20
+        let planner = PackStreamPlanner(mapping: mapping, pieceLength: Int64(metadata.pieceLength), options: options)
+        let plan = planner.makePlan(start: EpisodeRef(season: 1, episode: 1))
+        let map = try #require(TorrentFileByteSource.pieceMap(for: metadata.files[plan.currentFiles[0]], in: metadata))
+        let container = Set(map.pieces(forFileRange: 0..<options.headBytes))
+            .union(map.pieces(forFileRange: (map.fileLength - options.tailBytes)..<map.fileLength))
+        let scheduler = TorrentDeadlineScheduler(
+            session: leecher, torrent: id, plan: plan, have: PieceAvailability(pieceCount: metadata.pieceCount),
+            deadlineBudgetBytes: Int64(container.count) * Int64(metadata.pieceLength))
+
+        await scheduler.start()
+        let applied = await scheduler.appliedDeadlines
+        #expect(Set(applied.keys) == container, "a tight budget carries exactly the head and tail")
+        await leecher.shutdown()
+    }
+
+    @Test("advance keeps the prefetched head and pre-warms the next episode")
+    func advanceKeepsPrefetchedHead() async throws {
+        let scratch = try EngineScratch()
+        let seedDir = try scratch.directory("seed")
+        let pack = try EnginePack.make(in: seedDir)
+        let leecher = try await engineMakeLeecher()
+        let id = try await leecher.addTorrent(
+            data: pack.torrent, savePath: try scratch.directory("download").path, options: .holdDownload)
+        let metadata = try await leecher.metadata(id)
+        let files = metadata.files.map { PackFile(index: $0.index, path: $0.path, size: $0.size, offset: $0.offset) }
+        let mapping = PackFileMapper.map(files: files, series: EnginePack.series())
+        var options = StreamPlanOptions()
+        options.rolloverBytes = 2 << 20
+        let planner = PackStreamPlanner(mapping: mapping, pieceLength: Int64(metadata.pieceLength), options: options)
+        let e1 = EpisodeRef(season: 1, episode: 1)
+        let e2 = EpisodeRef(season: 1, episode: 2)
+        let e3 = EpisodeRef(season: 1, episode: 3)
+        let plan = planner.makePlan(start: e1)
+        let scheduler = TorrentDeadlineScheduler(
+            session: leecher, torrent: id, plan: plan, have: PieceAvailability(pieceCount: metadata.pieceCount))
+        await scheduler.start()
+        func map(of episode: EpisodeRef) throws -> PieceMap {
+            let p = planner.makePlan(start: episode)
+            return try #require(TorrentFileByteSource.pieceMap(for: metadata.files[p.currentFiles[0]], in: metadata))
+        }
+        let e1Map = try map(of: e1)
+        let e2Map = try map(of: e2)
+        let e3Map = try map(of: e3)
+        let e2Head = e2Map.pieces(forFileRange: 0..<options.headBytes)
+
+        // Far from the end of E01, E02's head is not requested.
+        let initial = await scheduler.appliedDeadlines
+        #expect(e2Head.allSatisfy { initial[$0] == nil })
+
+        // Near the end, rollover pulls E02's head and tail in.
+        await scheduler.movePlayhead(to: e1Map.fileLength - (1 << 20))
+        var applied = await scheduler.appliedDeadlines
+        #expect(e2Head.allSatisfy { applied[$0] != nil })
+
+        // Advancing keeps E02's head (now current) instead of clearing it.
+        let clears = await scheduler.deadlineClearCount
+        await scheduler.setPlan(planner.makePlan(start: e2))
+        #expect(await scheduler.playhead == 0)
+        applied = await scheduler.appliedDeadlines
+        #expect(e2Head.allSatisfy { applied[$0] != nil }, "prefetched head survives the switch")
+        #expect(e2Map.pieceIndex(forFileOffset: 0) == e2Head.lowerBound)
+        #expect(applied[e2Map.pieceIndex(forFileOffset: 0)] != nil)
+        #expect(await scheduler.deadlineClearCount > clears, "E01's window behind was cleared")
+
+        // Near the end of E02, E03's head joins: the new current pre-warms its successor.
+        await scheduler.movePlayhead(to: e2Map.fileLength - (1 << 20))
+        applied = await scheduler.appliedDeadlines
+        let e3Head = e3Map.pieces(forFileRange: 0..<options.headBytes)
+        #expect(e3Head.allSatisfy { applied[$0] != nil })
+        await leecher.shutdown()
+    }
 }

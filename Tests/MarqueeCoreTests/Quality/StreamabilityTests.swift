@@ -202,4 +202,104 @@ import Testing
         let ranked = StreamabilityScorer.rank(decisions([bad, ok], wanted: wanted), input: StreamabilityInput(wanted: wanted))
         #expect(titles(ranked) == [ok.release.title])
     }
+
+    // MARK: Play picks startable releases
+
+    @Test func profileNeverOutranks3xSeederGapForPlay() {
+        let wanted = WantedItem.movie("Movie", year: 2021, runtimeMinutes: 100)
+        let pretty = qualityMakeCandidate("Movie.2021.2160p.WEB-DL.H.265-AAA", seeders: 10, sizeGB: 6)
+        let healthy = qualityMakeCandidate("Movie.2021.1080p.BluRay.H.264-BBB", seeders: 30, sizeGB: 6)
+        let all = decisions([pretty, healthy], wanted: wanted)
+        // The engine still prefers quality; Play must not.
+        #expect(all.best?.candidate.release.title == pretty.release.title)
+        let ranked = StreamabilityScorer.rank(all, input: StreamabilityInput(wanted: wanted))
+        #expect(titles(ranked).first == healthy.release.title)
+        func points(_ title: String, _ name: String) -> Double {
+            ranked.first { $0.decision.candidate.release.title == title }!.components.first { $0.name == name }!.points
+        }
+        // The 3x seeder gap is worth more health than the one rank step is worth profile.
+        #expect(points(healthy.release.title, "health") - points(pretty.release.title, "health")
+            > points(pretty.release.title, "profile") - points(healthy.release.title, "profile"))
+    }
+
+    @Test func hugeFileDemotedOnSlowLine() {
+        let wanted = WantedItem.movie("Movie", year: 2021, runtimeMinutes: 120)
+        let huge = qualityMakeCandidate("Movie.2021.2160p.WEB-DL.H.265-AAA", seeders: 200, sizeGB: 60)
+        let light = qualityMakeCandidate("Movie.2021.1080p.WEB-DL.H.264-BBB", seeders: 200, sizeGB: 6)
+        let all = decisions([huge, light], wanted: wanted)
+        // Measured slow line: bitrate far above throughput is a veto, not a nudge.
+        let slow = StreamabilityInput(wanted: wanted, measuredThroughputBytesPerSecond: 2_000_000)
+        let ranked = StreamabilityScorer.rank(all, input: slow)
+        #expect(titles(ranked).first == light.release.title)
+        #expect(ranked.last?.components.first { $0.name == "bitrate" }?.points ?? 0 <= -60)
+        #expect(ranked.last?.fitsThroughput == false)
+        // Unmeasured line: the conservative default estimate still demotes the hog.
+        let unknown = StreamabilityScorer.rank(all, input: StreamabilityInput(wanted: wanted))
+        #expect(titles(unknown).first == light.release.title)
+        #expect(unknown.last?.fitsThroughput == nil)
+    }
+
+    @Test func metadataContainerOverrideBeatsNameGuess() {
+        let wanted = WantedItem.movie("Movie", year: 2021, runtimeMinutes: 100)
+        let bare = qualityMakeCandidate("Movie.2021.1080p.WEB-DL.H.264-AAA", seeders: 100, sizeGB: 6)
+        let mislabeled = qualityMakeCandidate("Movie.2021.1080p.WEB-DL.H.264-BBB.mkv", seeders: 100, sizeGB: 6)
+        // Name guesses say unknown / MKV; real torrent metadata says otherwise.
+        let input = StreamabilityInput(
+            wanted: wanted, metadataFiles: [bare.id: ["movie.avi"], mislabeled.id: ["movie.mp4"]])
+        let ranked = StreamabilityScorer.rank(decisions([bare, mislabeled], wanted: wanted), input: input)
+        func container(_ title: String) -> ContainerKind {
+            ranked.first { $0.decision.candidate.release.title == title }!.container
+        }
+        #expect(container(bare.release.title) == .avi)
+        #expect(container(mislabeled.release.title) == .mp4)
+        // The real container moves the ranking, not just the label.
+        #expect(titles(ranked).first == mislabeled.release.title)
+    }
+
+    @Test func containerFromMetadataFilesMapsExtensions() {
+        #expect(ContainerKind.fromMetadataFiles(["movie.mp4"]) == .mp4)
+        #expect(ContainerKind.fromMetadataFiles(["VIDEO/movie.MKV"]) == .mkv)
+        #expect(ContainerKind.fromMetadataFiles(["cd1.avi"]) == .avi)
+        #expect(ContainerKind.fromMetadataFiles(["movie.ts"]) == .transportStream)
+        #expect(ContainerKind.fromMetadataFiles(["movie.rar", "movie.r00"]) == .compressedArchive)
+        #expect(ContainerKind.fromMetadataFiles(["movie.zip"]) == .compressedArchive)
+        #expect(ContainerKind.fromMetadataFiles(["movie.r37"]) == .compressedArchive)
+        #expect(ContainerKind.fromMetadataFiles(["poster.nfo", "sample.txt"]) == .unknown)
+        // Direct video wins over an accompanying archive.
+        #expect(ContainerKind.fromMetadataFiles(["movie.rar", "movie.mkv"]) == .mkv)
+    }
+
+    @Test func magnetPreferredOnTie() {
+        let wanted = WantedItem.movie("Movie", year: 2021, runtimeMinutes: 100)
+        let fileBacked = qualityMakeCandidate("Movie.2021.1080p.WEB-DL.H.264-AAA", seeders: 100, sizeGB: 6)
+        var magnet = qualityMakeCandidate("Movie.2021.1080p.WEB-DL.H.264-BBB", seeders: 100, sizeGB: 6)
+        magnet.release.magnetURL = URL(string: "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567")
+        let ranked = StreamabilityScorer.rank(decisions([fileBacked, magnet], wanted: wanted), input: StreamabilityInput(wanted: wanted))
+        #expect(titles(ranked).first == magnet.release.title)
+        #expect(ranked.first?.components.first { $0.name == "source" }?.points == 4)
+        #expect(ranked.first?.explanation.text.contains("magnet link") == true)
+    }
+
+    @Test func observedSeedersOverrideAdvertisedCounts() {
+        let wanted = WantedItem.movie("Movie", year: 2021, runtimeMinutes: 100)
+        let c = qualityMakeCandidate("Movie.2021.1080p.WEB-DL.H.264-AAA", seeders: 100, sizeGB: 6)
+        let all = decisions([c], wanted: wanted)
+        let plain = StreamabilityScorer.score(all[0], input: StreamabilityInput(wanted: wanted), bestSingleSeeders: 100)
+        let probed = StreamabilityScorer.score(
+            all[0],
+            input: StreamabilityInput(wanted: wanted, observedSeeders: [c.id: 4], observedLatencySeconds: [c.id: 0.5]),
+            bestSingleSeeders: 100)
+        func health(_ s: StreamabilityScore) -> StreamabilityComponent { s.components.first { $0.name == "health" }! }
+        #expect(health(probed).points < health(plain).points)
+        #expect(health(probed).note.contains("observed 4 seeders"))
+        // Fast probe: no responsiveness penalty.
+        #expect(probed.components.first { $0.name == "responsiveness" } == nil)
+        #expect(probed.total < plain.total)
+
+        // Slow probe: small responsiveness penalty.
+        let slow = StreamabilityScorer.score(
+            all[0], input: StreamabilityInput(wanted: wanted, observedLatencySeconds: [c.id: 5]),
+            bestSingleSeeders: 100)
+        #expect(slow.components.first { $0.name == "responsiveness" }?.points == -8)
+    }
 }

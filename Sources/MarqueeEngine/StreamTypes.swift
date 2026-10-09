@@ -64,13 +64,16 @@ public enum StreamControllerError: Error, Sendable, Equatable {
     /// Plain-language text for the UI.
     public var plainLanguage: String {
         switch self {
-        case .alreadyStarted: "This stream is already running."
-        case .notStarted: "This stream hasn't started yet."
-        case .metadataTimeout: "Couldn't find anyone sharing this release. Try another version."
-        case .noPlayableFile: "This release doesn't seem to contain anything playable."
-        case .episodeNotInPack(let e): "This release doesn't include \(e)."
-        case .archiveStreamingUnsupported: "This release is packed in archives, which can't be played while downloading yet."
-        case .engine: "The download engine ran into a problem. Try another version."
+        case .alreadyStarted: return "This stream is already running."
+        case .notStarted: return "This stream hasn't started yet."
+        case .metadataTimeout: return "Couldn't find anyone sharing this release. Try another version."
+        case .noPlayableFile: return "This release doesn't seem to contain anything playable."
+        case .episodeNotInPack(let e): return "This release doesn't include \(e)."
+        case .archiveStreamingUnsupported: return "This release is packed in archives, which can't be played while downloading yet."
+        case .engine(let detail):
+            let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return "The download engine ran into a problem. Try another version." }
+            return "The download engine ran into a problem (\(SecretRedactor.redact(trimmed))). Try another version."
         }
     }
 }
@@ -142,13 +145,27 @@ public protocol StreamReadinessPolicy: Sendable {
 }
 
 /// Ready once the container head and tail are in and `bytesAfterHead` more bytes follow the head.
+///
+/// When `cushionSeconds` is set, readiness additionally requires that many seconds of the
+/// estimated bitrate buffered ahead (capped by the bytes remaining), so starting playback means
+/// a real time cushion, not just a fixed byte count. `nil` (the default) keeps the legacy
+/// fixed-buffer behaviour.
 public struct FixedBufferReadinessPolicy: StreamReadinessPolicy {
     public var bytesAfterHead: Int64
-    public init(bytesAfterHead: Int64 = 4 << 20) { self.bytesAfterHead = bytesAfterHead }
+    public var cushionSeconds: Double?
+    public init(bytesAfterHead: Int64 = 4 << 20, cushionSeconds: Double? = nil) {
+        self.bytesAfterHead = bytesAfterHead
+        self.cushionSeconds = cushionSeconds
+    }
 
     public func isReady(_ input: ReadinessInput) -> Bool {
         guard input.headComplete, input.tailComplete else { return false }
-        return input.bytesAhead >= min(input.headBytes + bytesAfterHead, input.remainingBytes)
+        var need = input.headBytes + bytesAfterHead
+        if let cushionSeconds, cushionSeconds > 0 {
+            let cushionBytes = input.estimatedBytesPerSecond * cushionSeconds
+            need = max(need, Int64(min(cushionBytes, Double(Int64.max))))
+        }
+        return input.bytesAhead >= min(need, input.remainingBytes)
     }
 }
 
@@ -189,6 +206,15 @@ public struct StreamControllerConfiguration: Sendable {
     /// Once the download rate is known, the budget grows to this many seconds of it (capped by the plan's
     /// window), so fast connections keep a deeper deadline window than the starting budget.
     public var deadlineBudgetSeconds: Double
+    /// Seconds of estimated playback that must be buffered ahead before `.ready` (on top of the
+    /// readiness policy's fixed buffer), so starting means a time cushion, not just a byte count.
+    /// Applies when the policy is a ``FixedBufferReadinessPolicy`` without its own cushion and
+    /// `requirePlaybackCushion` is true.
+    public var readyCushionSeconds: Double
+    /// When true (default), the controller requires the `readyCushionSeconds` cushion even though
+    /// the readiness policy alone would allow starting sooner. Set to false for the legacy
+    /// fixed-buffer behaviour.
+    public var requirePlaybackCushion: Bool
     public var tuning: StreamingTuning
     public var metadataTimeout: Duration
     /// No piece for this long while waiting for data reports ``StreamStatus/stalled(_:)``.
@@ -206,6 +232,8 @@ public struct StreamControllerConfiguration: Sendable {
         readinessPolicy: any StreamReadinessPolicy = FixedBufferReadinessPolicy(),
         deadlineBudgetBytes: Int64? = 1 << 20,
         deadlineBudgetSeconds: Double = 2,
+        readyCushionSeconds: Double = 15,
+        requirePlaybackCushion: Bool = true,
         tuning: StreamingTuning = StreamingTuning(),
         metadataTimeout: Duration = .seconds(60),
         stallTimeout: Duration = .seconds(20),
@@ -218,6 +246,8 @@ public struct StreamControllerConfiguration: Sendable {
         self.readinessPolicy = readinessPolicy
         self.deadlineBudgetBytes = deadlineBudgetBytes
         self.deadlineBudgetSeconds = deadlineBudgetSeconds
+        self.readyCushionSeconds = readyCushionSeconds
+        self.requirePlaybackCushion = requirePlaybackCushion
         self.tuning = tuning
         self.metadataTimeout = metadataTimeout
         self.stallTimeout = stallTimeout

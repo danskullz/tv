@@ -82,6 +82,14 @@ public struct PlayPipelineConfiguration: Sendable {
     /// Releases tried before giving up.
     public var maxAttempts: Int
     public var minimumSeeders: Int
+    /// A `.torrent` link download that takes longer than this falls back to the magnet link when
+    /// there is one, else fails the attempt. Bounds one slow indexer, not the whole Play.
+    public var linkFetchTimeout: Duration
+    /// Controller start (metadata fetch) bound for the first attempt: the top pick is usually
+    /// healthy, so a dead one should fail over in seconds.
+    public var metadataTimeoutFirstAttempt: Duration
+    /// Controller start bound for later attempts.
+    public var metadataTimeoutLaterAttempts: Duration
     /// An attempt that has not become playable after this long counts as failed.
     public var readyTimeout: Duration
     /// Peers every attempt connects to directly, on top of any a magnet link carries (`x.pe`).
@@ -92,9 +100,11 @@ public struct PlayPipelineConfiguration: Sendable {
     public var streamMode: StreamMode
 
     public init(
-        maxAttempts: Int = 4, minimumSeeders: Int = 1, readyTimeout: Duration = .seconds(90),
+        maxAttempts: Int = 4, minimumSeeders: Int = 1, readyTimeout: Duration = .seconds(60),
         extraPeers: [PeerEndpoint] = [], measuredThroughputBytesPerSecond: Double? = nil,
-        formats: [CustomFormatConfig] = BuiltInFormats.all, streamMode: StreamMode = .streamFromStart
+        formats: [CustomFormatConfig] = BuiltInFormats.all, streamMode: StreamMode = .streamFromStart,
+        linkFetchTimeout: Duration = .seconds(15), metadataTimeoutFirstAttempt: Duration = .seconds(20),
+        metadataTimeoutLaterAttempts: Duration = .seconds(30)
     ) {
         self.maxAttempts = max(1, maxAttempts)
         self.minimumSeeders = minimumSeeders
@@ -103,6 +113,14 @@ public struct PlayPipelineConfiguration: Sendable {
         self.measuredThroughputBytesPerSecond = measuredThroughputBytesPerSecond
         self.formats = formats
         self.streamMode = streamMode
+        self.linkFetchTimeout = linkFetchTimeout
+        self.metadataTimeoutFirstAttempt = metadataTimeoutFirstAttempt
+        self.metadataTimeoutLaterAttempts = metadataTimeoutLaterAttempts
+    }
+
+    /// Metadata bound for attempt `number` (1-based): tight on the top pick, looser afterwards.
+    public func metadataTimeout(forAttempt number: Int) -> Duration {
+        number <= 1 ? metadataTimeoutFirstAttempt : metadataTimeoutLaterAttempts
     }
 }
 
@@ -138,8 +156,15 @@ public protocol StreamControlling: Sendable {
     func setMediaDuration(_ seconds: Double) async
     func playheadMoved(to offset: Int64) async
     func stop(removeTorrent: Bool, deleteFiles: Bool) async
+    /// Per-attempt metadata bound, applied before `start`. Controllers that cannot honor it
+    /// ignore the hint; the pipeline also enforces its own bound around `start`.
+    func setMetadataTimeout(_ timeout: Duration) async
     nonisolated func statusUpdates() -> AsyncStream<StreamStatus>
     nonisolated func events() -> AsyncStream<StreamControllerEvent>
+}
+
+extension StreamControlling {
+    public func setMetadataTimeout(_ timeout: Duration) async {}
 }
 
 extension StreamSessionController: StreamControlling {}

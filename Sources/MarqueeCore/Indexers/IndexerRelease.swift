@@ -99,6 +99,22 @@ public struct IndexerRelease: Sendable, Hashable, Codable, Identifiable, CustomS
 
     public var isFreeleech: Bool { downloadVolumeFactor == 0 }
 
+    /// Explicit magnet link, else a magnet synthesized from `infoHash` (for trackers that only
+    /// serve a `.torrent` proxy link plus a hash). Used to prefer magnets and as peer hints.
+    public var effectiveMagnetURI: String? {
+        if let magnetURL { return magnetURL.absoluteString }
+        guard let infoHash else { return nil }
+        let name = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        return "magnet:?xt=urn:btih:\(infoHash)&dn=\(name)"
+    }
+
+    /// True for `magnet:` links (or any URL carrying an `xt=urn:btih:` hash, as some Torznab
+    /// proxies redirect to).
+    public static func isMagnetURI(_ value: String) -> Bool {
+        let lower = value.lowercased()
+        return lower.hasPrefix("magnet:") || lower.contains("xt=urn:btih:")
+    }
+
     /// Safe for logs: links are redacted and never printed in full.
     public var description: String {
         let link = downloadURL.map { SecretRedactor.redact($0) } ?? (magnetURL != nil ? "magnet" : "no link")
