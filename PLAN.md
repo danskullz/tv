@@ -15,7 +15,7 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☑ Season-pack file→episode mapper + ordered streaming plan (priority gradient, cross-file deadlines) — `Packs`
 - ◐ Quality engine: profiles, custom formats, scoring, streamability score, "why this release" — `Quality`
 - ◐ libmpv LGPL universal build + Metal player view (`PlaybackEngine` protocol)
-- ◐ Torrent engine ↔ stream server bridge (piece deadlines follow playhead) — `MarqueeEngine`
+- ☑ Torrent engine ↔ stream server bridge (piece deadlines follow playhead) — `MarqueeEngine`
 - ☐ Helper daemon (`SMAppService` login item) + XPC
 
 ## Wave 3 — Phase 1 exit: add → search → grab → stream
@@ -33,3 +33,4 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - UI: `-initialDetail` launch hook doesn't sync sidebar selection; Discover/Calendar placeholders; settings don't persist; no UI-model tests (FuzzyIndex, Formatters); macOS 15 fallback unverified.
 - TorrentEngine: measure idle CPU with libtorrent's internal tick (`tick_interval`) against §5.6 and pause/sleep the session when idle; libtorrent tarball SHA is trust-on-first-use.
 - Packs: corpus is author-written; DD/MM ambiguity, bare 3–4 digit episodes, absolute numbers without folder hint; opaque whole-pack archives disable gap detection; inner-archive byte ranges (stored RAR streaming) not yet implemented.
+- Engine (priority): time-to-first-byte is ~5–6 s on loopback because libtorrent issues deadline requests on its tick; implement a progressive deadline window (head + small window first, extend as pieces land) and consider a shorter tick while streaming. Investigate the one unreproduced seek read that returned mismatched bytes (data integrity). Archive episodes throw `archiveStreamingUnsupported`; `fileCompleted` not emitted for already-complete files at add; re-adding an existing hash unhandled.

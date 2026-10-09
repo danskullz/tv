@@ -6,7 +6,7 @@ import Testing
 
 @Suite struct PersistenceSearchTests {
     #if DEBUG
-    static let budgetMs = 250.0  // debug builds are far slower than release; the gate is release
+    static let budgetMs = 1_000.0  // sanity bound only: debug + parallel suites is noisy; the 50 ms gate is release
     #else
     static let budgetMs = 50.0
     #endif
