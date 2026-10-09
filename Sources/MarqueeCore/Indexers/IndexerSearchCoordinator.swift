@@ -57,6 +57,18 @@ public struct IndexerSearchOutcome: Sendable, Equatable, Identifiable {
     public var skippedItems: Int
     public var isPartial: Bool
     public var id: UUID { indexerID }
+
+    public init(
+        indexerID: UUID, indexerName: String, status: Status, latency: TimeInterval = 0,
+        skippedItems: Int = 0, isPartial: Bool = false
+    ) {
+        self.indexerID = indexerID
+        self.indexerName = indexerName
+        self.status = status
+        self.latency = latency
+        self.skippedItems = skippedItems
+        self.isPartial = isPartial
+    }
 }
 
 public struct CoordinatedSearchResult: Sendable, Equatable {
@@ -64,6 +76,12 @@ public struct CoordinatedSearchResult: Sendable, Equatable {
     public var releases: [IndexerRelease]
     public var outcomes: [IndexerSearchOutcome]
     public var duplicatesRemoved: Int
+
+    public init(releases: [IndexerRelease] = [], outcomes: [IndexerSearchOutcome] = [], duplicatesRemoved: Int = 0) {
+        self.releases = releases
+        self.outcomes = outcomes
+        self.duplicatesRemoved = duplicatesRemoved
+    }
 
     public var succeededCount: Int { outcomes.filter { if case .success = $0.status { true } else { false } }.count }
     public var failedCount: Int { outcomes.count - succeededCount }

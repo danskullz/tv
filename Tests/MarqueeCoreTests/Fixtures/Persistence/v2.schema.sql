@@ -12,6 +12,8 @@ CREATE INDEX grab_infoHash ON grab(infoHash) WHERE infoHash IS NOT NULL;
 
 CREATE INDEX grab_titleId_createdAt ON grab(titleId, createdAt);
 
+CREATE INDEX healthIssue_code_entity ON healthIssue(code, entityId) WHERE resolvedAt IS NULL;
+
 CREATE INDEX healthIssue_open ON healthIssue(severity) WHERE resolvedAt IS NULL;
 
 CREATE INDEX historyEvent_entity ON historyEvent(entityType, entityId, occurredAt);
@@ -47,6 +49,8 @@ CREATE INDEX title_addedAt ON title(addedAt) WHERE deletedAt IS NULL;
 CREATE INDEX title_deletedAt ON title(deletedAt) WHERE deletedAt IS NOT NULL;
 
 CREATE INDEX title_kind_sortTitle ON title(kind, sortTitle) WHERE deletedAt IS NULL;
+
+CREATE INDEX title_monitored ON title(kind) WHERE monitored = 1 AND deletedAt IS NULL;
 
 CREATE UNIQUE INDEX title_tmdb ON title(kind, tmdbId) WHERE tmdbId IS NOT NULL AND deletedAt IS NULL;
 
@@ -333,7 +337,7 @@ CREATE TABLE title (
     deletedAt DATETIME,
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL
-);
+, releaseDate DATETIME, inCinemasDate DATETIME, digitalReleaseDate DATETIME, physicalReleaseDate DATETIME);
 
 CREATE VIRTUAL TABLE titleSearch USING fts5(
     titleId UNINDEXED, title, sortTitle, overview,
@@ -370,6 +374,13 @@ CREATE TABLE torrent (
     addedAt DATETIME NOT NULL,
     completedAt DATETIME,
     createdAt DATETIME NOT NULL,
+    updatedAt DATETIME NOT NULL
+, grabId BLOB, episodeIds TEXT NOT NULL DEFAULT '[]', uploadedBytes INTEGER NOT NULL DEFAULT 0, pausedByUser BOOLEAN NOT NULL DEFAULT 0, pausedByQueue BOOLEAN NOT NULL DEFAULT 0, pausedForBattery BOOLEAN NOT NULL DEFAULT 0, seedRatioGoal REAL, seedTimeGoalMinutes INTEGER, downloadLimit INTEGER, uploadLimit INTEGER, importedAt DATETIME);
+
+CREATE TABLE torrentPayload (
+    infoHash TEXT PRIMARY KEY NOT NULL REFERENCES torrent(infoHash) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    data BLOB NOT NULL,
     updatedAt DATETIME NOT NULL
 );
 

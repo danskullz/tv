@@ -111,16 +111,21 @@ public struct GRDBLibraryRepository: LibraryRepository {
             try Self.assertNoLiveDuplicate(of: title, in: db)
             try title.insert(db)
             let now = Date()
+            let flags = MonitoringRules.episodeFlags(
+                mode: title.monitorMode, titleMonitored: title.monitored, seasons: seasons, now: now)
             for draft in seasons {
+                let seasonFlags = flags[draft.seasonNumber] ?? [:]
                 let season = Season(
                     titleId: title.id, seasonNumber: draft.seasonNumber,
-                    monitored: draft.monitored, createdAt: now, updatedAt: now)
+                    monitored: seasonFlags.values.contains(true), createdAt: now, updatedAt: now)
                 try season.insert(db)
                 for e in draft.episodes {
                     try Episode(
                         titleId: title.id, seasonId: season.id, seasonNumber: draft.seasonNumber,
                         episodeNumber: e.episodeNumber, absoluteNumber: e.absoluteNumber,
-                        airDate: e.airDate, monitored: e.monitored, title: e.title,
+                        airDate: e.airDate,
+                        monitored: seasonFlags[MonitoredEpisodeKey(season: draft.seasonNumber, episode: e.episodeNumber)] ?? false,
+                        title: e.title,
                         runtime: e.runtime, tvdbId: e.tvdbId, createdAt: now, updatedAt: now
                     ).insert(db)
                 }
@@ -166,14 +171,22 @@ public struct GRDBLibraryRepository: LibraryRepository {
 
     public func mergeSeasons(titleId: UUID, seasons: [SeasonDraft]) async throws {
         try await database.writer.write { db in
-            guard try Title.exists(db, key: titleId) else { throw LibraryError.notFound(titleId) }
+            guard let title = try Title.fetchOne(db, key: titleId) else { throw LibraryError.notFound(titleId) }
             let now = Date()
+            let existingEpisodes = try Episode.filter(Column("titleId") == titleId).fetchAll(db)
+            let existingFlags = Dictionary(uniqueKeysWithValues: existingEpisodes.map {
+                (MonitoredEpisodeKey(season: $0.seasonNumber, episode: $0.episodeNumber), $0.monitored)
+            })
+            let flags = MonitoringRules.episodeFlags(
+                mode: title.monitorMode, titleMonitored: title.monitored, seasons: seasons, now: now,
+                existing: existingFlags)
             for draft in seasons {
                 var season = try Season
                     .filter(Column("titleId") == titleId && Column("seasonNumber") == draft.seasonNumber).fetchOne(db)
                 if season == nil {
                     let created = Season(
-                        titleId: titleId, seasonNumber: draft.seasonNumber, monitored: draft.monitored,
+                        titleId: titleId, seasonNumber: draft.seasonNumber,
+                        monitored: (flags[draft.seasonNumber] ?? [:]).values.contains(true),
                         createdAt: now, updatedAt: now)
                     try created.insert(db)
                     season = created
@@ -195,11 +208,17 @@ public struct GRDBLibraryRepository: LibraryRepository {
                         try Episode(
                             titleId: titleId, seasonId: season.id, seasonNumber: draft.seasonNumber,
                             episodeNumber: e.episodeNumber, absoluteNumber: e.absoluteNumber, airDate: e.airDate,
-                            monitored: e.monitored, title: e.title, runtime: e.runtime, tvdbId: e.tvdbId,
+                            monitored: flags[draft.seasonNumber]?[MonitoredEpisodeKey(
+                                season: draft.seasonNumber, episode: e.episodeNumber)] ?? false,
+                            title: e.title, runtime: e.runtime, tvdbId: e.tvdbId,
                             createdAt: now, updatedAt: now
                         ).insert(db)
                     }
                 }
+                var refreshedSeason = season
+                refreshedSeason.monitored = (flags[draft.seasonNumber] ?? [:]).values.contains(true)
+                refreshedSeason.updatedAt = now
+                try refreshedSeason.update(db)
             }
         }
     }
