@@ -249,6 +249,10 @@ public actor DownloadManager {
         }
         if let existing = try await torrents.torrent(infoHash: resolvedHash) {
             if existing.state == .error {
+                try await enforceFreeSpace(
+                    size: request.release.size ?? existing.size,
+                    at: URL(fileURLWithPath: existing.savePath),
+                    titleID: request.titleId, title: request.release.title)
                 if loadedHashes.contains(existing.infoHash) {
                     try await engine.remove(TorrentID(hex: existing.infoHash), deleteFiles: false)
                     loadedHashes.remove(existing.infoHash)
@@ -278,6 +282,7 @@ public actor DownloadManager {
                 let savedPayload = try await torrents.payload(infoHash: resolvedHash) ?? payload
                 try await torrents.update(retry)
                 try await torrents.savePayload(infoHash: resolvedHash, savedPayload)
+                try await health.resolve(code: "diskSpaceLow", entityId: request.titleId.uuidString)
                 try await health.resolve(code: "downloadFailed", entityId: resolvedHash)
                 try await health.resolve(code: "downloadHashFailed", entityId: resolvedHash)
                 try await reconcileQueue()
@@ -286,17 +291,9 @@ public actor DownloadManager {
             throw DownloadManagerError.alreadyManaged(existing.infoHash)
         }
         try FileManager.default.createDirectory(at: request.savePath, withIntermediateDirectories: true)
-        let available = freeSpace(request.savePath)
-        if let available, let size = request.release.size,
-            size + configuration.reservedFreeSpaceBytes > available
-        {
-            let needed = size + configuration.reservedFreeSpaceBytes
-            _ = try? await health.report(
-                code: "diskSpaceLow", severity: .error,
-                message: "Not enough free space for \(request.release.title). Need \(needed) bytes, have \(available).",
-                fixAction: "chooseDownloadFolder", entityId: request.titleId.uuidString)
-            throw DownloadManagerError.insufficientSpace(required: needed, available: available)
-        }
+        try await enforceFreeSpace(
+            size: request.release.size, at: request.savePath,
+            titleID: request.titleId, title: request.release.title)
         let torrent = Torrent(
             infoHash: resolvedHash,
             name: request.release.title, state: .queued, savePath: request.savePath.path,
@@ -530,6 +527,17 @@ public actor DownloadManager {
     private func applyLimits(to torrent: Torrent) async throws {
         if let limit = torrent.downloadLimit { try await engine.setDownloadLimit(TorrentID(hex: torrent.infoHash), bytesPerSecond: limit) }
         if let limit = torrent.uploadLimit { try await engine.setUploadLimit(TorrentID(hex: torrent.infoHash), bytesPerSecond: limit) }
+    }
+
+    private func enforceFreeSpace(size: Int64?, at path: URL, titleID: UUID, title: String) async throws {
+        guard let available = freeSpace(path), let size else { return }
+        let required = size + configuration.reservedFreeSpaceBytes
+        guard required > available else { return }
+        _ = try? await health.report(
+            code: "diskSpaceLow", severity: .error,
+            message: "Not enough free space for \(title). Need \(required) bytes, have \(available).",
+            fixAction: "chooseDownloadFolder", entityId: titleID.uuidString)
+        throw DownloadManagerError.insufficientSpace(required: required, available: available)
     }
 
     private func handle(_ event: TorrentEvent) async {

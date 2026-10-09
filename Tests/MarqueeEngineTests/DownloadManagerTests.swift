@@ -72,6 +72,9 @@ import TorrentEngine
             infoHash: hash, name: request.release.title, state: .error, savePath: request.savePath.path,
             size: request.release.size, titleId: request.titleId, lastError: "tracker failure"))
         try await repository.savePayload(infoHash: hash, .magnet(storedMagnet))
+        _ = try await health.report(
+            code: "diskSpaceLow", severity: .error, message: "free space was low",
+            fixAction: "chooseDownloadFolder", entityId: request.titleId.uuidString)
 
         let engine = FakeManagedTorrentEngine()
         let manager = DownloadManager(
@@ -83,7 +86,48 @@ import TorrentEngine
         #expect(retried.lastError == nil)
         #expect(engine.addedHashes == [hash])
         #expect(engine.magnetURIs == [storedMagnet])
+        #expect(try await health.active().filter { $0.code == "diskSpaceLow" }.isEmpty)
         await manager.stop()
+    }
+
+    @Test func insufficientSpaceDoesNotMutateErroredTorrentBeforeRetry() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let health = GRDBHealthIssueRepository(database)
+        let hash = String(repeating: "8", count: 40)
+        let request = makeDownloadRequest(hash: hash, title: "Retry with too little space", size: 20)
+        try await addTitle(for: request, to: database)
+        let actualSavePath = FileManager.default.temporaryDirectory.appending(path: "existing-download-location")
+        let storedMagnet = "magnet:?xt=urn:btih:\(hash)&tr=https%3A%2F%2Ftracker.example%2Fannounce"
+        try await repository.upsert(Torrent(
+            infoHash: hash, name: request.release.title, state: .error, savePath: actualSavePath.path,
+            size: request.release.size, titleId: request.titleId, lastError: "previous failure"))
+        try await repository.savePayload(infoHash: hash, .magnet(storedMagnet))
+
+        let checkedPaths = Mutex<[String]>([])
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: health,
+            configuration: .init(reservedFreeSpaceBytes: 100),
+            freeSpace: { url in
+                checkedPaths.withLock { $0.append(url.path) }
+                return 110
+            })
+
+        do {
+            _ = try await manager.add(request)
+            Issue.record("Expected insufficient space to refuse the retry")
+        } catch let error as DownloadManagerError {
+            #expect(error == .insufficientSpace(required: 120, available: 110))
+        }
+
+        let unchanged = try #require(await repository.torrent(infoHash: hash))
+        #expect(unchanged.state == .error)
+        #expect(unchanged.lastError == "previous failure")
+        #expect(try await repository.payload(infoHash: hash) == .magnet(storedMagnet))
+        #expect(checkedPaths.withLock { $0 } == [actualSavePath.path])
+        #expect(engine.addedHashes.isEmpty)
+        #expect(try await health.active().contains { $0.code == "diskSpaceLow" && $0.entityId == request.titleId.uuidString })
     }
 
     @Test func appliesUploadLimitWhenQueuedCompletedTorrentStartsSeeding() async throws {
