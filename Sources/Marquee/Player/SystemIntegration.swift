@@ -31,6 +31,12 @@ final class DisplaySleepAssertion {
 }
 
 /// Media keys, Control Center and Now Playing. Registered while a player is open, removed on close.
+/// File scope is nonisolated, so the artwork handler below stays nonisolated too.
+private func makeNowPlayingArtwork(from image: CGImage) -> MPMediaItemArtwork {
+    let ns = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+    return MPMediaItemArtwork(boundsSize: ns.size) { _ in ns }
+}
+
 @MainActor
 final class NowPlayingBridge {
     private final class WeakSession: @unchecked Sendable {
@@ -76,12 +82,17 @@ final class NowPlayingBridge {
         for command in [center.previousTrackCommand, center.seekForwardCommand, center.seekBackwardCommand] { command.isEnabled = false }
 
         if let url = session.request.artwork?.url {
-            artworkTask = Task { [weak self] in
+            artworkTask = Task.detached { [weak self] in
                 guard let image = await ImagePipeline.shared.image(for: url, pixelSize: CGSize(width: 600, height: 600)),
                       !Task.isCancelled else { return }
-                let ns = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
-                self?.artwork = MPMediaItemArtwork(boundsSize: ns.size) { _ in ns }
-                if let session = self?.box.session { self?.refresh(from: session) }
+                // Built off the main actor on purpose: MediaPlayer invokes the request handler
+                // on its own queue, and a main-actor-isolated closure traps there (SIGILL).
+                nonisolated(unsafe) let artwork = makeNowPlayingArtwork(from: image)
+                await MainActor.run { [weak self] in
+                    guard let self, self.isAttached else { return }
+                    self.artwork = artwork
+                    if let session = self.box.session { self.refresh(from: session) }
+                }
             }
         }
     }
