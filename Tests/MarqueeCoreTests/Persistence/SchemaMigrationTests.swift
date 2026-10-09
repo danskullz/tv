@@ -45,6 +45,32 @@ private func schemaSQL(_ db: Database) throws -> String {
         }
     }
 
+    @Test func qualityGroupsSurviveV2MigrationAndRoundTrip() throws {
+        let queue = try DatabaseQueue()
+        try Schema.makeMigrator().migrate(queue, upTo: "v1")
+        let now = Date()
+        let id = UUID()
+        try queue.write { db in
+            try db.execute(
+                sql: "INSERT INTO qualityProfile (id, name, items, upgradeAllowed, minFormatScore, cutoffFormatScore, formatScores, createdAt, updatedAt) VALUES (?, ?, ?, 1, 0, 0, '{}', ?, ?)",
+                arguments: [id, "Balanced", #"[{"quality":"webDL1080p","allowed":true}]"#, now, now])
+        }
+        try Schema.makeMigrator().migrate(queue)
+
+        let profile = try queue.read { try QualityProfile.fetchOne($0, key: id) }
+        #expect(QualityProfileConfig(record: try #require(profile)).groups.count == 1)
+
+        let original = QualityProfileConfig(
+            name: "Grouped", groups: [
+                QualityGroup(name: "WEB", tiers: [.webDL1080p, .webRip1080p]),
+                QualityGroup(name: "Blu-ray", tiers: [.bluray1080p], allowed: false),
+            ], cutoff: .webDL1080p, sizePreference: .larger)
+        try queue.write { db in try original.record().save(db) }
+        let loaded = try queue.read { try QualityProfile.fetchOne($0, key: original.id) }
+        #expect(try #require(loaded).groups == original.groups)
+        #expect(QualityProfileConfig(record: try #require(loaded)).groups == original.groups)
+    }
+
     /// Released migrations must never change: append a new migration instead of editing v1.
     @Test func v1SchemaMatchesSnapshot() throws {
         let queue = try DatabaseQueue()
@@ -56,6 +82,17 @@ private func schemaSQL(_ db: Database) throws -> String {
                 forResource: "v1.schema", withExtension: "sql", subdirectory: "Fixtures/Persistence"))
         let expected = try String(contentsOf: fixtureURL, encoding: .utf8)
         #expect(actual == expected, "v1 schema changed. Add a new migration instead of editing v1.")
+    }
+
+    @Test func v2SchemaMatchesSnapshot() throws {
+        let queue = try DatabaseQueue()
+        try Schema.makeMigrator().migrate(queue)
+        let actual = try queue.read(schemaSQL)
+        let fixtureURL = try #require(
+            Bundle.module.url(
+                forResource: "v2.schema", withExtension: "sql", subdirectory: "Fixtures/Persistence"))
+        let expected = try String(contentsOf: fixtureURL, encoding: .utf8)
+        #expect(actual == expected, "v2 schema changed. Add a new migration instead of editing existing migrations.")
     }
 
     @Test func migrationIdentifiersAreAppendOnly() {
@@ -88,8 +125,8 @@ private func schemaSQL(_ db: Database) throws -> String {
     }
 }
 
-/// Regenerates the v1 snapshot: `MARQUEE_UPDATE_FIXTURES=1 swift test --filter persistenceRegenerateV1Snapshot`.
-/// Only do this for a deliberate, unreleased schema change.
+/// Regenerates schema snapshots: `MARQUEE_UPDATE_FIXTURES=1 swift test --filter persistenceRegenerateV1Snapshot`.
+/// Only do this for a deliberate, unreleased migration; v1 remains frozen.
 @Test(.enabled(if: ProcessInfo.processInfo.environment["MARQUEE_UPDATE_FIXTURES"] != nil))
 func persistenceRegenerateV1Snapshot() throws {
     let queue = try DatabaseQueue()
@@ -99,4 +136,12 @@ func persistenceRegenerateV1Snapshot() throws {
         .deletingLastPathComponent().deletingLastPathComponent()
         .appending(path: "Fixtures/Persistence/v1.schema.sql")
     try sql.write(to: url, atomically: true, encoding: .utf8)
+
+    let currentQueue = try DatabaseQueue()
+    try Schema.makeMigrator().migrate(currentQueue)
+    let currentSQL = try currentQueue.read(schemaSQL)
+    let currentURL = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent()
+        .appending(path: "Fixtures/Persistence/v2.schema.sql")
+    try currentSQL.write(to: currentURL, atomically: true, encoding: .utf8)
 }

@@ -36,6 +36,8 @@ public struct QualityProfile: Codable, FetchableRecord, PersistableRecord, Ident
     public var name: String
     /// Tiers, lowest to highest preference.
     public var items: [QualityItem]
+    /// Equal-quality groups. `nil` means a legacy profile written before groups were persisted.
+    public var groups: [QualityGroup]?
     public var cutoff: String?
     public var upgradeAllowed: Bool
     public var minFormatScore: Int
@@ -46,13 +48,15 @@ public struct QualityProfile: Codable, FetchableRecord, PersistableRecord, Ident
     public var updatedAt: Date
 
     public init(
-        id: UUID = UUID(), name: String, items: [QualityItem] = [], cutoff: String? = nil,
+        id: UUID = UUID(), name: String, items: [QualityItem] = [], groups: [QualityGroup]? = nil,
+        cutoff: String? = nil,
         upgradeAllowed: Bool = true, minFormatScore: Int = 0, cutoffFormatScore: Int = 0,
         formatScores: [String: Int] = [:], createdAt: Date = Date(), updatedAt: Date = Date()
     ) {
         self.id = id
         self.name = name
         self.items = items
+        self.groups = groups
         self.cutoff = cutoff
         self.upgradeAllowed = upgradeAllowed
         self.minFormatScore = minFormatScore

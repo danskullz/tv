@@ -174,8 +174,9 @@ import Testing
         let back = QualityProfileConfig(record: record)
         #expect(back.id == p.id && back.formatScores == p.formatScores)
         #expect(back.isAllowed(.bluray1080p) && !back.isAllowed(.webDL2160p))
-        // Group structure is flattened by the record, but ordering and allowance survive.
+        // The persistence bridge keeps equal-tier groups intact.
         #expect(back.groupIndex(of: .webDL1080p)! < back.groupIndex(of: .bluray1080p)!)
+        #expect(back.groups == p.groups)
     }
 
     @Test func presetBehaviourOnRealisticReleases() {

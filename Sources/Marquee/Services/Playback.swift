@@ -23,6 +23,12 @@ extension AppServices {
     func play(_ target: PlayTarget) async {
         do {
             let context = try await playContext(for: target)
+            if let local = try? await localMediaResolver.file(
+                titleID: context.title.id, episodeID: context.current?.id)
+            {
+                presentLocalPlayback(context, url: local)
+                return
+            }
             try await startPlayback(context)
         } catch let error as PlayPipelineError {
             announce("Couldn't start playback", error.plainLanguage, "exclamationmark.triangle")
@@ -125,6 +131,58 @@ extension AppServices {
         activePlaybacks.append(session)
         session.start(startAt: context.startAt)
     }
+
+    private func presentLocalPlayback(_ context: PlayContext, url: URL) {
+        let title = context.title
+        let episode = context.current
+        let playableID = episode?.id ?? title.id
+        let episodes = context.current == nil ? [] : context.episodes
+            .filter { $0.seasonNumber > 0 && Self.isAired($0) }
+            .map {
+                PlayerEpisode(
+                    id: $0.id.uuidString, title: $0.title ?? "Episode \($0.episodeNumber)",
+                    subtitle: "S\($0.seasonNumber) · E\($0.episodeNumber)", artwork: RealLibrary.art(title, backdrop: true))
+            }
+        let subtitle = episode.map {
+            "S\($0.seasonNumber) · E\($0.episodeNumber)" + ($0.title.map { " · \($0)" } ?? "")
+        } ?? ""
+        PlayerPresenter.shared.present(PlayerRequest(
+            title: title.title, subtitle: subtitle, artwork: RealLibrary.art(title, backdrop: true),
+            source: .url(url), startPosition: context.startAt ?? 0, episodes: episodes,
+            currentEpisodeID: episode?.id.uuidString,
+            onPositionChange: { [weak self] position, duration in
+                guard let self else { return }
+                Task {
+                    try? await self.watchStates.recordProgress(
+                        id: playableID, titleId: title.id, position: position, duration: duration,
+                        watchedThreshold: 0.9)
+                }
+            },
+            onFinished: { [weak self] in
+                guard let self else { return }
+                Task {
+                    try? await self.watchStates.setWatched(id: playableID, titleId: title.id, watched: true)
+                    self.libraryChanged()
+                }
+            },
+            onNextEpisode: { [weak self] next in
+                guard let self,
+                    let nextEpisode = context.episodes.first(where: { $0.id.uuidString == next.id })
+                else { return }
+                Task {
+                    await self.play(.episode(
+                        title.id, season: nextEpisode.seasonNumber, episode: nextEpisode.episodeNumber))
+                }
+            },
+            onClose: { [weak self] position in
+                guard let self else { return }
+                Task {
+                    try? await self.watchStates.recordProgress(
+                        id: playableID, titleId: title.id, position: position, duration: nil,
+                        watchedThreshold: 0.9)
+                }
+            }))
+    }
 }
 
 private extension PlayTarget {
@@ -174,6 +232,7 @@ final class ActivePlayback {
     private var pipelineRequest: PlayRequest
     private var operation: PlayOperation?
     private var stream: PlayStream?
+    private var importForwarder: Task<Void, Never>?
     private var feed: AsyncStream<PlayerBufferingStatus>.Continuation?
     private var forwarder: Task<Void, Never>?
     /// Bumped whenever the shown episode changes, so late callbacks from a replaced one are ignored.
@@ -281,6 +340,7 @@ final class ActivePlayback {
     private func streamStarted(_ stream: PlayStream, forward feed: AsyncStream<PlayerBufferingStatus>.Continuation) async {
         self.stream = stream
         await registerDownload(stream)
+        observeCompletedFiles(from: stream)
         let status = stream.control.statusUpdates()
         forwarder = Task {
             for await s in status { if let mapped = s.playerStatus { feed.yield(mapped) } }
@@ -303,6 +363,31 @@ final class ActivePlayback {
             type: .streamStarted, entityType: .torrent, entityId: stream.control.torrent.hex, titleId: title.id,
             payload: ["release": .string(stream.release.title), "grab": .string(stream.release.grabID.uuidString)]))
         services.libraryChanged()
+    }
+
+    private func observeCompletedFiles(from stream: PlayStream) {
+        importForwarder?.cancel()
+        let events = stream.control.events()
+        let services = self.services
+        let context = self.context
+        let savePath = services.downloadFolder.path
+        importForwarder = Task {
+            for await event in events {
+                guard case .fileCompleted(let torrent, let index, let path, let refs) = event else { continue }
+                let target: ImportTarget
+                if context.title.kind == .movie, refs.contains(StreamContent.movieEpisode) {
+                    target = .movie(titleID: context.title.id)
+                } else if !refs.isEmpty {
+                    target = .episodes(titleID: context.title.id, refs: refs)
+                } else {
+                    target = .unmapped
+                }
+                services.importCoordinator.handle(CompletedDownload(
+                    infoHash: torrent.hex, savePath: savePath, releaseName: stream.release.title,
+                    grabID: stream.release.grabID,
+                    files: [CompletedFile(path: path, fileIndex: index, target: target)]))
+            }
+        }
     }
 
     // MARK: Player callbacks
@@ -328,6 +413,7 @@ final class ActivePlayback {
     }
 
     private func retry() {
+        importForwarder?.cancel()
         stream = nil
         beginPipeline()
         forwardPipeline()
@@ -337,6 +423,7 @@ final class ActivePlayback {
         generation += 1
         record(position: position, duration: nil)
         forwarder?.cancel()
+        importForwarder?.cancel()
         feed?.finish()
         operation?.cancel()
         let stream = self.stream
