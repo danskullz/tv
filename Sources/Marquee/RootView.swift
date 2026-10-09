@@ -11,11 +11,8 @@ struct RootView: View {
         @Bindable var model = model
         NavigationSplitView(columnVisibility: $model.columnVisibility) {
             SidebarView(
-                selection: Binding(get: { model.selection }, set: {
-                    guard let next = $0 else { return }
-                    model.go(to: next)
-                }),
-                activeCount: model.activeDownloads
+                selection: $model.selection, activeCount: model.activeDownloads,
+                onSelect: { model.go(to: $0) }
             )
         } detail: {
             NavigationStack(path: $model.path) {
@@ -94,9 +91,13 @@ enum AppearanceChoice: String, CaseIterable, Identifiable {
 struct SidebarView: View {
     @Binding var selection: SidebarItem?
     let activeCount: Int
+    /// Row activation. Rows are explicit buttons with an explicit highlight: the outline's own
+    /// tap-to-select does not fire on this OS version, and `.badge()` breaks row highlighting,
+    /// so both are driven here instead of by `List(selection:)`.
+    var onSelect: (SidebarItem) -> Void = { _ in }
 
     var body: some View {
-        List(selection: $selection) {
+        List {
             row(.home)
             row(.discover)
             Section("Library") {
@@ -105,7 +106,7 @@ struct SidebarView: View {
             }
             Section {
                 row(.calendar)
-                row(.activity).badge(activeCount)
+                row(.activity)
                 row(.search)
             }
         }
@@ -117,8 +118,37 @@ struct SidebarView: View {
     }
 
     private func row(_ item: SidebarItem) -> some View {
-        Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
-            .tag(item)
+        Button { onSelect(item) } label: {
+            HStack(spacing: 6) {
+                Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
+                if item == .activity, activeCount > 0 {
+                    Spacer(minLength: 4)
+                    Text("\(activeCount)")
+                        .font(.caption.weight(.medium))
+                        .monospacedDigit()
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(
+                            selection == item ? Color.white.opacity(0.28) : Color.primary.opacity(0.12)))
+                        .foregroundStyle(selection == item ? .white : .secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(selection == item ? .white : .primary)
+        .listRowBackground(
+            Group {
+                if selection == item {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor)
+                        .padding(.vertical, 2)
+                } else {
+                    Color.clear
+                }
+            }
+        )
     }
 }
 
