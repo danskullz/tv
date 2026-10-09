@@ -47,6 +47,9 @@ final class PlayerSession: Identifiable {
     @ObservationIgnored var toggleFullScreen: () -> Void = {}
     @ObservationIgnored var requestClose: () -> Void = {}
     @ObservationIgnored var controlsVisibilityChanged: (Bool) -> Void = { _ in }
+    /// Called once per load with the picture's display size, so the window can take the video's shape.
+    @ObservationIgnored var videoSizeKnown: (CGSize) -> Void = { _ in }
+    @ObservationIgnored private var didReportVideoSize = false
 
     // Interaction state that gates auto-hide.
     @ObservationIgnored private var isScrubbing = false
@@ -161,6 +164,7 @@ final class PlayerSession: Identifiable {
         pipelineStatus = nil
         hasStartedPlaying = false
         didFinish = false
+        didReportVideoSize = false
         request.onRetry?()
         engine?.stop()
         startLoading()
@@ -186,8 +190,10 @@ final class PlayerSession: Identifiable {
             if state == .paused || state == .ended { showControls(autoHide: false) } else if state == .playing { scheduleHide() }
             if state == .paused { reportPosition(force: true) }
             if state == .ended { playbackEnded() }
+            reportVideoSizeIfKnown()
         case .position(let position):
             reportPosition(force: false, position: position)
+            reportVideoSizeIfKnown()
             updateUpNext(position: position)
         case .duration:
             updateUpNext(position: snapshot.position)
@@ -195,6 +201,12 @@ final class PlayerSession: Identifiable {
         case .tracks: break
         case .speed, .volume, .bufferedAhead, .seekable: break
         }
+    }
+
+    private func reportVideoSizeIfKnown() {
+        guard !didReportVideoSize, hasStartedPlaying, let size = engine?.displaySize() else { return }
+        didReportVideoSize = true
+        videoSizeKnown(size)
     }
 
     private func reportPosition(force: Bool, position: TimeInterval? = nil) {

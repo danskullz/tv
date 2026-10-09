@@ -59,7 +59,7 @@ final class PlayerWindowController: NSObject, NSWindowDelegate {
         window.backgroundColor = .black
         window.appearance = NSAppearance(named: .darkAqua)  // video chrome is always dark
         window.collectionBehavior = [.fullScreenPrimary]
-        window.contentMinSize = NSSize(width: 560, height: 315)
+        window.contentMinSize = NSSize(width: 480, height: 200)
         window.contentAspectRatio = NSSize(width: 16, height: 9)
         window.acceptsMouseMovedEvents = true
         window.isReleasedWhenClosed = false
@@ -90,6 +90,7 @@ final class PlayerWindowController: NSObject, NSWindowDelegate {
         session.toggleFullScreen = { [weak self] in self?.window.toggleFullScreen(nil) }
         session.requestClose = { [weak self] in self?.window.performClose(nil) }
         session.controlsVisibilityChanged = { [weak self] visible in self?.setTrafficLights(visible: visible) }
+        session.videoSizeKnown = { [weak self] size in self?.adopt(videoSize: size) }
         session.isFullScreen = window.styleMask.contains(.fullScreen)
         window.keyHandler = { [weak session] event in session?.handleKey(event) ?? false }
         window.activityHandler = { [weak session] in session?.userActivity() }
@@ -113,6 +114,35 @@ final class PlayerWindowController: NSObject, NSWindowDelegate {
     func close(notify: Bool) {
         suppressCloseCallback = !notify
         window.close()
+    }
+
+    // MARK: Shape
+
+    /// Takes the video's real shape: pre-roll uses 16:9; once the first frame's size is known the window
+    /// keeps its width and adopts the picture's aspect, so the video fills it with no bars. In full
+    /// screen only the lock changes (the picture letterboxes/pillarboxes in black as usual).
+    private func adopt(videoSize: CGSize) {
+        guard videoSize.width > 0, videoSize.height > 0 else { return }
+        let aspect = videoSize.width / videoSize.height
+        guard aspect.isFinite, aspect > 0.2, aspect < 6 else { return }
+        window.contentAspectRatio = NSSize(width: aspect * 1000, height: 1000)
+        guard !window.styleMask.contains(.fullScreen) else { return }
+
+        let visible = (window.screen ?? NSScreen.main)?.visibleFrame ?? window.frame
+        var content = window.contentRect(forFrameRect: window.frame).size
+        var width = max(content.width, 640)
+        var height = width / aspect
+        let maxHeight = visible.height - 60
+        if height > maxHeight { height = maxHeight; width = height * aspect }
+        if width > visible.width - 40 { width = visible.width - 40; height = width / aspect }
+        content = NSSize(width: width.rounded(), height: height.rounded())
+        var frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: content))
+        let old = window.frame
+        frame.origin = NSPoint(x: old.midX - frame.width / 2, y: old.midY - frame.height / 2)
+        // Keep the window on screen.
+        frame.origin.x = min(max(frame.origin.x, visible.minX), visible.maxX - frame.width)
+        frame.origin.y = min(max(frame.origin.y, visible.minY), visible.maxY - frame.height)
+        window.setFrame(frame, display: true, animate: !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
 
     // MARK: Chrome

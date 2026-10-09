@@ -30,6 +30,14 @@ extension MPVPlaybackEngine {
         setPropertyValue("sub-delay", String(format: "%.3f", seconds))
     }
 
+    /// Shape of the picture as it should be displayed (pixel aspect and rotation applied), once a video
+    /// frame has been decoded. `nil` before that and for audio-only media.
+    public func displaySize() -> CGSize? {
+        guard let w = property("video-params/dw").flatMap(Double.init), let h = property("video-params/dh").flatMap(Double.init),
+              w > 0, h > 0 else { return nil }
+        return CGSize(width: w, height: h)
+    }
+
     /// Lifts subtitles clear of the transport controls (`true`) or puts them back at the bottom edge.
     public func setSubtitlesRaised(_ raised: Bool) { setPropertyValue("sub-pos", raised ? "76" : "100") }
 

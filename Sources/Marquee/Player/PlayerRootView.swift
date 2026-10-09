@@ -128,12 +128,12 @@ private struct PlayerTopBar: View {
             .foregroundStyle(.white)
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(alignment: .top) {
             LinearGradient(colors: [.black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
                 .frame(height: 150)
                 .opacity(session.hasStartedPlaying ? 1 : 0)
                 .allowsHitTesting(false)
-                .frame(maxHeight: .infinity, alignment: .top)
         }
         .opacity(session.controlsVisible || !session.hasStartedPlaying ? 1 : 0)
         .allowsHitTesting(session.controlsVisible || !session.hasStartedPlaying)
@@ -155,11 +155,11 @@ private struct PlayerTransport: View {
                 .padding(.horizontal, 28)
                 .padding(.bottom, session.isFullScreen ? 36 : 28)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(alignment: .bottom) {
             LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom)
                 .frame(height: 260)
                 .allowsHitTesting(false)
-                .frame(maxHeight: .infinity, alignment: .bottom)
         }
         .opacity(session.controlsVisible ? 1 : 0)
         .allowsHitTesting(session.controlsVisible)
