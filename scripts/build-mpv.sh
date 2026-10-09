@@ -508,7 +508,9 @@ verify() {
       case " $archs " in *" $want "*) ;; *) echo "FAIL $f lacks $want ($archs)"; bad=1 ;; esac
     done
     local d
-    for d in $(deps_of "$f" | tail -n +2); do   # first line is the install name
+    # Every slice; skip "<file> (architecture …):" headers, which newer otool prints for universal files.
+    # The install name itself is @rpath/… so it passes the check below.
+    for d in $(otool -L -arch all "$f" | awk '!/:$/ {print $1}' | sort -u); do
       case "$d" in
         /usr/lib/*|/System/*|@rpath/*) ;;
         *) echo "FAIL $(basename "$f") -> $d"; bad=1 ;;
