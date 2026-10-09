@@ -19,6 +19,7 @@ jobs:
   # Builds universal libtorrent + OpenSSL once; every other job downloads the result.
   deps:
     runs-on: macos-26
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode 26
@@ -49,6 +50,7 @@ jobs:
   # script changes. Build tools only from Homebrew; nothing from Homebrew is linked.
   deps-mpv:
     runs-on: macos-26
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode 26
@@ -77,6 +79,7 @@ jobs:
   test:
     needs: [deps, deps-mpv]
     runs-on: macos-26
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode 26
@@ -97,6 +100,7 @@ jobs:
   build:
     needs: [deps, test]
     runs-on: macos-26
+    timeout-minutes: 45
     strategy:
       matrix:
         arch: [arm64, x86_64]
@@ -121,6 +125,7 @@ jobs:
   release:
     needs: [build, deps-mpv]
     runs-on: macos-26
+    timeout-minutes: 45
     env:
       VERSION: 0.1.${{ github.run_number }}
       REQUIRE_FRAMEWORKS: 1

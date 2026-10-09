@@ -1,4 +1,5 @@
 import AVFoundation
+import VideoToolbox
 import CoreText
 import Foundation
 
@@ -27,6 +28,10 @@ enum PlayerTestClip {
             AVVideoCodecKey: AVVideoCodecType.h264,
             AVVideoWidthKey: Int(size.width), AVVideoHeightKey: Int(size.height),
             AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 1_500_000, AVVideoMaxKeyFrameIntervalKey: 15],
+            // Software encoder: CI VMs have no hardware video encoder, and the input never becomes ready there.
+            AVVideoEncoderSpecificationKey: [
+                kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder as String: false,
+            ],
         ])
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: video, sourcePixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
@@ -40,6 +45,13 @@ enum PlayerTestClip {
         guard writer.startWriting() else { throw writer.error ?? CocoaError(.fileWriteUnknown) }
         writer.startSession(atSourceTime: .zero)
 
+        // Never hang: a failed writer leaves inputs not-ready forever, so check status and a deadline.
+        let deadline = ContinuousClock.now + .seconds(30)
+        func checkProgress() throws {
+            if writer.status == .failed { throw writer.error ?? CocoaError(.fileWriteUnknown) }
+            if ContinuousClock.now > deadline { throw PlayerTestClipError.timedOut }
+        }
+
         // AVAssetWriter interleaves tracks: feed audio alongside video or both inputs stall.
         let frameCount = Int(duration * Double(fps))
         let chunk = 1024
@@ -49,6 +61,7 @@ enum PlayerTestClip {
             while audioWritten < min(target, totalAudio) {
                 if !audio.isReadyForMoreMediaData {
                     if !blocking { return }
+                    try checkProgress()
                     try await Task.sleep(for: .milliseconds(2)); continue
                 }
                 let count = min(chunk, totalAudio - audioWritten)
@@ -59,6 +72,7 @@ enum PlayerTestClip {
         for n in 0..<frameCount {
             while !video.isReadyForMoreMediaData {
                 try await feedAudio(upTo: Int((Double(n) / Double(fps) + 0.5) * sampleRate), blocking: false)
+                try checkProgress()
                 try await Task.sleep(for: .milliseconds(2))
             }
             adaptor.append(try makeFrame(index: n, of: frameCount), withPresentationTime: CMTime(value: CMTimeValue(n), timescale: fps))
@@ -135,6 +149,11 @@ enum PlayerTestClip {
         guard let sample else { throw CocoaError(.fileWriteUnknown) }
         return sample
     }
+}
+
+private enum PlayerTestClipError: Error, CustomStringConvertible {
+    case timedOut
+    var description: String { "Generating the test clip took over 30 s (is a video encoder available?)" }
 }
 
 private actor PlayerTestClipCache {
