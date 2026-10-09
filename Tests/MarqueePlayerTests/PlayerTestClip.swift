@@ -18,7 +18,15 @@ enum PlayerTestClip {
         URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("marquee-player-test-clip.mp4")
     }
 
-    static func url() async throws -> URL { try await cache.url() }
+    /// The committed clip (Fixtures/test-clip.mp4, made by `generate`), so tests never need a video encoder —
+    /// CI VMs have none. Set MARQUEE_REGENERATE_CLIP=1 to rebuild it into the temp dir instead.
+    static func url() async throws -> URL {
+        if ProcessInfo.processInfo.environment["MARQUEE_REGENERATE_CLIP"] == nil,
+           let bundled = Bundle.module.url(forResource: "test-clip", withExtension: "mp4", subdirectory: "Fixtures") {
+            return bundled
+        }
+        return try await cache.url()
+    }
 
     static func generate(to url: URL) async throws {
         try? FileManager.default.removeItem(at: url)

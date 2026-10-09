@@ -24,7 +24,7 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 ## Code conventions
 - Swift 6 language mode, strict concurrency: value types are `Sendable`, services are `actor`s, UI state is `@Observable` on `@MainActor`.
 - `MarqueeCore` is organized by area folder: `Parsing/`, `Indexers/`, `Metadata/`, `Persistence/`, `Streaming/`, `Quality/`, `Packs/` (add new ones as needed). Tests mirror it under `Tests/MarqueeCoreTests/<Area>/`; fixtures under `Tests/MarqueeCoreTests/Fixtures/<Area>/`, loaded via `Bundle.module`. Test helpers/mocks are `private` (all tests share one module); helpers shared across files carry an area prefix, e.g. `makeIndexerRelease`.
-- Tests use Swift Testing (`import Testing`), never hit the live network, and must pass before work is merged.
+- Tests use Swift Testing (`import Testing`), never hit the live network, and must pass before work is merged. CI VMs have no video encoder: tests must not encode media at runtime — commit small generated fixtures instead (e.g. `Tests/MarqueePlayerTests/Fixtures/test-clip.mp4`).
 - No new dependencies without orchestrator approval; prefer Foundation/Network/system frameworks. Approved: GRDB.
 - Brief doc comments on public API; no comments narrating the obvious.
 

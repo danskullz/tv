@@ -70,7 +70,7 @@ let package = Package(
         // Streaming critical path: joins the torrent engine to the stream server and the pack planner.
         .target(name: "MarqueeEngine", dependencies: ["MarqueeCore", "TorrentEngine"]),
         .testTarget(name: "MarqueeEngineTests", dependencies: ["MarqueeEngine", "MarqueeCore", "TorrentEngine"]),
-        .testTarget(name: "MarqueePlayerTests", dependencies: ["MarqueePlayer"]),
+        .testTarget(name: "MarqueePlayerTests", dependencies: ["MarqueePlayer"], resources: [.copy("Fixtures")]),
     ],
     cxxLanguageStandard: .cxx17
 )
