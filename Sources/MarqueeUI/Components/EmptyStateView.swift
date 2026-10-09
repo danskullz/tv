@@ -8,10 +8,14 @@ public struct EmptyStateView: View {
     private let tips: [LocalizedStringKey]
     private let actionTitle: LocalizedStringKey?
     private let action: (() -> Void)?
+    private let secondaryActionTitle: LocalizedStringKey?
+    private let secondaryAction: (() -> Void)?
 
     public init(
         title: LocalizedStringKey, message: LocalizedStringKey, systemImage: String,
-        tips: [LocalizedStringKey] = [], actionTitle: LocalizedStringKey? = nil, action: (() -> Void)? = nil
+        tips: [LocalizedStringKey] = [], actionTitle: LocalizedStringKey? = nil,
+        secondaryActionTitle: LocalizedStringKey? = nil, secondaryAction: (() -> Void)? = nil,
+        action: (() -> Void)? = nil
     ) {
         self.title = title
         self.message = message
@@ -19,6 +23,8 @@ public struct EmptyStateView: View {
         self.tips = tips
         self.actionTitle = actionTitle
         self.action = action
+        self.secondaryActionTitle = secondaryActionTitle
+        self.secondaryAction = secondaryAction
     }
 
     public var body: some View {
@@ -50,10 +56,16 @@ public struct EmptyStateView: View {
                 .padding(.top, 2)
             }
             if let actionTitle, let action {
-                Button(action: action) { Text(actionTitle) }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .padding(.top, Tokens.Spacing.s)
+                HStack(spacing: Tokens.Spacing.s) {
+                    Button(action: action) { Text(actionTitle) }
+                        .buttonStyle(.borderedProminent)
+                    if let secondaryActionTitle, let secondaryAction {
+                        Button(action: secondaryAction) { Text(secondaryActionTitle) }
+                            .buttonStyle(.bordered)
+                    }
+                }
+                .controlSize(.large)
+                .padding(.top, Tokens.Spacing.s)
             }
         }
         .padding(Tokens.Spacing.xl)

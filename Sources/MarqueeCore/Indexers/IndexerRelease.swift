@@ -36,6 +36,8 @@ public struct IndexerRelease: Sendable, Hashable, Codable, Identifiable, CustomS
     public var minimumRatio: Double?
     /// Seconds.
     public var minimumSeedTime: TimeInterval?
+    /// Flags reported by the source, such as `Freeleech` or `Halfleech`.
+    public var indexerFlags: [String]
     /// Other indexers that returned the same release (filled by deduplication).
     public var alsoFoundOn: [UUID]
 
@@ -65,6 +67,7 @@ public struct IndexerRelease: Sendable, Hashable, Codable, Identifiable, CustomS
         uploadVolumeFactor: Double? = nil,
         minimumRatio: Double? = nil,
         minimumSeedTime: TimeInterval? = nil,
+        indexerFlags: [String] = [],
         alsoFoundOn: [UUID] = []
     ) {
         self.indexerID = indexerID
@@ -90,6 +93,7 @@ public struct IndexerRelease: Sendable, Hashable, Codable, Identifiable, CustomS
         self.uploadVolumeFactor = uploadVolumeFactor
         self.minimumRatio = minimumRatio
         self.minimumSeedTime = minimumSeedTime
+        self.indexerFlags = indexerFlags
         self.alsoFoundOn = alsoFoundOn
     }
 

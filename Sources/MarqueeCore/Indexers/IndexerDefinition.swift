@@ -22,10 +22,14 @@ public struct IndexerRateLimit: Sendable, Hashable, Codable {
 public struct IndexerDefinition: Sendable, Hashable, Codable, Identifiable {
     public var id: UUID
     public var name: String
+    /// `torznab` for a feed URL, or `prowlarr` for a Prowlarr REST API connection.
+    public var implementation: String
     /// Scheme + host (+ optional path prefix), e.g. `https://jackett.local:9117`.
     public var baseURL: URL
     /// Path of the Torznab endpoint relative to `baseURL`, e.g. `/api` or `/api/v2.0/indexers/x/results/torznab/api`.
     public var apiPath: String
+    /// Optional user-supplied FlareSolverr server used to fetch this indexer's Torznab responses.
+    public var flareSolverrURL: URL?
     public var enabled: Bool
     /// 1 = highest priority, 50 = lowest (same convention as Prowlarr). Used to break ties.
     public var priority: Int
@@ -40,7 +44,9 @@ public struct IndexerDefinition: Sendable, Hashable, Codable, Identifiable {
         id: UUID = UUID(),
         name: String,
         baseURL: URL,
+        implementation: String = "torznab",
         apiPath: String = "/api",
+        flareSolverrURL: URL? = nil,
         enabled: Bool = true,
         priority: Int = 25,
         categories: [Int] = [],
@@ -51,7 +57,9 @@ public struct IndexerDefinition: Sendable, Hashable, Codable, Identifiable {
         self.id = id
         self.name = name
         self.baseURL = baseURL
+        self.implementation = implementation
         self.apiPath = apiPath
+        self.flareSolverrURL = flareSolverrURL
         self.enabled = enabled
         self.priority = priority
         self.categories = categories

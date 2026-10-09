@@ -127,11 +127,23 @@ public struct GRDBGrabRepository: GrabRepository {
 extension Indexer {
     /// Stores a Torznab endpoint. `baseURL` keeps the full address (including the API path) the user
     /// pasted; the API key lives in the secret store under ``credentialRef``.
-    public init(name: String, torznabURL: URL, priority: Int = 25, minimumSeeders: Int = 1, id: UUID = UUID()) {
+    public init(
+        name: String, torznabURL: URL, priority: Int = 25, minimumSeeders: Int = 1,
+        flareSolverrURL: URL? = nil, id: UUID = UUID()
+    ) {
         self.init(
             id: id, name: name, implementation: "torznab", baseURL: torznabURL.absoluteString,
-            priority: priority, minimumSeeders: minimumSeeders,
+            flareSolverrURL: flareSolverrURL?.absoluteString, priority: priority, minimumSeeders: minimumSeeders,
             credentialRef: IndexerDefinition(id: id, name: name, baseURL: torznabURL).apiKeyAccount)
+    }
+
+    /// Stores a Prowlarr server URL. Its API key uses the same Keychain-only credential handling.
+    public init(name: String, prowlarrURL: URL, priority: Int = 25, id: UUID = UUID()) {
+        self.init(
+            id: id, name: name, implementation: "prowlarr", baseURL: prowlarrURL.absoluteString,
+            priority: priority, minimumSeeders: 1,
+            credentialRef: IndexerDefinition(
+                id: id, name: name, baseURL: prowlarrURL, implementation: "prowlarr").apiKeyAccount)
     }
 
     /// The search-side definition, or nil when `baseURL` is not a usable http(s) address.
@@ -141,13 +153,29 @@ extension Indexer {
         else { return nil }
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let path = components?.percentEncodedPath ?? ""
-        components?.percentEncodedPath = ""
         components?.query = nil
         components?.fragment = nil
+        if implementation == "prowlarr" {
+            while components?.percentEncodedPath.hasSuffix("/") == true {
+                components?.percentEncodedPath.removeLast()
+            }
+            guard let server = components?.url else { return nil }
+            return IndexerDefinition(
+                id: id, name: name, baseURL: server, implementation: "prowlarr", apiPath: "/api/v1",
+                enabled: enabled && (disabledUntil.map { $0 <= Date() } ?? true), priority: priority,
+                categories: categories, minimumSeeders: minimumSeeders, rateLimit: .unlimited)
+        }
+        components?.percentEncodedPath = ""
         let base = components?.url ?? url
         let apiPath = path.isEmpty || path == "/" ? "/api" : path
+        let solverURL = flareSolverrURL.flatMap(URL.init(string:)).flatMap { candidate -> URL? in
+            guard let scheme = candidate.scheme?.lowercased(), ["http", "https"].contains(scheme),
+                let host = candidate.host, !host.isEmpty
+            else { return nil }
+            return candidate
+        }
         return IndexerDefinition(
-            id: id, name: name, baseURL: base, apiPath: apiPath,
+            id: id, name: name, baseURL: base, implementation: implementation, apiPath: apiPath, flareSolverrURL: solverURL,
             enabled: enabled && (disabledUntil.map { $0 <= Date() } ?? true), priority: priority,
             categories: categories, minimumSeeders: minimumSeeders)
     }

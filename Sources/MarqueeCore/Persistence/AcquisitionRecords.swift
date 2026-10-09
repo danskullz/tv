@@ -230,6 +230,7 @@ public struct Indexer: Codable, FetchableRecord, PersistableRecord, Identifiable
     public var name: String
     public var implementation: String
     public var baseURL: String
+    public var flareSolverrURL: String?
     public var enabled: Bool
     public var priority: Int
     public var minimumSeeders: Int
@@ -243,6 +244,7 @@ public struct Indexer: Codable, FetchableRecord, PersistableRecord, Identifiable
 
     public init(
         id: UUID = UUID(), name: String, implementation: String = "torznab", baseURL: String,
+        flareSolverrURL: String? = nil,
         enabled: Bool = true, priority: Int = 25, minimumSeeders: Int = 1, categories: [Int] = [],
         credentialRef: String? = nil, failureCount: Int = 0, disabledUntil: Date? = nil,
         lastSuccessAt: Date? = nil, createdAt: Date = Date(), updatedAt: Date = Date()
@@ -251,6 +253,7 @@ public struct Indexer: Codable, FetchableRecord, PersistableRecord, Identifiable
         self.name = name
         self.implementation = implementation
         self.baseURL = baseURL
+        self.flareSolverrURL = flareSolverrURL
         self.enabled = enabled
         self.priority = priority
         self.minimumSeeders = minimumSeeders

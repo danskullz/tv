@@ -38,6 +38,7 @@ public enum IndexerError: Error, Equatable, Sendable {
     case apiError(code: Int, description: String)
     case unsupportedSearch(String)
     case responseTooLarge
+    case challengeSolverFailed
     case cancelled
 
     /// Maps a Torznab/Newznab error code to a typed error.
@@ -93,6 +94,8 @@ public enum IndexerError: Error, Equatable, Sendable {
             return "This indexer can't run that kind of search. \(detail)"
         case .responseTooLarge:
             return "The indexer's answer was unusually large, so Marquee ignored it."
+        case .challengeSolverFailed:
+            return "FlareSolverr couldn't complete the browser challenge. Check that it's running and try again."
         case .cancelled:
             return "The search was cancelled."
         }
@@ -112,6 +115,7 @@ public enum IndexerError: Error, Equatable, Sendable {
         case .apiError(let c, let d): return "apiError \(c): \(d)"
         case .unsupportedSearch(let d): return "unsupportedSearch: \(d)"
         case .responseTooLarge: return "responseTooLarge"
+        case .challengeSolverFailed: return "challengeSolverFailed"
         case .cancelled: return "cancelled"
         }
     }
@@ -128,7 +132,7 @@ public enum IndexerError: Error, Equatable, Sendable {
     /// (an unsupported search type) and user cancellation do not.
     public var countsAgainstHealth: Bool {
         switch self {
-        case .unsupportedSearch, .cancelled: return false
+        case .unsupportedSearch, .challengeSolverFailed, .cancelled: return false
         default: return true
         }
     }

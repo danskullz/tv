@@ -297,6 +297,7 @@ public actor ReleaseAutomation {
                 try? await indexers?.recordSearchOutcome(
                     id: outcome.indexerID, succeeded: true, threshold: 5, disableFor: 6 * 60 * 60, now: now)
             case .failure(let error):
+                guard error.countsAgainstHealth else { continue }
                 _ = try? await health.report(
                     code: "indexerFailure", severity: .warning,
                     message: "\(outcome.indexerName) failed: \(error.userMessage)",

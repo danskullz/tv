@@ -173,6 +173,7 @@ public enum ReleaseDeduplicator {
                 best.tvdbID = best.tvdbID ?? other.tvdbID
                 best.tmdbID = best.tmdbID ?? other.tmdbID
                 best.grabs = best.grabs ?? other.grabs
+                best.indexerFlags = Array(Set(best.indexerFlags + other.indexerFlags)).sorted()
                 if other.indexerID != best.indexerID, !best.alsoFoundOn.contains(other.indexerID) {
                     best.alsoFoundOn.append(other.indexerID)
                 }
@@ -217,7 +218,7 @@ public actor IndexerSearchCoordinator {
 
     public init(
         secrets: SecretStore,
-        transport: IndexerTransport = URLSessionIndexerTransport(),
+        transport: IndexerTransport = FlareSolverrIndexerTransport(),
         clock: IndexerClock = SystemIndexerClock(),
         clientConfiguration: IndexerClientConfiguration = IndexerClientConfiguration(),
         configuration: IndexerCoordinatorConfiguration = IndexerCoordinatorConfiguration()
@@ -317,7 +318,6 @@ public actor IndexerSearchCoordinator {
             if let tags, tags.isDisjoint(with: entry.definition.tags) { return false }
             return true
         }
-        let timeout = configuration.perIndexerTimeout
         let clock = self.clock
 
         let attempts = await withTaskGroup(of: Attempt.self) { group in
@@ -325,6 +325,14 @@ public actor IndexerSearchCoordinator {
                 let client = entry.client
                 let id = entry.definition.id
                 let name = entry.definition.name
+                let timeout: TimeInterval
+                if entry.definition.flareSolverrURL != nil {
+                    timeout = max(configuration.perIndexerTimeout, 180)
+                } else if entry.definition.implementation == "prowlarr" {
+                    timeout = max(configuration.perIndexerTimeout, 30)
+                } else {
+                    timeout = configuration.perIndexerTimeout
+                }
                 group.addTask {
                     let started = clock.now()
                     let result: Result<IndexerSearchResponse, IndexerError>
@@ -379,13 +387,14 @@ public actor IndexerSearchCoordinator {
     /// Runs `IndexerClient.test()` on every enabled indexer in parallel ("Test all"). Does not touch health stats.
     public func testAll(includeDisabled: Bool = false) async -> [IndexerTestOutcome] {
         let targets = entries.values.filter { includeDisabled || $0.definition.enabled }
-        let timeout = configuration.perIndexerTimeout
         let clock = self.clock
         return await withTaskGroup(of: IndexerTestOutcome.self) { group in
             for entry in targets {
                 let client = entry.client
                 let id = entry.definition.id
                 let name = entry.definition.name
+                let timeout = entry.definition.implementation == "prowlarr"
+                    ? max(configuration.perIndexerTimeout, 30) : configuration.perIndexerTimeout
                 group.addTask {
                     do {
                         let result = try await Self.withTimeout(seconds: timeout, clock: clock) { try await client.test() }

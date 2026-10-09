@@ -10,8 +10,9 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 - 2026-10-09 **Intel Macs must be supported**: universal binary (arm64 + x86_64), every native dependency built for both. Minimum macOS 15.
 - 2026-10-09 **As lightweight and performant as possible**: native Swift only (no Electron/WebView), minimal dependencies, tiny idle cost, budgets in SCOPE.md §5.6 are release gates.
 - 2026-10-09 Must handle full season packs and archives; streaming starts at episode 1 (see SCOPE.md §4.5).
-- 2026-10-09 Ships no indexers or content links (content-agnostic).
+- 2026-10-10 First install includes the user's default provider list: EZTV, LimeTorrents, SolidTorrents, The Pirate Bay, TorLock, TorrentProject, torrents-csv, plus optional local Prowlarr and Jackett connections. Use original native Swift adapters, not GPL qBittorrent plugin code. Bundle provider configuration, never torrent/content links; defaults must be removable, and unreachable providers must be disabled with diagnostics.
 - 2026-10-09 OpenSSL stays in the torrent engine (~5 MB/arch) for HTTPS trackers/web seeds; user approved the size cost.
+- 2026-10-09 FlareSolverr stays unbundled and optional in the app. User removed the local service and chose to keep the app integration; do not reinstall or start the service unless asked.
 
 ## Build, CI & release
 - SwiftPM package: `MarqueeCore` (UI-free logic, depends on GRDB), `MarqueeUI` (design system + views), `Marquee` (app), tests in `Tests/`.

@@ -4,14 +4,17 @@ import GRDB
 /// `SchemaMigrationTests` snapshots the v1 schema and fails if it changes.
 enum Schema {
     /// Identifiers of every migration, in order.
-    static let migrationIdentifiers = ["v1", "v2"]
+    static let migrationIdentifiers = ["v1", "v2", "v3"]
 
     static func makeMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in try db.execute(sql: v1) }
         migrator.registerMigration("v2") { db in try db.execute(sql: v2) }
+        migrator.registerMigration("v3") { db in try db.execute(sql: v3) }
         return migrator
     }
+
+    static let v3 = "ALTER TABLE indexer ADD COLUMN flareSolverrURL TEXT;"
 
     // Conventions: UUID primary keys are 16-byte BLOBs (GRDB's native UUID encoding; half the
     // size of text and cheaper to index/compare). `torrent` uses its natural key, the infoHash.

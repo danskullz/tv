@@ -2,7 +2,7 @@
 
 *Working title. A native macOS app that unifies the \*arr suite (Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, Overseerr-style discovery) with a built-in torrent engine and a player that can start watching a release within seconds while it downloads to disk.*
 
-Date: 2026-10-09 · Status: Draft v1
+Date: 2026-10-10 · Status: Draft v1
 
 ---
 
@@ -19,7 +19,7 @@ Date: 2026-10-09 · Status: Draft v1
 5. **Never lose data, never surprise the user.** Atomic imports, reversible actions, clear explanations for every automated decision ("Why was this release picked?").
 6. **Fast everywhere.** Instant search, 120 fps scrolling, no spinners for local data, background work never blocks UI.
 7. **Lightweight and fast by construction.** Native Swift only (no Electron/WebView shells, no bundled runtimes), a small dependency list that must justify itself, a small download, and near-zero idle cost. The helper daemon sleeps when nothing is happening and the UI holds no more data than is on screen. Every feature is weighed against its footprint; performance budgets (§5.6) are release gates, not goals.
-8. **Content-agnostic tooling.** Like qBittorrent, Prowlarr or VLC, the app ships no content, no indexers and no trackers. Users supply their own sources. (See §14.)
+8. **No content bundled.** Marquee ships user-approved provider adapters and first-run defaults, but never ships torrent files, magnets or release links. Users can disable or remove any provider. (See §14.)
 
 ---
 
@@ -116,7 +116,8 @@ Core logic lives in a UI-free Swift package (`MarqueeCore`) so it's unit-testabl
 
 ### 4.3 Indexers (Prowlarr, integrated)
 
-- Torznab/Newznab-compatible endpoints plus **Cardigann-format indexer definitions** (YAML), with a definition browser and auto-updating definitions repository (user-configurable source).
+- Torznab/Newznab-compatible endpoints, Prowlarr/Jackett REST integration, and **Cardigann-format indexer definitions** (YAML), with a definition browser and auto-updating definitions repository (user-configurable source).
+- First install seeds the default providers requested by the user: EZTV, LimeTorrents, SolidTorrents, The Pirate Bay, TorLock, TorrentProject and torrents-csv. Prowlarr and Jackett are offered at their local defaults and require the user's running service and API key.
 - Per-indexer: priority, categories, minimum seeders, rate limits, tags, proxy/FlareSolverr-style challenge solver integration (optional, user-supplied).
 - Parallel search with result deduplication, canonical release parsing, health/latency stats, auto-disable on repeated failure with notification.
 - One-click "Test all", search testing playground, per-indexer stats (queries, grabs, failures).
@@ -373,7 +374,7 @@ Solo/small team assumption (1–3 engineers + design). Estimates are calendar ti
 
 The \*arr suite, libtorrent, mpv and VLC are lawful tools; legality depends on what content a user accesses. To keep this project on solid ground:
 
-- Ship **no indexers, trackers, or content links**; users add their own sources.
+- Ship native adapters and configuration for the default providers listed in §4.3. Ship **no torrent files, magnets, release URLs or other content links**. Users are responsible for configuring and using their sources lawfully; every default can be disabled or removed.
 - Surface legal availability (TMDB watch providers) in the UI, and make it easy to use legally obtained content (own rips, public domain, Creative Commons, open torrents like Blender/Internet Archive) for demos and screenshots.
 - Use only licensed/permitted metadata and image sources, with required attribution.
 - Provide a clear user-responsibility statement at first run, and keep copyright-complaint contact details if ever distributed publicly.

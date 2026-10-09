@@ -84,15 +84,15 @@ private func schemaSQL(_ db: Database) throws -> String {
         #expect(actual == expected, "v1 schema changed. Add a new migration instead of editing v1.")
     }
 
-    @Test func v2SchemaMatchesSnapshot() throws {
+    @Test func v3SchemaMatchesSnapshot() throws {
         let queue = try DatabaseQueue()
         try Schema.makeMigrator().migrate(queue)
         let actual = try queue.read(schemaSQL)
         let fixtureURL = try #require(
             Bundle.module.url(
-                forResource: "v2.schema", withExtension: "sql", subdirectory: "Fixtures/Persistence"))
+                forResource: "v3.schema", withExtension: "sql", subdirectory: "Fixtures/Persistence"))
         let expected = try String(contentsOf: fixtureURL, encoding: .utf8)
-        #expect(actual == expected, "v2 schema changed. Add a new migration instead of editing existing migrations.")
+        #expect(actual == expected, "v3 schema changed. Add a new migration instead of editing existing migrations.")
     }
 
     @Test func migrationIdentifiersAreAppendOnly() {
@@ -142,6 +142,6 @@ func persistenceRegenerateV1Snapshot() throws {
     let currentSQL = try currentQueue.read(schemaSQL)
     let currentURL = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent()
-        .appending(path: "Fixtures/Persistence/v2.schema.sql")
+        .appending(path: "Fixtures/Persistence/v3.schema.sql")
     try currentSQL.write(to: currentURL, atomically: true, encoding: .utf8)
 }

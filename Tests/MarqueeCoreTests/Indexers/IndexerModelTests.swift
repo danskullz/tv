@@ -37,6 +37,15 @@ struct IndexerDefinitionTests {
         #expect(d.apiKeyAccount != makeDefinition().apiKeyAccount)
     }
 
+    @Test func prowlarrSourcePreservesReverseProxyPathAndUsesSeparateBackend() throws {
+        let source = Indexer(name: "Home Prowlarr", prowlarrURL: URL(string: "https://search.example.invalid/prowlarr/")!)
+        let definition = try #require(source.definition)
+        #expect(definition.implementation == "prowlarr")
+        #expect(definition.baseURL.path == "/prowlarr")
+        #expect(try ProwlarrAPIEndpoint.url(server: definition.baseURL, endpoint: "search").path == "/prowlarr/api/v1/search")
+        #expect(source.credentialRef == definition.apiKeyAccount)
+    }
+
     @Test func rateLimitIsClamped() {
         let r = IndexerRateLimit(minInterval: -5, burst: 0)
         #expect(r.minInterval == 0)
@@ -77,7 +86,7 @@ struct RedactionAndErrorTests {
             .rateLimited(retryAfter: nil), .serverError(status: 503), .httpStatus(404), .httpStatus(403), .httpStatus(418),
             .timeout, .network("x"), .malformedResponse("x"), .apiError(code: 910, description: ""),
             .apiError(code: 201, description: "Bad param"), .apiError(code: 900, description: ""),
-            .unsupportedSearch("x"), .responseTooLarge, .cancelled,
+            .unsupportedSearch("x"), .responseTooLarge, .challengeSolverFailed, .cancelled,
         ]
         for e in errors {
             #expect(!e.userMessage.isEmpty)
@@ -96,6 +105,7 @@ struct RedactionAndErrorTests {
         #expect(!IndexerError.authenticationFailed(detail: "").isRetryable)
         #expect(!IndexerError.httpStatus(404).isRetryable)
         #expect(!IndexerError.unsupportedSearch("").countsAgainstHealth)
+        #expect(!IndexerError.challengeSolverFailed.countsAgainstHealth)
         #expect(!IndexerError.cancelled.countsAgainstHealth)
         #expect(IndexerError.timeout.countsAgainstHealth)
     }

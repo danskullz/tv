@@ -147,6 +147,13 @@ final class AppServices {
 
     /// Cheap start-up work: reads status for the first-run checklist, and brings the demo swarm up.
     func prepare() async {
+        if !isDemo {
+            do {
+                _ = try await DefaultIndexerProviderSeeder.installIfNeeded(into: indexerRecords)
+            } catch {
+                announce("Couldn't install default providers", error.localizedDescription, "exclamationmark.triangle")
+            }
+        }
         if isDemo, demoSwarm == nil {
             do {
                 let swarm = try await DemoSwarm.start(
@@ -159,6 +166,7 @@ final class AppServices {
                 announce("Couldn't start the demo content", error.localizedDescription, "exclamationmark.triangle")
             }
         }
+        await reloadIndexers()
         if let managed = try? await torrents.managedDownloads(), !managed.isEmpty {
             _ = try? await downloadManager()
         }
@@ -287,9 +295,11 @@ final class AppServices {
     }
 
     /// Tries an address and key without saving anything.
-    nonisolated func testIndexer(url: URL, apiKey: String) async -> ConnectionResult {
+    nonisolated func testIndexer(url: URL, apiKey: String, flareSolverrURL: URL? = nil) async -> ConnectionResult {
         var definition = IndexerDefinition(name: "Test", baseURL: url)
-        if let parsed = Indexer(name: "Test", torznabURL: url).definition { definition = parsed }
+        if let parsed = Indexer(name: "Test", torznabURL: url, flareSolverrURL: flareSolverrURL).definition {
+            definition = parsed
+        }
         definition.rateLimit = .unlimited
         let store = InMemorySecretStore([definition.apiKeyAccount: apiKey])
         var configuration = IndexerClientConfiguration()
@@ -305,15 +315,85 @@ final class AppServices {
             let ms = Int((result.latency * 1000).rounded())
             return ConnectionResult(ok: true, message: "Connected in \(ms) ms. Supports \(supports).")
         } catch let error as IndexerError {
-            return ConnectionResult(ok: false, message: error.userMessage)
+            return ConnectionResult(ok: false, message: "\(error.userMessage) Details: \(error.technicalDetail)")
         } catch {
             return ConnectionResult(ok: false, message: "The indexer couldn't be reached.")
         }
     }
 
+    /// Checks a Prowlarr server and key without saving either.
+    nonisolated func testProwlarr(url: URL, apiKey: String) async -> ConnectionResult {
+        let definition = IndexerDefinition(name: "Prowlarr", baseURL: url, implementation: "prowlarr")
+        let store = InMemorySecretStore([definition.apiKeyAccount: apiKey])
+        var configuration = IndexerClientConfiguration()
+        configuration.maxAttempts = 1
+        configuration.prowlarrConcurrency = 1
+        let client = IndexerClient(definition: definition, secrets: store, configuration: configuration)
+        do {
+            let result = try await client.test()
+            let ms = Int((result.latency * 1000).rounded())
+            return ConnectionResult(
+                ok: true, message: "Connected to Prowlarr in \(ms) ms. Found \(result.sampleReleaseCount) sample releases.")
+        } catch let error as IndexerError {
+            return ConnectionResult(ok: false, message: "\(error.userMessage) Details: \(error.technicalDetail)")
+        } catch {
+            return ConnectionResult(ok: false, message: "Prowlarr couldn't be reached. Check the address and API key.")
+        }
+    }
+
+    /// Tests one of Marquee's bundled direct-site adapters without saving the result.
+    nonisolated func testBuiltInProvider(_ indexer: Indexer, apiKey: String = "") async -> ConnectionResult {
+        guard let definition = indexer.definition,
+            BuiltInProvider(rawValue: definition.implementation) != nil
+        else {
+            return ConnectionResult(ok: false, message: "This isn't a built-in provider Marquee recognizes.")
+        }
+        let store = InMemorySecretStore(apiKey.isEmpty ? [:] : [definition.apiKeyAccount: apiKey])
+        var configuration = IndexerClientConfiguration()
+        configuration.maxAttempts = 1
+        let client = IndexerClient(definition: definition, secrets: store, configuration: configuration)
+        do {
+            let result = try await client.test()
+            let ms = Int((result.latency * 1000).rounded())
+            return ConnectionResult(
+                ok: true, message: "Connected in \(ms) ms. Found \(result.sampleReleaseCount) sample releases.")
+        } catch let error as IndexerError {
+            return ConnectionResult(ok: false, message: "\(error.userMessage) Details: \(error.technicalDetail)")
+        } catch {
+            return ConnectionResult(ok: false, message: "Marquee couldn't reach this provider.")
+        }
+    }
+
+    /// Saves the address and API key for a local Prowlarr or Jackett connection.
+    func configureRemoteIndexer(_ indexer: Indexer, url: URL, apiKey: String) async throws {
+        guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw IndexerError.invalidConfiguration("Enter the service's API key.")
+        }
+        var updated = indexer
+        updated.baseURL = url.absoluteString
+        updated.enabled = true
+        guard let account = updated.credentialRef, !account.isEmpty else {
+            throw IndexerError.invalidConfiguration("This source has no Keychain credential account.")
+        }
+        try secrets.set(apiKey, account: account)
+        try await indexerRecords.upsert(updated)
+        await reloadIndexers()
+        try? await startAutomaticReleaseAutomation()
+    }
+
     @discardableResult
-    func addIndexer(name: String, url: URL, apiKey: String) async throws -> Indexer {
-        let record = Indexer(name: name, torznabURL: url)
+    func addIndexer(name: String, url: URL, apiKey: String, flareSolverrURL: URL? = nil) async throws -> Indexer {
+        let record = Indexer(name: name, torznabURL: url, flareSolverrURL: flareSolverrURL)
+        try secrets.set(apiKey, account: record.credentialRef ?? "")
+        try await indexerRecords.upsert(record)
+        await reloadIndexers()
+        try? await startAutomaticReleaseAutomation()
+        return record
+    }
+
+    @discardableResult
+    func addProwlarr(name: String, url: URL, apiKey: String) async throws -> Indexer {
+        let record = Indexer(name: name, prowlarrURL: url)
         try secrets.set(apiKey, account: record.credentialRef ?? "")
         try await indexerRecords.upsert(record)
         await reloadIndexers()
@@ -325,6 +405,13 @@ final class AppServices {
         try? await indexerRecords.setEnabled(id: indexer.id, enabled)
         await reloadIndexers()
         if enabled { try? await startAutomaticReleaseAutomation() }
+    }
+
+    func setIndexerFlareSolverrURL(_ indexer: Indexer, _ url: URL?) async {
+        var updated = indexer
+        updated.flareSolverrURL = url?.absoluteString
+        try? await indexerRecords.upsert(updated)
+        await reloadIndexers()
     }
 
     func deleteIndexer(_ indexer: Indexer) async {

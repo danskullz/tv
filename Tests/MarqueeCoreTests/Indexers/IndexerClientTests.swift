@@ -26,6 +26,19 @@ private func response(_ status: Int, _ headers: [String: String] = [:], body: St
 }
 
 struct IndexerClientSearchTests {
+    @Test func configuredFlareSolverrAddressIsForwardedToTransport() async throws {
+        var definition = makeDefinition()
+        definition.flareSolverrURL = URL(string: "http://localhost:8191")
+        let transport = FakeIndexerTransport(search: IndexerFixtures.data("empty-results.xml"))
+        let client = makeClient(definition, transport: transport)
+
+        _ = try await client.search(.generic("example"))
+
+        #expect(transport.requests.count == 2)
+        #expect(transport.requests.allSatisfy { $0.flareSolverrURL == definition.flareSolverrURL })
+        #expect(transport.requests.allSatisfy { $0.timeout >= 90 })
+    }
+
     @Test func searchSendsExpectedRequestAndParsesResults() async throws {
         let transport = FakeIndexerTransport(search: IndexerFixtures.data("tv-results.xml"))
         let def = makeDefinition(apiPath: "/torznab/api")
@@ -157,6 +170,137 @@ struct IndexerClientSearchTests {
         let client = makeClient(def, transport: transport, secrets: InMemorySecretStore())
         _ = try await client.search(.generic("x"))
         #expect(transport.requests.allSatisfy { $0.url.queryValue("apikey") == nil })
+    }
+}
+
+struct ProwlarrClientTests {
+    @Test func searchesEnabledTorrentIndexersAndMapsReleaseMetadata() async throws {
+        var definition = makeDefinition(host: "prowlarr.example.invalid")
+        definition.baseURL = URL(string: "https://prowlarr.example.invalid/prowlarr")!
+        definition.implementation = "prowlarr"
+        let indexers = #"[{"id":10,"enable":true,"protocol":"torrent"},{"id":20,"enable":true,"protocol":2},{"id":30,"enable":false,"protocol":"torrent"}]"#
+        let releases = #"[{"guid":"release-10","title":"Show\nS01E02\t1080p","size":2048,"indexer":"Tracker One","indexerFlags":["G_Freeleech","DoubleUpload"],"publishDate":"2025-02-03T12:30:45.123Z","downloadUrl":"https://prowlarr.example.invalid/download/10","magnetUrl":"magnet:?xt=urn:btih:0123456789012345678901234567890123456789","infoUrl":"https://tracker.example.invalid/release/10","seeders":40,"leechers":4,"protocol":"torrent"},{"guid":"release-usenet","title":"Usenet result","downloadUrl":"https://prowlarr.example.invalid/download/nzb","protocol":2}]"#
+        let transport = FakeIndexerTransport { request, _ in
+            if request.url.path == "/prowlarr/api/v1/indexer" {
+                return response(200, body: indexers)
+            }
+            #expect(request.url.path == "/prowlarr/api/v1/search")
+            #expect(request.headers["X-Api-Key"] == "SECRETKEY123")
+            #expect(request.url.queryValue("type") == "search")
+            #expect(request.url.queryValue("indexerIds") == "10")
+            #expect(request.url.queryValue("categories") == "5000")
+            #expect(request.url.queryValue("query") == "Björk S01E02")
+            return response(200, body: releases)
+        }
+        let client = makeClient(definition, transport: transport, secrets: makeSecrets(for: [definition]))
+
+        let result = try await client.search(.tv(title: "Björk", season: 1, episode: 2))
+
+        #expect(result.releases.count == 1)
+        #expect(!result.isPartial)
+        let release = try #require(result.releases.first)
+        #expect(release.title == "Show S01E02 1080p")
+        #expect(release.indexerName == "Tracker One")
+        #expect(release.seeders == 40)
+        #expect(release.leechers == 4)
+        #expect(release.isFreeleech)
+        #expect(release.indexerFlags == ["Freeleech", "DoubleUpload"])
+        #expect(release.publishDate != nil)
+        #expect(transport.requests.count == 2)
+    }
+
+    @Test func emptyEnabledSetFallsBackToAllIndexers() async throws {
+        var definition = makeDefinition(host: "prowlarr.example.invalid")
+        definition.implementation = "prowlarr"
+        let transport = FakeIndexerTransport { request, _ in
+            if request.url.path.hasSuffix("/indexer") { return response(200, body: "[]") }
+            #expect(request.url.queryValue("indexerIds") == "-2")
+            return response(200, body: "[]")
+        }
+        let client = makeClient(definition, transport: transport, secrets: makeSecrets(for: [definition]))
+        let result = try await client.search(.generic("C++"))
+        #expect(result.releases.isEmpty)
+        #expect(transport.requests.last?.url.queryValue("query") == "C++")
+    }
+
+    @Test func connectionTestChecksAPIKeyAndSearchRoute() async throws {
+        var definition = makeDefinition(host: "prowlarr.example.invalid")
+        definition.implementation = "prowlarr"
+        let transport = FakeIndexerTransport { request, _ in
+            if request.url.path.hasSuffix("/indexer") { return response(200, body: "[]") }
+            return response(200, body: "[]")
+        }
+        let client = makeClient(definition, transport: transport, secrets: makeSecrets(for: [definition]))
+
+        let result = try await client.test()
+
+        #expect(result.capabilities.serverTitle == "Prowlarr")
+        #expect(result.sampleReleaseCount == 0)
+        #expect(transport.requests.filter { $0.url.path.hasSuffix("/indexer") }.count == 2)
+        #expect(transport.requests.last?.url.path.hasSuffix("/search") == true)
+    }
+
+    @Test func rejectsHTMLResponseWithActionableError() async throws {
+        var definition = makeDefinition(host: "prowlarr.example.invalid")
+        definition.implementation = "prowlarr"
+        let transport = FakeIndexerTransport { _, _ in response(200, body: "<!doctype html><html>blocked</html>") }
+        let client = makeClient(definition, transport: transport, secrets: makeSecrets(for: [definition]))
+
+        await #expect(throws: IndexerError.malformedResponse(
+            "Prowlarr returned an HTML page instead of JSON. Check the URL base, reverse proxy, or access challenge.")) {
+            try await client.search(.generic("test"))
+        }
+    }
+}
+
+struct FlareSolverrTransportTests {
+    @Test func wrapsTorznabURLAndReturnsSolvedResponse() async throws {
+        let requests = Mutex<[IndexerHTTPRequest]>([])
+        let base = FakeIndexerTransport { request, _ in
+            requests.withLock { $0.append(request) }
+            guard let body = request.body,
+                let payload = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+            else { throw IndexerError.malformedResponse("Expected JSON request body.") }
+            #expect(payload["cmd"] as? String == "request.get")
+            #expect(payload["maxTimeout"] as? Int == 60_000)
+            #expect((payload["url"] as? String)?.contains("apikey=KEY123") == true)
+            return response(200, body: #"{"status":"ok","solution":{"status":200,"response":"<xml>solved</xml>"}}"#)
+        }
+        let transport = FlareSolverrIndexerTransport(base: base)
+        let request = IndexerHTTPRequest(
+            url: URL(string: "https://indexer.example.invalid/api?t=caps&apikey=KEY123")!,
+            flareSolverrURL: URL(string: "http://localhost:8191"))
+
+        let result = try await transport.send(request)
+
+        #expect(result.statusCode == 200)
+        #expect(String(decoding: result.body, as: UTF8.self) == "<xml>solved</xml>")
+        let sent = try #require(requests.withLock { $0.first })
+        #expect(sent.url.absoluteString == "http://localhost:8191/v1")
+        #expect(sent.method == "POST")
+        #expect(sent.headers["Content-Type"] == "application/json")
+    }
+
+    @Test func directRequestsBypassFlareSolverrAndPathIsNormalized() async throws {
+        let base = FakeIndexerTransport { request, _ in response(200, body: "direct") }
+        let transport = FlareSolverrIndexerTransport(base: base)
+        let result = try await transport.send(IndexerHTTPRequest(url: URL(string: "https://indexer.invalid/api")!))
+        #expect(String(decoding: result.body, as: UTF8.self) == "direct")
+        #expect(try FlareSolverrIndexerTransport.endpoint(for: URL(string: "http://localhost:8191/v1")!).path == "/v1")
+        #expect(try FlareSolverrIndexerTransport.endpoint(for: URL(string: "http://localhost:8191/proxy/v1/")!).path == "/proxy/v1")
+    }
+
+    @Test func rejectsMalformedSolverAddressAndResponse() async throws {
+        let base = FakeIndexerTransport { _, _ in response(200, body: #"{"status":"error"}"#) }
+        let transport = FlareSolverrIndexerTransport(base: base)
+        await #expect(throws: IndexerError.self) {
+            try await transport.send(IndexerHTTPRequest(
+                url: URL(string: "https://indexer.invalid/api")!, flareSolverrURL: URL(string: "file:///tmp/solver")!))
+        }
+        await #expect(throws: IndexerError.self) {
+            try await transport.send(IndexerHTTPRequest(
+                url: URL(string: "https://indexer.invalid/api")!, flareSolverrURL: URL(string: "http://localhost:8191")!))
+        }
     }
 }
 

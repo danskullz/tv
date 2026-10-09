@@ -14,6 +14,7 @@ public struct IndexerClientConfiguration: Sendable, Equatable {
     public var capsTTL: TimeInterval = 24 * 3600
     public var maxResponseBytes: Int = 32 * 1024 * 1024
     public var defaultLimit: Int = 100
+    public var prowlarrConcurrency: Int = 10
     public var userAgent: String = "Marquee"
 
     public init() {}
@@ -119,11 +120,12 @@ public actor IndexerClient {
     private var bucket: TokenBucket
     private var cachedCaps: (caps: TorznabCapabilities, fetchedAt: TimeInterval)?
     private var capsTask: Task<TorznabCapabilities, Error>?
+    private var torlockResponseCache: [URL: (data: Data, expiresAt: TimeInterval)] = [:]
 
     public init(
         definition: IndexerDefinition,
         secrets: SecretStore,
-        transport: IndexerTransport = URLSessionIndexerTransport(),
+        transport: IndexerTransport = FlareSolverrIndexerTransport(),
         clock: IndexerClock = SystemIndexerClock(),
         configuration: IndexerClientConfiguration = IndexerClientConfiguration(),
         random: @escaping @Sendable () -> Double = { Double.random(in: 0...1) }
@@ -142,6 +144,11 @@ public actor IndexerClient {
     public func update(definition new: IndexerDefinition) {
         if new.rateLimit != definition.rateLimit { bucket = TokenBucket(limit: new.rateLimit, now: clock.now()) }
         if new.baseURL != definition.baseURL || new.apiPath != definition.apiPath || new.id != definition.id {
+            cachedCaps = nil
+            capsTask?.cancel()
+            capsTask = nil
+        }
+        if new.implementation != definition.implementation {
             cachedCaps = nil
             capsTask?.cancel()
             capsTask = nil
@@ -171,6 +178,28 @@ public actor IndexerClient {
     private func fetchCapabilities() async throws -> TorznabCapabilities {
         let key = try apiKey()
         return try await redactingErrors(key) {
+            if definition.implementation == "torlock" {
+                let caps = Self.basicTextCapabilities(serverTitle: "TorLock")
+                cachedCaps = (caps, clock.now())
+                return caps
+            }
+            if definition.implementation == "prowlarr" {
+                guard let key, !key.isEmpty else {
+                    throw IndexerError.invalidConfiguration("Enter the Prowlarr API key.")
+                }
+                let url = try ProwlarrAPIEndpoint.url(server: definition.baseURL, endpoint: "indexer")
+                let (data, _) = try await fetch(url, key: key)
+                _ = try Self.parseProwlarrIndexers(data)
+                let caps = TorznabCapabilities(
+                    serverTitle: "Prowlarr",
+                    searchModes: [
+                        "search": TorznabSearchMode(available: true, supportedParams: ["q"]),
+                        "tv-search": TorznabSearchMode(available: true, supportedParams: ["q"]),
+                        "movie-search": TorznabSearchMode(available: true, supportedParams: ["q"]),
+                    ])
+                cachedCaps = (caps, clock.now())
+                return caps
+            }
             let url = try TorznabEndpoint.url(definition: definition, function: "caps", parameters: [], apiKey: key)
             let (data, _) = try await fetch(url, key: key)
             let caps = try TorznabCapabilities.parse(data)
@@ -182,6 +211,10 @@ public actor IndexerClient {
     // MARK: Search
 
     public func search(_ query: TorznabQuery) async throws -> IndexerSearchResponse {
+        if definition.implementation == "prowlarr" { return try await searchProwlarr(query) }
+        if let provider = BuiltInProvider(rawValue: definition.implementation) {
+            return try await searchBuiltIn(provider, query: query)
+        }
         let caps = try await capabilities()
         let plan = try TorznabQueryBuilder.plan(
             for: query, definition: definition, capabilities: caps, defaultLimit: configuration.defaultLimit)
@@ -208,9 +241,209 @@ public actor IndexerClient {
 
     /// Verifies address, API key and search in one go: fresh capabilities plus a one-result search.
     public func test() async throws -> IndexerTestResult {
+        if let provider = BuiltInProvider(rawValue: definition.implementation) {
+            let response = try await search(.generic("ubuntu", limit: 1))
+            return IndexerTestResult(
+                latency: response.latency, capabilities: Self.basicTextCapabilities(serverTitle: provider.name),
+                sampleReleaseCount: response.releases.count)
+        }
         let caps = try await capabilities(forceRefresh: true)
         let response = try await search(.generic(nil, limit: 1))
         return IndexerTestResult(latency: response.latency, capabilities: caps, sampleReleaseCount: response.releases.count)
+    }
+
+    // MARK: Prowlarr REST API
+
+    private static func basicTextCapabilities(serverTitle: String) -> TorznabCapabilities {
+        TorznabCapabilities(
+            serverTitle: serverTitle,
+            searchModes: ["search": TorznabSearchMode(available: true, supportedParams: ["q"])])
+    }
+
+    private func searchBuiltIn(_ provider: BuiltInProvider, query: TorznabQuery) async throws -> IndexerSearchResponse {
+        let started = clock.now()
+        if query.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false,
+            !(provider == .eztv && query.imdbID != nil)
+        {
+            return IndexerSearchResponse(
+                releases: [], totalAvailable: nil, offset: nil, skippedItems: 0, isPartial: false,
+                filteredBySeeders: 0, usedTextFallback: false, latency: max(0, clock.now() - started))
+        }
+        let url = try BuiltInProviderSearch.url(provider: provider, server: definition.baseURL, query: query)
+        let key = try apiKey()
+        let (data, _) = try await redactingErrors(key) { try await fetch(url, key: key) }
+        var releases = try BuiltInProviderSearch.parse(
+            data, provider: provider, indexerID: definition.id, indexerName: definition.name,
+            query: query, server: definition.baseURL)
+        var filtered = 0
+        if definition.minimumSeeders > 0 {
+            releases = releases.filter { release in
+                guard let seeds = release.seeders else { return true }
+                let keep = seeds >= definition.minimumSeeders
+                if !keep { filtered += 1 }
+                return keep
+            }
+        }
+        return IndexerSearchResponse(
+            releases: releases, totalAvailable: nil, offset: nil, skippedItems: 0, isPartial: false,
+            filteredBySeeders: filtered, usedTextFallback: false, latency: max(0, clock.now() - started))
+    }
+
+    private struct ProwlarrIndexer: Sendable {
+        var id: Int
+        var enabled: Bool
+        var isUsenet: Bool
+    }
+
+    private struct ProwlarrAttempt: Sendable {
+        var result: Result<(Data, TimeInterval), IndexerError>
+    }
+
+    private func searchProwlarr(_ query: TorznabQuery) async throws -> IndexerSearchResponse {
+        guard let key = try apiKey(), !key.isEmpty else {
+            throw IndexerError.invalidConfiguration("Enter the Prowlarr API key.")
+        }
+        return try await redactingErrors(key) {
+            let started = clock.now()
+            let indexersURL = try ProwlarrAPIEndpoint.url(server: definition.baseURL, endpoint: "indexer")
+            let (indexersData, _) = try await fetch(indexersURL, key: key)
+            let indexers = try Self.parseProwlarrIndexers(indexersData)
+                .filter { $0.enabled && !$0.isUsenet }
+            let categories = Self.prowlarrCategories(for: query)
+            let targets = indexers.isEmpty ? ["-2"] : indexers.map { String($0.id) }
+            let maxConcurrent = max(1, configuration.prowlarrConcurrency)
+            let server = definition.baseURL
+
+            let attempts = await withTaskGroup(of: ProwlarrAttempt.self) { group in
+                var next = 0
+                let initialCount = min(targets.count, maxConcurrent)
+                for _ in 0..<initialCount {
+                    let target = targets[next]
+                    next += 1
+                    group.addTask {
+                        await self.fetchProwlarrTarget(
+                            query, indexerID: target, categories: categories, server: server, key: key)
+                    }
+                }
+                var results: [ProwlarrAttempt] = []
+                while let result = await group.next() {
+                    results.append(result)
+                    if next < targets.count {
+                        let target = targets[next]
+                        next += 1
+                        group.addTask {
+                            await self.fetchProwlarrTarget(
+                                query, indexerID: target, categories: categories, server: server, key: key)
+                        }
+                    }
+                }
+                return results
+            }
+
+            var releases: [IndexerRelease] = []
+            var failed = 0
+            var firstError: IndexerError?
+            for attempt in attempts {
+                switch attempt.result {
+                case .success(let (data, _)):
+                    releases += try ProwlarrResultParser.parse(data, indexerID: definition.id)
+                case .failure(let error):
+                    failed += 1
+                    firstError = firstError ?? error
+                }
+            }
+            guard failed < attempts.count else { throw firstError ?? IndexerError.network("Prowlarr search failed.") }
+
+            var filtered = 0
+            if definition.minimumSeeders > 0 {
+                releases = releases.filter { release in
+                    guard let seeds = release.seeders else { return true }
+                    let keep = seeds >= definition.minimumSeeders
+                    if !keep { filtered += 1 }
+                    return keep
+                }
+            }
+            return IndexerSearchResponse(
+                releases: releases, totalAvailable: nil, offset: nil, skippedItems: 0, isPartial: failed > 0,
+                filteredBySeeders: filtered, usedTextFallback: false, latency: max(0, clock.now() - started))
+        }
+    }
+
+    private func fetchProwlarrTarget(
+        _ query: TorznabQuery, indexerID: String, categories: [Int], server: URL, key: String
+    ) async -> ProwlarrAttempt {
+        do {
+            let url = try ProwlarrAPIEndpoint.url(
+                server: server, endpoint: "search",
+                query: Self.prowlarrQuery(query, indexerID: indexerID, categories: categories))
+            return ProwlarrAttempt(result: .success(try await fetch(url, key: key)))
+        } catch let error as IndexerError {
+            return ProwlarrAttempt(result: .failure(error))
+        } catch is CancellationError {
+            return ProwlarrAttempt(result: .failure(.cancelled))
+        } catch {
+            return ProwlarrAttempt(result: .failure(.network(String(describing: error))))
+        }
+    }
+
+    private static func parseProwlarrIndexers(_ data: Data) throws -> [ProwlarrIndexer] {
+        let object: Any
+        do { object = try JSONSerialization.jsonObject(with: data) }
+        catch {
+            if ProwlarrResultParser.looksLikeHTML(data) {
+                throw IndexerError.malformedResponse(
+                    "Prowlarr returned an HTML page instead of JSON. Check the URL base, reverse proxy, or access challenge.")
+            }
+            throw IndexerError.malformedResponse("Prowlarr returned invalid JSON while listing indexers.")
+        }
+        guard let values = object as? [[String: Any]] else {
+            if let response = object as? [String: Any], let message = response["message"] as? String {
+                throw IndexerError.apiError(code: 900, description: SecretRedactor.redact(message))
+            }
+            throw IndexerError.malformedResponse("Prowlarr returned an unexpected indexer list.")
+        }
+        return values.compactMap { item in
+            guard let idValue = item["id"] else { return nil }
+            let id: Int?
+            if let number = idValue as? NSNumber { id = number.intValue }
+            else if let string = idValue as? String { id = Int(string) }
+            else { id = nil }
+            guard let id else { return nil }
+            let protocolValue = String(describing: item["protocol"] ?? "").lowercased()
+            let enabled = (item["enable"] as? Bool) ?? ((item["enable"] as? NSNumber)?.boolValue ?? false)
+            return ProwlarrIndexer(
+                id: id, enabled: enabled, isUsenet: protocolValue == "usenet" || protocolValue == "2")
+        }
+    }
+
+    private static func prowlarrCategories(for query: TorznabQuery) -> [Int] {
+        if let categories = query.categories, !categories.isEmpty { return categories }
+        switch query.kind {
+        case .generic: return []
+        case .tv: return [5000]
+        case .movie: return [2000]
+        }
+    }
+
+    private static func prowlarrQuery(
+        _ query: TorznabQuery, indexerID: String, categories: [Int]
+    ) -> [URLQueryItem] {
+        var text = query.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if query.kind == .tv, let season = query.season {
+            text += String(format: " S%02d", season)
+            if let episode = query.episode { text += String(format: "E%02d", episode) }
+        } else if query.kind == .movie, let year = query.year {
+            text += " \(year)"
+        }
+        var items = [
+            URLQueryItem(name: "query", value: text),
+            URLQueryItem(name: "type", value: "search"),
+            URLQueryItem(name: "indexerIds", value: indexerID),
+        ]
+        items += categories.map { URLQueryItem(name: "categories", value: String($0)) }
+        if let limit = query.limit { items.append(URLQueryItem(name: "limit", value: String(max(1, limit)))) }
+        if let offset = query.offset, offset > 0 { items.append(URLQueryItem(name: "offset", value: String(offset))) }
+        return items
     }
 
     // MARK: Internals
@@ -233,8 +466,22 @@ public actor IndexerClient {
 
     /// Paces, sends, and retries transient failures with exponential backoff and jitter.
     private func fetch(_ url: URL, key: String?) async throws -> (Data, TimeInterval) {
+        if definition.implementation == "torlock",
+            let cached = torlockResponseCache[url], cached.expiresAt > clock.now()
+        {
+            return (cached.data, 0)
+        }
+        var headers = ["User-Agent": configuration.userAgent]
+        if definition.implementation == "prowlarr" {
+            headers["Accept"] = "application/json"
+            if let key, !key.isEmpty { headers["X-Api-Key"] = key }
+        } else if BuiltInProvider(rawValue: definition.implementation) != nil {
+            headers["Accept"] = "application/json, application/rss+xml, application/xml, text/html, */*"
+        }
         let request = IndexerHTTPRequest(
-            url: url, timeout: configuration.requestTimeout, headers: ["User-Agent": configuration.userAgent])
+            url: url, timeout: max(configuration.requestTimeout, definition.flareSolverrURL == nil ? 0 : 90),
+            headers: headers,
+            flareSolverrURL: definition.implementation == "prowlarr" ? nil : definition.flareSolverrURL)
         var attempt = 0
         while true {
             let wait = bucket.reserve(now: clock.now())
@@ -247,6 +494,13 @@ public actor IndexerClient {
                 let response = try await transport.send(request)
                 if (200..<300).contains(response.statusCode) {
                     guard response.body.count <= configuration.maxResponseBytes else { throw IndexerError.responseTooLarge }
+                    if definition.implementation == "torlock" {
+                        torlockResponseCache = torlockResponseCache.filter { $0.value.expiresAt > clock.now() }
+                        if torlockResponseCache.count >= 128, let oldest = torlockResponseCache.min(by: { $0.value.expiresAt < $1.value.expiresAt }) {
+                            torlockResponseCache[oldest.key] = nil
+                        }
+                        torlockResponseCache[url] = (response.body, clock.now() + 60)
+                    }
                     return (response.body, max(0, clock.now() - started))
                 }
                 retryAfter = IndexerBackoff.parseRetryAfter(response.header("Retry-After"))
