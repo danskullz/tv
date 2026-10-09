@@ -22,8 +22,7 @@ public enum SizePreference: String, Sendable, Hashable, Codable, CaseIterable {
 }
 
 /// A quality profile: which tiers are wanted, in what order, when to stop upgrading and how
-/// custom-format scores count. Persistence stores the flat `QualityProfile` record; use
-/// ``init(record:)`` / ``record(base:)`` to convert (groups are flattened in the record).
+/// custom-format scores count. Persistence stores the full group layout alongside legacy flat tiers.
 public struct QualityProfileConfig: Sendable, Hashable, Codable, Identifiable {
     public var id: UUID
     public var name: String
@@ -92,7 +91,7 @@ public struct QualityProfileConfig: Sendable, Hashable, Codable, Identifiable {
     // MARK: Persistence bridge
 
     public init(record: QualityProfile) {
-        let groups = record.items.compactMap { item -> QualityGroup? in
+        let groups = record.groups ?? record.items.compactMap { item -> QualityGroup? in
             QualityTier(rawValue: item.quality).map { QualityGroup(tiers: [$0], allowed: item.allowed) }
         }
         self.init(
@@ -101,11 +100,12 @@ public struct QualityProfileConfig: Sendable, Hashable, Codable, Identifiable {
             upgradeUntilFormatScore: record.cutoffFormatScore, formatScores: record.formatScores)
     }
 
-    /// Flattens into the persisted record (one item per tier, lowest to highest).
+    /// Persists the group layout and a flat compatibility representation.
     public func record(createdAt: Date = Date(), updatedAt: Date = Date()) -> QualityProfile {
         QualityProfile(
             id: id, name: name,
             items: groups.flatMap { g in g.tiers.map { QualityItem(quality: $0.rawValue, allowed: g.allowed) } },
+            groups: groups,
             cutoff: cutoff?.rawValue, upgradeAllowed: upgradeAllowed, minFormatScore: minFormatScore,
             cutoffFormatScore: upgradeUntilFormatScore, formatScores: formatScores, createdAt: createdAt,
             updatedAt: updatedAt)

@@ -4,11 +4,24 @@ import GRDB
 /// `SchemaMigrationTests` snapshots the v1 schema and fails if it changes.
 enum Schema {
     /// Identifiers of every migration, in order.
-    static let migrationIdentifiers = ["v1"]
+    static let migrationIdentifiers = ["v1", "v2"]
 
     static func makeMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in try db.execute(sql: v1) }
+        migrator.registerMigration("v2") { db in
+            try db.execute(sql: "ALTER TABLE qualityProfile ADD COLUMN groups TEXT")
+            try db.execute(sql: """
+                CREATE TABLE importReceipt (
+                    sourceKey TEXT PRIMARY KEY NOT NULL,
+                    historyEventId BLOB NOT NULL,
+                    mediaFileId BLOB NOT NULL,
+                    previousState TEXT,
+                    trashedPaths TEXT NOT NULL DEFAULT '[]',
+                    createdAt DATETIME NOT NULL
+                )
+                """)
+        }
         return migrator
     }
 

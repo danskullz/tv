@@ -30,7 +30,9 @@ public actor StreamSessionController {
     private let server: StreamServer
     private let config: StreamControllerConfiguration
     private let statusHub = Broadcaster<StreamStatus>(replayLatest: true, policy: .bufferingNewest(32))
-    private let eventHub = Broadcaster<StreamControllerEvent>(replayLatest: false, policy: .unbounded)
+    private let eventHub = Broadcaster<StreamControllerEvent>(
+        replayLatest: false, policy: .unbounded, replayLimit: 100_000,
+        shouldReplay: { if case .fileCompleted = $0 { true } else { false } })
     private let playheadUpdates: AsyncStream<PlayheadUpdate>
     private let playheadContinuation: AsyncStream<PlayheadUpdate>.Continuation
 

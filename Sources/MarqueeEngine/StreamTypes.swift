@@ -234,16 +234,24 @@ final class Broadcaster<Element: Sendable>: Sendable {
     private struct State {
         var subscribers: [UUID: AsyncStream<Element>.Continuation] = [:]
         var latest: Element?
+        var replay: [Element] = []
         var finished = false
     }
 
     private let state = Mutex(State())
     private let replayLatest: Bool
+    private let replayLimit: Int
+    private let shouldReplay: @Sendable (Element) -> Bool
     private let policy: AsyncStream<Element>.Continuation.BufferingPolicy
 
-    init(replayLatest: Bool, policy: AsyncStream<Element>.Continuation.BufferingPolicy) {
+    init(
+        replayLatest: Bool, policy: AsyncStream<Element>.Continuation.BufferingPolicy,
+        replayLimit: Int = 0, shouldReplay: @escaping @Sendable (Element) -> Bool = { _ in true }
+    ) {
         self.replayLatest = replayLatest
         self.policy = policy
+        self.replayLimit = max(0, replayLimit)
+        self.shouldReplay = shouldReplay
     }
 
     func subscribe() -> AsyncStream<Element> {
@@ -251,7 +259,11 @@ final class Broadcaster<Element: Sendable>: Sendable {
         let (stream, continuation) = AsyncStream<Element>.makeStream(bufferingPolicy: policy)
         let alreadyFinished = state.withLock { s -> Bool in
             if s.finished { return true }
-            if replayLatest, let latest = s.latest { continuation.yield(latest) }
+            if replayLimit > 0 {
+                for value in s.replay { continuation.yield(value) }
+            } else if replayLatest, let latest = s.latest {
+                continuation.yield(latest)
+            }
             s.subscribers[id] = continuation
             return false
         }
@@ -268,6 +280,10 @@ final class Broadcaster<Element: Sendable>: Sendable {
     func send(_ value: Element) {
         let targets = state.withLock { s -> [AsyncStream<Element>.Continuation] in
             s.latest = value
+            if replayLimit > 0, shouldReplay(value) {
+                s.replay.append(value)
+                if s.replay.count > replayLimit { s.replay.removeFirst(s.replay.count - replayLimit) }
+            }
             return Array(s.subscribers.values)
         }
         for t in targets { t.yield(value) }

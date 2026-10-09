@@ -32,7 +32,7 @@ let package = Package(
         .target(name: "CMpv"),
         .target(
             name: "MarqueePlayer",
-            dependencies: ["CMpv"],
+            dependencies: ["CMpv", "MarqueeCore"],
             // OpenGL is deprecated but is the only render API libmpv offers on macOS; silence the noise.
             swiftSettings: [.unsafeFlags(["-Xcc", "-DGL_SILENCE_DEPRECATION"])],
             linkerSettings: [.linkedFramework("OpenGL"), .linkedFramework("QuartzCore")]

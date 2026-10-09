@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import MarqueeCore
 import MarqueeEngine
+import MarqueePlayer
 import Observation
 import Synchronization
 import TorrentEngine
@@ -52,6 +53,8 @@ final class AppServices {
     nonisolated let blocklist: GRDBBlocklistRepository
     nonisolated let grabs: GRDBGrabRepository
     nonisolated let torrents: GRDBTorrentRepository
+    nonisolated let importCoordinator: ImportCoordinator
+    nonisolated let localMediaResolver: LocalMediaResolver
 
     // MARK: Engine
 
@@ -65,6 +68,7 @@ final class AppServices {
     @ObservationIgnored private(set) var demoSwarm: DemoSwarm?
     @ObservationIgnored var announce: @MainActor (_ title: String, _ detail: String?, _ systemImage: String) -> Void = { _, _, _ in }
     @ObservationIgnored private var terminationObserver: NSObjectProtocol?
+    @ObservationIgnored private var importEventTask: Task<Void, Never>?
 
     // MARK: Observable status (first-run checklist, Settings)
 
@@ -87,7 +91,7 @@ final class AppServices {
             let url = Self.demoDirectory.appendingPathComponent("marquee-demo.sqlite")
             // Fresh library and downloads every launch; the generated clips are kept.
             let fm = FileManager.default
-            for name in ["marquee-demo.sqlite", "marquee-demo.sqlite-wal", "marquee-demo.sqlite-shm", "downloads"] {
+            for name in ["marquee-demo.sqlite", "marquee-demo.sqlite-wal", "marquee-demo.sqlite-shm", "downloads", "Library"] {
                 try? fm.removeItem(at: Self.demoDirectory.appendingPathComponent(name))
             }
             db = try AppDatabase.onDisk(at: url)
@@ -103,9 +107,22 @@ final class AppServices {
         blocklist = GRDBBlocklistRepository(db)
         grabs = GRDBGrabRepository(db)
         torrents = GRDBTorrentRepository(db)
+        localMediaResolver = LocalMediaResolver(database: db)
+        importCoordinator = ImportCoordinator(
+            database: db, probe: AppMediaProbe(), rootDirectory: {
+                (demo ? Self.demoDirectory : AppSettings.downloadFolder)
+                    .appendingPathComponent("Library", isDirectory: true)
+            })
         coordinator = IndexerSearchCoordinator(secrets: self.secrets)
         let host = engineHost
         monitor = DownloadMonitor(session: { host.current }, torrents: GRDBTorrentRepository(db))
+        let importEvents = importCoordinator.events()
+        importEventTask = Task { @MainActor [weak self] in
+            for await event in importEvents {
+                guard case .imported = event else { continue }
+                self?.libraryChanged()
+            }
+        }
         terminationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
