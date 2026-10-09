@@ -3,7 +3,8 @@ import Security
 import Synchronization
 
 /// Storage for secrets (indexer API keys, passkeys). Secrets never live in model structs,
-/// settings files or logs; they are looked up by an account string at request time.
+/// settings files or logs; they are looked up by an account string at request time. The only
+/// sanctioned on-disk home is a dedicated secrets file (see `FileSecretStore`).
 public protocol SecretStore: Sendable {
     func get(account: String) throws -> String?
     func set(_ secret: String, account: String) throws
@@ -13,6 +14,7 @@ public protocol SecretStore: Sendable {
 public enum SecretStoreError: Error, Equatable, Sendable {
     case keychain(status: Int32)
     case invalidData
+    case fileError
 }
 
 extension SecretStoreError: LocalizedError {
@@ -23,6 +25,8 @@ extension SecretStoreError: LocalizedError {
             return "Marquee couldn't access the Keychain (\(text ?? "error \(status)"))."
         case .invalidData:
             return "A saved secret in the Keychain couldn't be read."
+        case .fileError:
+            return "Marquee couldn't save its secrets file. Check disk space and permissions."
         }
     }
 }
