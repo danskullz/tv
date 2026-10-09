@@ -11,6 +11,8 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 - 2026-10-09 **As lightweight and performant as possible**: native Swift only (no Electron/WebView), minimal dependencies, tiny idle cost, budgets in SCOPE.md §5.6 are release gates.
 - 2026-10-09 Must handle full season packs and archives; streaming starts at episode 1 (see SCOPE.md §4.5).
 - 2026-10-10 First install includes the user's default provider list: EZTV, LimeTorrents, SolidTorrents, The Pirate Bay, TorLock, TorrentProject, torrents-csv, plus optional local Prowlarr and Jackett connections. Use original native Swift adapters, not GPL qBittorrent plugin code. Bundle provider configuration, never torrent/content links; defaults must be removable, and unreachable providers must be disabled with diagnostics.
+- 2026-10-10 Perf is a hard gate, not an aspiration: idle CPU ~0 with zero polling (SCOPE.md §5.6), frugal enough to feel fine on old hardware, sensible defaults everywhere (quality preset, polling intervals, swarm services). Floor stays macOS 15 — 2012 Macs can't run it, so optimize, don't backport.
+- 2026-10-10 Activity screen is user-checked closely and has been reported broken twice: it must render correctly live in both empty and downloading states.
 - 2026-10-09 OpenSSL stays in the torrent engine (~5 MB/arch) for HTTPS trackers/web seeds; user approved the size cost.
 - 2026-10-09 FlareSolverr stays unbundled and optional in the app. User removed the local service and chose to keep the app integration; do not reinstall or start the service unless asked.
 
