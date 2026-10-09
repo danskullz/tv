@@ -48,12 +48,21 @@ actor DownloadMonitor {
         var status: TorrentStatus
     }
 
-    /// Current engine status of everything registered; finished torrents leave the active set.
+    /// Current engine status of everything registered; finished torrents leave the active set, as do
+    /// entries whose torrent is gone from the engine (removed elsewhere or lost on restart).
     func sample() async -> [Sample] {
         guard let session = session() else { return [] }
         var out: [Sample] = []
         for entry in entries.values {
-            guard let status = try? await session.status(entry.id) else { continue }
+            let status: TorrentStatus
+            do {
+                status = try await session.status(entry.id)
+            } catch TorrentError.notFound {
+                entries[entry.id.hex] = nil
+                continue
+            } catch {
+                continue
+            }
             out.append(Sample(entry: entry, status: status))
             let done = status.state == .seeding || status.state == .finished || status.progress >= 0.999
             let now = Date()
@@ -68,15 +77,37 @@ actor DownloadMonitor {
         return out
     }
 
-    /// Live progress for the UI: one update per title/episode id.
+    /// Live progress for the UI: one update per title/episode id, plus one keyed by the torrent's
+    /// own id (Activity rows look their box up by that id). Also covers torrents the engine knows
+    /// that no stream registered — background downloads from the download manager — so their rows
+    /// tick instead of freezing at their last loaded fraction.
     func progressUpdates() async -> [ProgressUpdate] {
         var updates: [ProgressUpdate] = []
+        var covered = Set<String>()
         for s in await sample() {
             let remaining = max(0, s.status.totalWanted - s.status.totalWantedDone)
             let rate = Double(s.status.downloadRate)
             let eta = rate > 1000 ? Double(remaining) / rate : nil
+            updates.append(ProgressUpdate(
+                id: s.entry.id.hex, fraction: s.status.progress, etaSeconds: eta, bytesPerSecond: rate))
+            covered.insert(s.entry.id.hex)
             for id in [s.entry.titleID.uuidString] + s.entry.progressIDs {
                 updates.append(ProgressUpdate(id: id, fraction: s.status.progress, etaSeconds: eta, bytesPerSecond: rate))
+            }
+        }
+        guard let rows = try? await torrents.torrents(in: [.queued, .checking, .downloading, .paused]) else {
+            return updates
+        }
+        let session = session()
+        for row in rows where !covered.contains(row.infoHash) {
+            if let session, let status = try? await session.status(TorrentID(hex: row.infoHash)) {
+                let remaining = max(0, status.totalWanted - status.totalWantedDone)
+                let rate = Double(status.downloadRate)
+                updates.append(ProgressUpdate(
+                    id: row.infoHash, fraction: status.progress,
+                    etaSeconds: rate > 1000 ? Double(remaining) / rate : nil, bytesPerSecond: rate))
+            } else {
+                updates.append(ProgressUpdate(id: row.infoHash, fraction: row.progress))
             }
         }
         return updates

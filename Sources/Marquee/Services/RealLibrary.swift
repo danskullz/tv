@@ -266,8 +266,10 @@ struct RealLibrary: LibraryDataSource {
     func activity() async throws -> [ActivityItem] {
         let titles = Dictionary(uniqueKeysWithValues: try await repo.titles(matching: MarqueeCore.LibraryFilter()).map { ($0.id, $0) })
         var items: [ActivityItem] = []
+        var covered = Set<String>()
         for sample in await monitor.sample() {
             guard let title = titles[sample.entry.titleID] else { continue }
+            covered.insert(sample.entry.id.hex)
             let s = sample.status
             let remaining = max(0, s.totalWanted - s.totalWantedDone)
             let eta = s.downloadRate > 1000 ? Double(remaining) / Double(s.downloadRate) : nil
@@ -276,6 +278,25 @@ struct RealLibrary: LibraryDataSource {
                 detail: sample.entry.releaseName, poster: Self.art(title, backdrop: false), phase: .downloading,
                 fraction: s.progress, totalSeconds: eta, bytesPerSecond: Double(s.downloadRate), peers: s.peerCount,
                 date: sample.entry.startedAt))
+        }
+        // Downloads the monitor never saw (background grabs from the download manager): they have
+        // torrent rows but no stream registration, so mirror them here or Activity stays empty
+        // while they run. Live numbers for these arrive via `liveProgress()` keyed by infoHash.
+        let tracked = try await torrents.torrents(in: [.queued, .checking, .downloading, .paused, .error])
+        for t in tracked.sorted(by: { $0.addedAt < $1.addedAt }) {
+            guard !covered.contains(t.infoHash), let id = t.titleId, let title = titles[id] else { continue }
+            if t.state == .error {
+                items.append(ActivityItem(
+                    id: t.infoHash, titleID: id.uuidString, title: title.title, detail: t.name,
+                    poster: Self.art(title, backdrop: false), phase: .failed, fraction: t.progress,
+                    date: t.updatedAt,
+                    failureMessage: t.lastError ?? String(localized: "The download ran into a problem.")))
+            } else {
+                items.append(ActivityItem(
+                    id: t.infoHash, titleID: id.uuidString, title: title.title, detail: t.name,
+                    poster: Self.art(title, backdrop: false), phase: .downloading, fraction: t.progress,
+                    date: t.addedAt))
+            }
         }
         let finished = try await torrents.torrents(in: [.finished, .seeding])
         for t in finished.prefix(20) {

@@ -76,9 +76,11 @@ public final class DownloadTracker {
     private func apply(_ updates: [ProgressUpdate]) {
         for u in updates {
             if let box = boxes[u.id] {
-                box.fraction = u.fraction
-                box.etaSeconds = u.etaSeconds
-                box.bytesPerSecond = u.bytesPerSecond
+                // Unchanged values must not invalidate observers: with downloads stalled or
+                // finished, every tick would otherwise re-render every row (SCOPE.md §5.6).
+                if box.fraction != u.fraction { box.fraction = u.fraction }
+                if box.etaSeconds != u.etaSeconds { box.etaSeconds = u.etaSeconds }
+                if box.bytesPerSecond != u.bytesPerSecond { box.bytesPerSecond = u.bytesPerSecond }
             } else {
                 boxes[u.id] = ProgressBox(fraction: u.fraction, etaSeconds: u.etaSeconds, bytesPerSecond: u.bytesPerSecond)
                 boxGeneration += 1
