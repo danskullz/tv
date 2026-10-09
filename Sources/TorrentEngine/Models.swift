@@ -110,6 +110,15 @@ public struct SessionConfiguration: Sendable {
     public var enableUPnP = true
     public var enableNATPMP = true
     public var encryption: EncryptionMode = .preferred
+    /// Run all disk jobs (writes, hashing, reads) on one thread, in submission order. Default `true`.
+    ///
+    /// libtorrent 2.0's mmap disk I/O hashes a piece from its in-memory store buffer and reports
+    /// `piece_finished` while the write jobs for its blocks may still be queued on another disk thread.
+    /// Anything that reads the file on the strength of that event (the streaming byte source does)
+    /// can then see zeros. One FIFO disk thread makes the event mean "on disk". Turning this off
+    /// restores libtorrent's parallel disk pool, which is only safe if nothing reads files that are
+    /// still downloading.
+    public var orderedDiskIO = true
 
     public init() {}
 

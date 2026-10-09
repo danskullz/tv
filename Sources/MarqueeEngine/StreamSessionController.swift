@@ -155,6 +155,7 @@ public actor StreamSessionController {
         peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
     ) async throws -> StreamHandle {
         let events = session.events()  // before the add, so no event can slip past the loop
+        await applyTuning()
         let id: TorrentID
         switch source {
         case .magnet(let uri):
@@ -220,7 +221,8 @@ public actor StreamSessionController {
         for p in 0..<min(metadata.pieceCount, bits.pieceCount) where bits[p] { have.insert(p) }
         self.have = have
 
-        let scheduler = TorrentDeadlineScheduler(session: session, torrent: id, plan: plan, have: have)
+        let scheduler = TorrentDeadlineScheduler(
+            session: session, torrent: id, plan: plan, have: have, deadlineBudgetBytes: config.deadlineBudgetBytes)
         self.scheduler = scheduler
         try await session.startDownload(id)
         await scheduler.start(playhead: 0)
@@ -279,6 +281,7 @@ public actor StreamSessionController {
         playheadLoop = nil
         watchdog = nil
         playheadContinuation.finish()
+        await restoreTuning()
         for token in registeredTokens { await server.revoke(token: token) }
         registeredTokens.removeAll()
         if let scheduler { await scheduler.clearAll() }
@@ -347,6 +350,7 @@ public actor StreamSessionController {
                 episodes: assignment?.isPreferred == true ? assignment?.episodes ?? [] : []))
         case .finished(let t) where t == id:
             eventHub.send(.torrentFinished(t))
+            await restoreTuning()  // nothing left to fetch: back to libtorrent's cheap idle cadence
         case .error(let t, let message) where t == id:
             diagnostics.append(message)
             publish(.failed("The download ran into a problem. Try another version."))
@@ -376,6 +380,10 @@ public actor StreamSessionController {
         if let at = rateSampledAt, now - at < .seconds(1) { return }
         rateSampledAt = now
         if let id = torrent, let status = try? await session.status(id) { downloadRate = status.downloadRate }
+        if let floor = config.deadlineBudgetBytes {
+            let wanted = Int64(Double(downloadRate) * config.deadlineBudgetSeconds)
+            await scheduler?.setBudget(min(max(floor, wanted), max(floor, config.planOptions.windowBytes)))
+        }
     }
 
     // MARK: Status
@@ -449,6 +457,24 @@ public actor StreamSessionController {
         }
     }
 
+    // MARK: Engine tuning
+
+    private var tuningApplied = false
+
+    private func applyTuning() async {
+        guard !tuningApplied else { return }
+        tuningApplied = true
+        if let tick = config.tuning.activeTickInterval { try? await session.setInt("tick_interval", tick) }
+        if config.tuning.priorityFirstPicking { try? await session.setInt("initial_picker_threshold", 0) }
+    }
+
+    private func restoreTuning() async {
+        guard tuningApplied else { return }
+        tuningApplied = false
+        if config.tuning.activeTickInterval != nil { try? await session.setInt("tick_interval", config.tuning.idleTickInterval) }
+        if config.tuning.priorityFirstPicking { try? await session.setInt("initial_picker_threshold", 4) }
+    }
+
     // MARK: Helpers
 
     private static func wrap(_ error: Error) -> StreamControllerError {
@@ -459,8 +485,18 @@ public actor StreamSessionController {
         }
     }
 
-    private static func priorityVector(_ plan: StreamPlan, fileCount: Int) -> [UInt8] {
-        (0..<fileCount).map { UInt8(plan.priorities[$0]?.rawValue ?? 0) }
+    /// File priorities for libtorrent, shifted down one step (7 -> 6, ... , floor 1; 0 stays 0).
+    ///
+    /// libtorrent forces every piece that has a deadline to its top priority (7) and, in sequential
+    /// mode, picks all top-priority pieces in an arbitrary order and only the lower ones in index order.
+    /// If the current episode were also priority 7, all of it would count as "deadline" pieces and the
+    /// first request wave would scatter across the whole file. Keeping 7 for the deadline window alone
+    /// lets everything else follow in playback order.
+    static func priorityVector(_ plan: StreamPlan, fileCount: Int) -> [UInt8] {
+        (0..<fileCount).map { index -> UInt8 in
+            let p = plan.priorities[index]?.rawValue ?? 0
+            return p == 0 ? 0 : UInt8(max(1, p - 1))
+        }
     }
 
     private static let videoExtensions: Set<String> = [

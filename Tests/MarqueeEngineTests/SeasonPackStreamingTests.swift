@@ -63,7 +63,7 @@ struct SeasonPackStreamingTests {
         #expect(metadata.files[sampleIndex].priority == 0, "sample is skipped")
         #expect(metadata.files[nfoIndex].priority == 0, "nfo is skipped")
         let prios = [e1, e2, e3].map { metadata.files[$0].priority }
-        #expect(prios[0] == 7 && prios[0] > prios[1] && prios[1] > prios[2] && prios[2] > 0, "descending gradient: \(prios)")
+        #expect(prios[0] == 6 && prios[0] > prios[1] && prios[1] > prios[2] && prios[2] > 0, "descending gradient: \(prios)")
         let initial = try #require(await controller.deadlineState())
         #expect(!initial.deadlines.isEmpty && initial.setCalls > 0, "head, tail and window deadlines set before the download starts")
 
@@ -82,6 +82,7 @@ struct SeasonPackStreamingTests {
         #expect(first.data == e1Data.prefix(1 << 20))
         let ttfb = ContinuousClock.now - t0
         #expect(ttfb < .seconds(15), "Phase 0: stream starts in under 15 s (took \(ttfb))")
+        #expect(first.firstByte < .seconds(3), "first byte follows the request promptly (\(first.firstByte))")
         let afterFirst = try await leecher.status(id)
         #expect(afterFirst.piecesHave < afterFirst.pieceCount / 2, "playing while downloading, not after")
 
@@ -100,7 +101,7 @@ struct SeasonPackStreamingTests {
         #expect(seekedState.clearCalls > 0, "deadlines behind the new playhead were cleared")
         #expect(seekedState.replans >= 3)
         let map1 = try #require(TorrentFileByteSource.pieceMap(for: metadata.files[e1], in: metadata))
-        let probe = map1.pieces(forFileRange: (seekOffset + (4 << 20))..<(seekOffset + (4 << 20) + 1))
+        let probe = map1.pieces(forFileRange: (seekOffset + 200_000)..<(seekOffset + 200_001))
         let haveNow = await controller.pieceAvailability
         #expect(hasPieces(probe, in: seekedState, have: haveNow), "the window ahead of the seek has deadlines")
 

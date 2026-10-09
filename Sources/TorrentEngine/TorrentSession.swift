@@ -18,7 +18,14 @@ public actor TorrentSession {
     public init(configuration: SessionConfiguration = SessionConfiguration()) throws {
         let hub = EventHub()
         self.hub = hub
-        self.native = try NativeSession(configuration: configuration, hub: hub)
+        let native = try NativeSession(configuration: configuration, hub: hub)
+        self.native = native
+        if configuration.orderedDiskIO {
+            // Hash jobs go to the generic pool when there are no dedicated hashing threads, and a pool of
+            // one runs jobs in submission order.
+            try Self.check(mq_session_set_int(native.pointer, "aio_threads", 1), message: nil)
+            try Self.check(mq_session_set_int(native.pointer, "hashing_threads", 0), message: nil)
+        }
     }
 
     // MARK: Events

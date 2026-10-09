@@ -52,7 +52,7 @@ struct ControllerBehaviorTests {
         // Priorities: the sample and nfo are skipped, the movie is not.
         let metadata = try await leecher.metadata(handle.torrent)
         let byName = Dictionary(uniqueKeysWithValues: metadata.files.map { (($0.path as NSString).lastPathComponent, $0.priority) })
-        #expect(byName[movie.name] == 7)
+        #expect(byName[movie.name] == 6, "7 is reserved for deadline pieces")
         #expect(byName["movie.name.2019.sample.mkv"] == 0)
 
         await controller.stop()
@@ -220,6 +220,62 @@ struct ControllerBehaviorTests {
         await scheduler.playheadMoved(fileIndex: e1, offset: 5 << 20)
         #expect(await scheduler.playhead == 0, "a hint from the previous episode's source is ignored")
         await leecher.shutdown()
+    }
+
+    @Test("progressive window: only the most urgent pieces carry deadlines, refilled as pieces land")
+    func progressiveWindow() async throws {
+        let scratch = try EngineScratch()
+        let seedDir = try scratch.directory("seed")
+        let pack = try EnginePack.make(in: seedDir)
+        let leecher = try await engineMakeLeecher()
+        let id = try await leecher.addTorrent(
+            data: pack.torrent, savePath: try scratch.directory("download").path, options: .holdDownload)
+        let metadata = try await leecher.metadata(id)
+        let files = metadata.files.map { PackFile(index: $0.index, path: $0.path, size: $0.size, offset: $0.offset) }
+        let mapping = PackFileMapper.map(files: files, series: EnginePack.series())
+        let planner = PackStreamPlanner(mapping: mapping, pieceLength: Int64(metadata.pieceLength))
+        let plan = planner.makePlan(start: EpisodeRef(season: 1, episode: 1))
+        let map = try #require(TorrentFileByteSource.pieceMap(for: metadata.files[plan.currentFiles[0]], in: metadata))
+        let scheduler = TorrentDeadlineScheduler(
+            session: leecher, torrent: id, plan: plan, have: PieceAvailability(pieceCount: metadata.pieceCount),
+            deadlineBudgetBytes: 512 << 10)  // 8 pieces of 64 KiB
+
+        await scheduler.start()
+        let first = await scheduler.appliedDeadlines
+        #expect(first.count == 8)
+        let head = Set(map.pieceRange.prefix(8))
+        #expect(Set(first.keys) == head, "the start of the file comes first")
+
+        // Complete 5 of them: the set drops below half and is topped up with the next pieces.
+        let sets = await scheduler.deadlineSetCount
+        for p in map.pieceRange.prefix(5) { await scheduler.markHave(p) }
+        let refilled = await scheduler.appliedDeadlines
+        #expect(refilled.count >= 7, "topped up when it fell to half, then one more completed")
+        #expect(await scheduler.deadlineSetCount > sets)
+        #expect(refilled.keys.allSatisfy { $0 >= map.pieceRange.lowerBound + 4 })
+
+        // After a seek the window at the new playhead goes ahead of the pending container pieces.
+        await scheduler.movePlayhead(to: 8 << 20)
+        let seeked = await scheduler.appliedDeadlines
+        let target = map.pieceIndex(forFileOffset: 8 << 20)
+        #expect(seeked[target] != nil)
+        #expect(seeked.keys.filter { (target..<target + 8).contains($0) }.count == 8, "all budget goes to the new window")
+
+        // A larger budget takes effect immediately.
+        await scheduler.setBudget(2 << 20)
+        #expect(await scheduler.appliedDeadlines.count == 32)
+        await leecher.shutdown()
+    }
+
+    @Test("file priorities keep 7 for deadline pieces")
+    func prioritiesReserveTop() throws {
+        let files = PackFile.layout((1...3).map { ("Show.Name.S01E0\($0).1080p.mkv", Int64(100 << 20)) })
+        let mapping = PackFileMapper.map(files: files, series: EnginePack.series())
+        let plan = PackStreamPlanner(mapping: mapping, pieceLength: 1 << 20).makePlan(start: EpisodeRef(season: 1, episode: 1))
+        #expect(plan.priorities.values.map(\.rawValue).max() == 7)
+        let vector = StreamSessionController.priorityVector(plan, fileCount: 3)
+        #expect(vector == [6, 5, 4])
+        #expect(StreamSessionController.priorityVector(plan, fileCount: 5).suffix(2) == [0, 0])
     }
 
     @Test("fixed-buffer readiness needs head, tail and the buffer after the head")

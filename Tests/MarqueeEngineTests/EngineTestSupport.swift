@@ -69,8 +69,10 @@ func engineMakeSeeder(
     return (session, id, try await session.tcpListenPort())
 }
 
-func engineMakeLeecher() async throws -> TorrentSession {
-    let session = try TorrentSession(configuration: .loopbackOnly())
+func engineMakeLeecher(orderedDiskIO: Bool = true) async throws -> TorrentSession {
+    var configuration = SessionConfiguration.loopbackOnly()
+    configuration.orderedDiskIO = orderedDiskIO
+    let session = try TorrentSession(configuration: configuration)
     try await session.setBool("allow_multiple_connections_per_ip", true)
     return session
 }

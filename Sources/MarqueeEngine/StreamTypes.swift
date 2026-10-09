@@ -154,11 +154,42 @@ public struct FixedBufferReadinessPolicy: StreamReadinessPolicy {
 
 // MARK: - Configuration
 
+/// Session settings that make libtorrent react quickly while something is being watched. They are
+/// applied when the stream starts and put back when it stops or the torrent finishes, so an idle app
+/// keeps libtorrent's cheap defaults (SCOPE.md §5.6: idle CPU ~0).
+public struct StreamingTuning: Sendable, Equatable {
+    /// `tick_interval` (ms) while streaming. libtorrent runs unchoke bookkeeping, time-critical piece
+    /// requests and bandwidth quota refills on this tick, so it bounds how soon a new deadline turns
+    /// into a request. `nil` leaves the setting alone.
+    public var activeTickInterval: Int? = 100
+    /// Value restored afterwards (libtorrent's default).
+    public var idleTickInterval = 500
+    /// While streaming, pick pieces by file priority from the very first request. libtorrent's default
+    /// (`initial_picker_threshold` 4) picks the first pieces at random across the whole torrent,
+    /// ignoring file priorities, which sends the first wave of requests to the wrong episodes.
+    public var priorityFirstPicking = true
+
+    public init() {}
+    public static let disabled: StreamingTuning = {
+        var t = StreamingTuning()
+        t.activeTickInterval = nil
+        t.priorityFirstPicking = false
+        return t
+    }()
+}
+
 public struct StreamControllerConfiguration: Sendable {
     /// Where libtorrent writes (the incomplete-downloads folder).
     public var savePath: URL
     public var planOptions: StreamPlanOptions
     public var readinessPolicy: any StreamReadinessPolicy
+    /// How much incomplete data may carry piece deadlines at once (refilled as pieces land); `nil` = the
+    /// whole plan window at once.
+    public var deadlineBudgetBytes: Int64?
+    /// Once the download rate is known, the budget grows to this many seconds of it (capped by the plan's
+    /// window), so fast connections keep a deeper deadline window than the starting budget.
+    public var deadlineBudgetSeconds: Double
+    public var tuning: StreamingTuning
     public var metadataTimeout: Duration
     /// No piece for this long while waiting for data reports ``StreamStatus/stalled(_:)``.
     public var stallTimeout: Duration
@@ -173,6 +204,9 @@ public struct StreamControllerConfiguration: Sendable {
         savePath: URL,
         planOptions: StreamPlanOptions = StreamPlanOptions(),
         readinessPolicy: any StreamReadinessPolicy = FixedBufferReadinessPolicy(),
+        deadlineBudgetBytes: Int64? = 1 << 20,
+        deadlineBudgetSeconds: Double = 2,
+        tuning: StreamingTuning = StreamingTuning(),
         metadataTimeout: Duration = .seconds(60),
         stallTimeout: Duration = .seconds(20),
         assumedEpisodeRuntime: Duration = .seconds(45 * 60),
@@ -182,6 +216,9 @@ public struct StreamControllerConfiguration: Sendable {
         self.savePath = savePath
         self.planOptions = planOptions
         self.readinessPolicy = readinessPolicy
+        self.deadlineBudgetBytes = deadlineBudgetBytes
+        self.deadlineBudgetSeconds = deadlineBudgetSeconds
+        self.tuning = tuning
         self.metadataTimeout = metadataTimeout
         self.stallTimeout = stallTimeout
         self.assumedEpisodeRuntime = assumedEpisodeRuntime
