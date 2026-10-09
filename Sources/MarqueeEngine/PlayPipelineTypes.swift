@@ -181,11 +181,14 @@ public struct PlayStatus: Sendable, Equatable {
     public var message: String
     /// 1-based attempt number (which release is being tried).
     public var attempt: Int
+    /// The stream's own state while connecting and buffering (nil for search and selection lines).
+    public var stream: StreamStatus?
 
-    public init(_ phase: Phase, _ message: String, attempt: Int = 1) {
+    public init(_ phase: Phase, _ message: String, attempt: Int = 1, stream: StreamStatus? = nil) {
         self.phase = phase
         self.message = message
         self.attempt = attempt
+        self.stream = stream
     }
 }
 

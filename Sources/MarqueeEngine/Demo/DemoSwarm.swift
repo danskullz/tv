@@ -18,12 +18,18 @@ public final class DemoSwarm: Sendable {
         /// Also advertise a 1080p release nobody seeds (the highest ranked), to exercise automatic fallback.
         public var includeDeadRelease: Bool
         public var clipSource: ClipSource
+        /// Delay added to every search, so the "Searching…" lines are visible in demos.
+        public var searchLatency: TimeInterval
+        public var framesPerSecond: Int
 
         public init(
             episodeSeconds: Double = 20, movieSeconds: Double = 25, width: Int = 1280, height: Int = 720,
-            includeDeadRelease: Bool = false, clipSource: ClipSource = .generate(fallback: nil)
+            includeDeadRelease: Bool = false, clipSource: ClipSource = .generate(fallback: nil),
+            searchLatency: TimeInterval = 0, framesPerSecond: Int = 24
         ) {
+            self.framesPerSecond = framesPerSecond
             self.clipSource = clipSource
+            self.searchLatency = searchLatency
             self.episodeSeconds = episodeSeconds
             self.movieSeconds = movieSeconds
             self.width = width
@@ -82,7 +88,7 @@ public final class DemoSwarm: Sendable {
         try fm.createDirectory(at: clips, withIntermediateDirectories: true)
 
         // 1. Clips (cached by their parameters).
-        let tag = "\(options.width)x\(options.height)"
+        let tag = "\(options.width)x\(options.height)@\(options.framesPerSecond)"
         let hues = [0.58, 0.08, 0.35]
         var specs: [(URL, SampleVideoGenerator.Spec)] = []
         for n in 1...3 {
@@ -90,13 +96,13 @@ public final class DemoSwarm: Sendable {
                 clips.appendingPathComponent("e\(n)-\(tag)-\(Int(options.episodeSeconds))s.mp4"),
                 SampleVideoGenerator.Spec(
                     title: seriesName, subtitle: "S01E0\(n) · Episode \(n)", duration: options.episodeSeconds,
-                    width: options.width, height: options.height, hue: hues[n - 1])))
+                    width: options.width, height: options.height, framesPerSecond: options.framesPerSecond, hue: hues[n - 1])))
         }
         specs.append((
             clips.appendingPathComponent("reel-\(tag)-\(Int(options.movieSeconds))s.mp4"),
             SampleVideoGenerator.Spec(
                 title: movieName, subtitle: "2026 · Feature presentation", duration: options.movieSeconds,
-                width: options.width, height: options.height, hue: 0.78)))
+                width: options.width, height: options.height, framesPerSecond: options.framesPerSecond, hue: 0.78)))
         switch options.clipSource {
         case .file(let source):
             try writeVariants(of: source, to: specs.map(\.0))
@@ -166,7 +172,8 @@ public final class DemoSwarm: Sendable {
         }
         let catalogue = releases
         let indexer = TorznabFixtureServer(
-            apiKey: apiKey, tvdbID: seriesTVDBID, movieTMDBID: movieTMDBID, releases: { catalogue })
+            apiKey: apiKey, tvdbID: seriesTVDBID, movieTMDBID: movieTMDBID, searchLatency: options.searchLatency,
+            releases: { catalogue })
         let indexerPort = try await indexer.start()
 
         return DemoSwarm(

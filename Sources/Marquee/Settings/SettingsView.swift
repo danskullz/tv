@@ -5,6 +5,7 @@ import MarqueeUI
 /// deep controls behind the "Show advanced settings" switch (SCOPE §5.2 progressive disclosure).
 struct SettingsView: View {
     @AppStorage("settings.tab") private var tab = "general"
+    @AppStorage("appearance") private var appearance = AppearanceChoice.system
 
     var body: some View {
         TabView(selection: $tab) {
@@ -19,6 +20,7 @@ struct SettingsView: View {
         }
         .scenePadding()
         .frame(width: 620, height: 520)
+        .preferredColorScheme(appearance.colorScheme)
     }
 }
 

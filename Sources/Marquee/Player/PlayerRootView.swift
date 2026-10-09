@@ -11,6 +11,8 @@ struct PlayerRootView: View {
             Color.black
             if let engine = session.engine {
                 MPVPlayerView(engine: engine)
+                    // A swapped session (Up Next) has a new engine; the video view is bound to one engine for life.
+                    .id(ObjectIdentifier(engine))
                     .accessibilityHidden(true)
             }
             PlayerInputLayer(onClick: { session.togglePlayPause() }, onDoubleClick: { session.toggleFullScreen() })

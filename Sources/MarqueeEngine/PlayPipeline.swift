@@ -272,12 +272,12 @@ public actor PlayPipeline {
                 for await status in statuses {
                     switch status {
                     case .fetchingMetadata:
-                        emit(PlayStatus(.connecting, "Fetching release details…", attempt: attempt))
+                        emit(PlayStatus(.connecting, "Fetching release details…", attempt: attempt, stream: status))
                     case .findingPeers:
-                        emit(PlayStatus(.connecting, "Connecting to peers…", attempt: attempt))
+                        emit(PlayStatus(.connecting, "Connecting to peers…", attempt: attempt, stream: status))
                     case .buffering(let seconds, _):
                         emit(PlayStatus(
-                            .buffering, "Buffering \(Int(seconds.rounded(.down))) s ahead…", attempt: attempt))
+                            .buffering, "Buffering \(Int(seconds.rounded(.down))) s ahead…", attempt: attempt, stream: status))
                     case .ready:
                         return .ready
                     case .stalled(let reason):

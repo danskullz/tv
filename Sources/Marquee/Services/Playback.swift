@@ -1,6 +1,7 @@
 import Foundation
 import MarqueeCore
 import MarqueeEngine
+import MarqueeUI
 import TorrentEngine
 
 /// What the user asked to play.
@@ -92,11 +93,10 @@ extension AppServices {
 
     // MARK: Start
 
-    private func startPlayback(_ context: PlayContext) async throws {
-        let pipeline = try await playPipeline()
+    /// Builds the pipeline request for a context (runtime and ids from TMDB when available).
+    fileprivate func playRequest(for context: PlayContext) async -> PlayRequest {
         let title = context.title
         let profile = QualityProfileConfig.presets.first { $0.id == title.qualityProfileId } ?? AppSettings.defaultPreset
-
         var runtime: Double? = context.current?.runtime.map(Double.init)
         var imdb = title.imdbId
         if title.kind == .movie, let tmdbID = title.tmdbId, let client = tmdb(), let details = try? await client.movieDetails(id: tmdbID) {
@@ -108,7 +108,7 @@ extension AppServices {
         let playTitle = PlayTitle(
             id: title.id, kind: title.kind, name: title.title, year: title.year, tmdbID: title.tmdbId,
             tvdbID: title.tvdbId, imdbID: imdb, runtimeMinutes: runtime)
-        let request = PlayRequest(
+        return PlayRequest(
             title: playTitle, scope: context.scope, profile: profile,
             episodes: context.episodes.map {
                 PackEpisode(
@@ -116,10 +116,14 @@ extension AppServices {
                     isAired: Self.isAired($0))
             },
             episodeID: context.current?.id)
-        let operation = pipeline.begin(request)
-        let session = ActivePlayback(services: self, context: context, operation: operation)
+    }
+
+    private func startPlayback(_ context: PlayContext) async throws {
+        let pipeline = try await playPipeline()
+        let request = await playRequest(for: context)
+        let session = ActivePlayback(services: self, context: context, pipeline: pipeline, request: request)
         activePlaybacks.append(session)
-        session.present(startAt: context.startAt)
+        session.start(startAt: context.startAt)
     }
 }
 
@@ -130,75 +134,166 @@ private extension PlayTarget {
     }
 }
 
-extension StreamStatus {
-    /// The plain-language line the player shows.
-    var line: String {
-        switch self {
-        case .fetchingMetadata: "Fetching release details…"
-        case .findingPeers: "Connecting to peers…"
-        case .buffering(let seconds, _): "Buffering \(Int(seconds.rounded(.down))) s ahead…"
-        case .ready: "Ready to play"
-        case .stalled(let reason): reason.message
-        case .failed(let message): message
+// MARK: - Status mapping
+
+extension PlayStatus {
+    /// The typed status the player shows.
+    var playerStatus: PlayerBufferingStatus {
+        if let stream, let mapped = stream.playerStatus { return mapped }
+        switch phase {
+        case .ready: return .ready
+        case .failed: return .failed(message: message)
+        default: return .preparing(message: message)
         }
     }
 }
 
-/// One Play from press to window close: shows the player, records watch progress, offers the next
-/// episode, and stops the stream once the last window using it closes.
+extension StreamStatus {
+    var playerStatus: PlayerBufferingStatus? {
+        switch self {
+        case .fetchingMetadata: .fetchingMetadata
+        case .findingPeers: .findingPeers
+        case .buffering(let seconds, _): .buffering(secondsAhead: seconds)
+        case .ready: .ready
+        case .stalled(let reason): .stalled(message: reason.message)
+        case .failed(let message): .failed(message: message)
+        }
+    }
+}
+
+// MARK: - One playback session
+
+/// One Play from press to window close, spanning every episode shown in the same player window. Shows
+/// the player, records watch progress, chains episodes (inside the same torrent when it is a pack, else
+/// with a fresh pipeline run), and stops the stream when the window closes.
 @MainActor
 final class ActivePlayback {
     private unowned let services: AppServices
     private var context: AppServices.PlayContext
-    private var operation: PlayOperation
-    private var windows = 0
+    private let pipeline: PlayPipeline
+    private var pipelineRequest: PlayRequest
+    private var operation: PlayOperation?
     private var stream: PlayStream?
+    private var feed: AsyncStream<PlayerBufferingStatus>.Continuation?
+    private var forwarder: Task<Void, Never>?
+    /// Bumped whenever the shown episode changes, so late callbacks from a replaced one are ignored.
+    private var generation = 0
 
-    init(services: AppServices, context: AppServices.PlayContext, operation: PlayOperation) {
+    init(services: AppServices, context: AppServices.PlayContext, pipeline: PlayPipeline, request: PlayRequest) {
         self.services = services
         self.context = context
-        self.operation = operation
+        self.pipeline = pipeline
+        self.pipelineRequest = request
     }
+
+    // MARK: Entry
+
+    func start(startAt: Double?) {
+        beginPipeline()
+        present(source: pipelineSource(), startAt: startAt ?? 0, statuses: makeFeed())
+        forwardPipeline()
+    }
+
+    // MARK: Request building
 
     private var playableID: UUID { context.current?.id ?? context.title.id }
 
-    private var subtitle: String? {
-        guard let e = context.current else { return nil }
-        let name = e.title.map { " · \($0)" } ?? ""
-        return "S\(e.seasonNumber) · E\(e.episodeNumber)\(name)"
+    private func subtitle(_ e: Episode?) -> String {
+        guard let e else { return "" }
+        return "S\(e.seasonNumber) · E\(e.episodeNumber)" + (e.title.map { " · \($0)" } ?? "")
     }
 
-    func present(startAt: Double?) {
-        windows += 1
-        let operation = self.operation
-        let (lines, continuation) = AsyncStream<String>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let forwarder = Task { [weak self] in
-            for await status in operation.statuses { continuation.yield(status.message) }
-            guard let stream = try? await operation.stream() else { continuation.finish(); return }
-            await self?.streamStarted(stream)
-            for await status in stream.control.statusUpdates() { continuation.yield(status.line) }
-            continuation.finish()
-        }
-        services.presenter.present(PlayerSessionRequest(
-            title: context.title.title, subtitle: subtitle, artworkURL: nil, startAt: startAt,
-            urlProvider: { try await operation.stream().url },
-            statusLines: lines,
-            onProgress: { [weak self] position, duration in self?.record(position: position, duration: duration) },
-            onEnded: { [weak self] in await self?.ended() },
-            onClose: { [weak self] in
-                forwarder.cancel()
-                self?.windowClosed()
+    private var playerEpisodes: [PlayerEpisode] {
+        let art = RealLibrary.art(context.title, backdrop: true)
+        return context.episodes
+            .filter { $0.seasonNumber > 0 && AppServices.isAired($0) }
+            .map {
+                PlayerEpisode(
+                    id: $0.id.uuidString, title: $0.title ?? "Episode \($0.episodeNumber)",
+                    subtitle: "S\($0.seasonNumber) · E\($0.episodeNumber)", artwork: art)
+            }
+    }
+
+    private func present(source: PlayerSource, startAt: TimeInterval, statuses: AsyncStream<PlayerBufferingStatus>) {
+        generation += 1
+        let mine = generation
+        let current = context.current
+        PlayerPresenter.shared.present(PlayerRequest(
+            title: context.title.title, subtitle: subtitle(current), artwork: RealLibrary.art(context.title, backdrop: true),
+            source: source, startPosition: startAt, statusUpdates: statuses,
+            episodes: context.current == nil ? [] : playerEpisodes, currentEpisodeID: current?.id.uuidString,
+            onPositionChange: { [weak self] position, duration in
+                guard let self, self.generation == mine else { return }
+                self.record(position: position, duration: duration)
+            },
+            onFinished: { [weak self] in
+                guard let self, self.generation == mine else { return }
+                self.finished()
+            },
+            onNextEpisode: { [weak self] episode in self?.switchTo(episodeID: episode.id) },
+            onRetry: { [weak self] in
+                guard let self, self.generation == mine else { return }
+                self.retry()
+            },
+            onClose: { [weak self] position in
+                guard let self, self.generation == mine else { return }
+                self.closed(position: position)
             }))
     }
 
-    private func streamStarted(_ stream: PlayStream) async {
+    /// Resolves the stream from whatever pipeline operation is current (a Retry replaces it).
+    private func pipelineSource() -> PlayerSource {
+        .deferred { [weak self] in
+            guard let operation = await self?.operation else { throw CancellationError() }
+            return try await operation.stream().url
+        }
+    }
+
+    // MARK: Pipeline
+
+    private func beginPipeline() {
+        operation?.cancel()
+        operation = pipeline.begin(pipelineRequest)
+    }
+
+    /// One status stream per presented request, fed by the pipeline's lines and then the stream's own state.
+    private func makeFeed() -> AsyncStream<PlayerBufferingStatus> {
+        feed?.finish()
+        let (stream, continuation) = AsyncStream<PlayerBufferingStatus>.makeStream(bufferingPolicy: .bufferingNewest(8))
+        feed = continuation
+        return stream
+    }
+
+    private func forwardPipeline() {
+        forwarder?.cancel()
+        guard let operation, let feed else { return }
+        forwarder = Task { [weak self] in
+            for await status in operation.statuses {
+                feed.yield(status.playerStatus)
+                // Let the pick ("Found 14 releases · picked 1080p WEB-DL") be readable before connecting lines replace it.
+                if status.phase == .choosing { try? await Task.sleep(for: .milliseconds(900)) }
+            }
+            guard let stream = try? await operation.stream() else { return }
+            await self?.streamStarted(stream, forward: feed)
+        }
+    }
+
+    private func streamStarted(_ stream: PlayStream, forward feed: AsyncStream<PlayerBufferingStatus>.Continuation) async {
         self.stream = stream
+        await registerDownload(stream)
+        let status = stream.control.statusUpdates()
+        forwarder = Task {
+            for await s in status { if let mapped = s.playerStatus { feed.yield(mapped) } }
+        }
+    }
+
+    private func registerDownload(_ stream: PlayStream) async {
         let title = context.title
         var progressIDs: [String] = []
         if let e = context.current {
             progressIDs = [AppServices.episodeKey(title.id, season: e.seasonNumber, episode: e.episodeNumber)]
         }
-        let label = subtitle.map { "\(title.title) · \($0)" } ?? title.title
+        let label = context.current.map { "\(title.title) · \(subtitle($0))" } ?? title.title
         await services.monitor.register(
             DownloadMonitor.Entry(
                 id: stream.control.torrent, titleID: title.id, label: label, releaseName: stream.release.title,
@@ -209,6 +304,8 @@ final class ActivePlayback {
             payload: ["release": .string(stream.release.title), "grab": .string(stream.release.grabID.uuidString)]))
         services.libraryChanged()
     }
+
+    // MARK: Player callbacks
 
     private func record(position: Double, duration: Double?) {
         let id = playableID, titleID = context.title.id
@@ -221,65 +318,73 @@ final class ActivePlayback {
         }
     }
 
-    private func ended() async -> UpNextOffer? {
-        try? await services.watchStates.setWatched(id: playableID, titleId: context.title.id, watched: true)
-        services.libraryChanged()
-        guard let current = context.current else { return nil }
-        let next = context.episodes.first {
-            $0.seasonNumber > 0
-                && ($0.seasonNumber, $0.episodeNumber) > (current.seasonNumber, current.episodeNumber)
-                && AppServices.isAired($0)
-        }
-        guard let next else { return nil }
-        let name = next.title.map { " · \($0)" } ?? ""
-        return UpNextOffer(title: "S\(next.seasonNumber) · E\(next.episodeNumber)\(name)") { [weak self] in
-            Task { await self?.playNext(next) }
+    private func finished() {
+        let id = playableID, titleID = context.title.id
+        let services = self.services
+        Task {
+            try? await services.watchStates.setWatched(id: id, titleId: titleID, watched: true)
+            services.libraryChanged()
         }
     }
 
-    /// Continues inside the same torrent when it is a pack (no new search, no buffering gap), else plays it afresh.
-    private func playNext(_ next: Episode) async {
-        let ref = EpisodeRef(season: next.seasonNumber, episode: next.episodeNumber)
-        if let stream, let handle = try? await stream.control.advance(to: ref) {
-            context.current = next
-            let advanced = PlayStream(url: handle.url, episodes: handle.episodes, release: stream.release, control: stream.control)
-            self.stream = advanced
-            let states = try? await services.watchStates.state(for: next.id)
-            presentAdvanced(url: handle.url, startAt: AppServices.resume(states), control: stream.control)
-        } else {
-            await services.play(.episode(context.title.id, season: next.seasonNumber, episode: next.episodeNumber))
-        }
+    private func retry() {
+        stream = nil
+        beginPipeline()
+        forwardPipeline()
     }
 
-    private func presentAdvanced(url: URL, startAt: Double?, control: PlayStreamControl) {
-        windows += 1
-        let (lines, continuation) = AsyncStream<String>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let forwarder = Task {
-            for await status in control.statusUpdates() { continuation.yield(status.line) }
-            continuation.finish()
-        }
-        services.presenter.present(PlayerSessionRequest(
-            title: context.title.title, subtitle: subtitle, artworkURL: nil, startAt: startAt,
-            urlProvider: { url }, statusLines: lines,
-            onProgress: { [weak self] position, duration in self?.record(position: position, duration: duration) },
-            onEnded: { [weak self] in await self?.ended() },
-            onClose: { [weak self] in
-                forwarder.cancel()
-                self?.windowClosed()
-            }))
-    }
-
-    private func windowClosed() {
-        windows -= 1
-        guard windows <= 0 else { return }
-        services.activePlaybacks.removeAll { $0 === self }
-        operation.cancel()  // no-op once the stream exists
+    private func closed(position: Double) {
+        generation += 1
+        record(position: position, duration: nil)
+        forwarder?.cancel()
+        feed?.finish()
+        operation?.cancel()
         let stream = self.stream
         let services = self.services
+        services.activePlaybacks.removeAll { $0 === self }
         Task {
             // A stream is just a download being watched: stop serving, keep downloading.
             await stream?.control.stop(removeTorrent: false)
             services.libraryChanged()
         }
+    }
+
+    // MARK: Switching episodes
+
+    /// Up Next, Play Now, or an episode the viewer picked from the list: same window, new content.
+    private func switchTo(episodeID: String) {
+        guard let next = context.episodes.first(where: { $0.id.uuidString == episodeID }) else { return }
+        let ref = EpisodeRef(season: next.seasonNumber, episode: next.episodeNumber)
+        let previous = stream
+        forwarder?.cancel()
+        Task {
+            let resume = AppServices.resume(try? await services.watchStates.state(for: next.id)) ?? 0
+            context.current = next
+            let statuses = makeFeed()
+            if let previous, let handle = try? await previous.control.advance(to: ref) {
+                // Same torrent (a season pack): no search, no buffering gap.
+                stream = PlayStream(url: handle.url, episodes: handle.episodes, release: previous.release, control: previous.control)
+                present(source: .url(handle.url), startAt: resume, statuses: statuses)
+                if let feed {
+                    let status = previous.control.statusUpdates()
+                    forwarder = Task { for await s in status { if let mapped = s.playerStatus { feed.yield(mapped) } } }
+                }
+                await registerDownload(stream!)
+                return
+            }
+            // Another torrent: release this one (it keeps downloading) and run the pipeline again.
+            await previous?.control.stop(removeTorrent: false)
+            stream = nil
+            pipelineRequest.scope = scopeForSwitch(to: ref)
+            pipelineRequest.episodeID = next.id
+            beginPipeline()
+            present(source: pipelineSource(), startAt: resume, statuses: statuses)
+            forwardPipeline()
+        }
+    }
+
+    private func scopeForSwitch(to ref: EpisodeRef) -> PlayScope {
+        if case .season(let season, _) = pipelineRequest.scope, season == ref.season { return .season(season, startingAt: ref) }
+        return .episode(ref)
     }
 }

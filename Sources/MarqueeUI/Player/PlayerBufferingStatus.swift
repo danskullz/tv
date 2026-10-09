@@ -4,6 +4,9 @@ import Foundation
 /// `AsyncStream`; the player turns them into one calm, truthful status line. Mirrors the streaming
 /// engine's own states without depending on it.
 public enum PlayerBufferingStatus: Sendable, Equatable {
+    /// The pipeline's own plain-language line before there is a stream to talk about
+    /// ("Searching 3 indexers…", "Found 14 releases · picked 1080p WEB-DL (312 seeders)").
+    case preparing(message: String)
     /// Looking for sources of the data.
     case findingPeers
     /// Connected; reading the file list and layout.
@@ -20,6 +23,7 @@ public enum PlayerBufferingStatus: Sendable, Equatable {
     /// The line shown under the title.
     public var statusLine: String {
         switch self {
+        case .preparing(let message): message
         case .findingPeers: String(localized: "Finding peers…")
         case .fetchingMetadata: String(localized: "Getting the file ready…")
         case .buffering(let ahead):

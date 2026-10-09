@@ -31,7 +31,10 @@ final class TorznabFixtureServer: Sendable {
     /// Query strings of every request received (`t=tvsearch&season=1…`), for tests.
     var requests: [String] { log.lines.withLock { $0 } }
 
-    init(apiKey: String, tvdbID: Int, movieTMDBID: Int, releases: @escaping @Sendable () -> [DemoRelease]) {
+    init(
+        apiKey: String, tvdbID: Int, movieTMDBID: Int, searchLatency: TimeInterval = 0,
+        releases: @escaping @Sendable () -> [DemoRelease]
+    ) {
         let log = self.log
         server = LoopbackHTTPServer { request in
             let summary = request.query.filter { $0.key != "apikey" }.sorted { $0.key < $1.key }
@@ -45,6 +48,7 @@ final class TorznabFixtureServer: Sendable {
             case "caps":
                 return .xml(Self.capsXML)
             case "search", "tvsearch", "movie":
+                if searchLatency > 0 { Thread.sleep(forTimeInterval: searchLatency) }
                 let items = Self.filter(releases(), query: request.query, tvdbID: tvdbID, movieTMDBID: movieTMDBID)
                 return .xml(Self.feed(items))
             default:

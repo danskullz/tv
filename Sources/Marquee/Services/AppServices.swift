@@ -63,7 +63,6 @@ final class AppServices {
     @ObservationIgnored var activePlaybacks: [ActivePlayback] = []
     @ObservationIgnored private var tmdbClient: (key: String, client: TMDBClient)?
     @ObservationIgnored private(set) var demoSwarm: DemoSwarm?
-    @ObservationIgnored var presenter: any PlayerPresenting = TemporaryPlayerPresenter()
     @ObservationIgnored var announce: @MainActor (_ title: String, _ detail: String?, _ systemImage: String) -> Void = { _, _, _ in }
     @ObservationIgnored private var terminationObserver: NSObjectProtocol?
 
@@ -129,7 +128,7 @@ final class AppServices {
             do {
                 let swarm = try await DemoSwarm.start(
                     directory: Self.demoDirectory.appendingPathComponent("swarm", isDirectory: true),
-                    options: .init(clipSource: .generate(fallback: Self.bundledFallbackClip)))
+                    options: Self.demoOptions)
                 try await swarm.install(into: database, secrets: secrets)
                 demoSwarm = swarm
                 libraryRevision += 1
@@ -138,6 +137,20 @@ final class AppServices {
             }
         }
         await refreshStatus()
+    }
+
+    /// `-demoEpisodeSeconds 150` makes the clips long enough for the player's Up Next card (it needs > 2 min).
+    private static var demoOptions: DemoSwarm.Options {
+        let seconds = UserDefaults.standard.double(forKey: "demoEpisodeSeconds")
+        var options = DemoSwarm.Options(
+            clipSource: .generate(fallback: bundledFallbackClip), searchLatency: 1.5)
+        if seconds > 0 {
+            options.episodeSeconds = seconds
+            options.width = 640
+            options.height = 360
+            options.framesPerSecond = 10
+        }
+        return options
     }
 
     /// `Contents/Resources/demo-clip.mp4` (a tiny pre-encoded clip), for Macs with no video encoder.
