@@ -13,6 +13,8 @@ VENDOR="${MPV_VENDOR_DIR:-$ROOT/Vendor/mpv}"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN" "$APP/Contents/MacOS/Marquee"
+# Drop local symbols (~half the executable; §5.6 size budget). Crash symbolication will use dSYMs later.
+strip -x "$APP/Contents/MacOS/Marquee"
 
 # --- Frameworks: LGPL dylibs stay separate files so users can replace them (LGPL relinking). ---
 if ls "$VENDOR"/lib/*.dylib >/dev/null 2>&1; then

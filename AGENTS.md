@@ -29,6 +29,7 @@ Marquee (working title): native macOS app combining the *arr suite with a built-
 - Brief doc comments on public API; no comments narrating the obvious.
 
 ## Working style / feedback
+- 2026-10-09 Screenshots: capture ONLY the Marquee window (`screencapture -x -o -l <windowID>`), never the full screen — the user's other windows are private. Delete any accidental full-screen capture unviewed.
 - 2026-10-09 UI bar is very high and the user checks it closely: every UI change must be verified by running the app and inspecting window screenshots (light + dark, scrolled states) before merge. Use stock macOS 26 chrome (sidebar, toolbar, scroll-edge effects); no toolbar-background hacks or heavy opaque panels over artwork.
 - 2026-10-09 Build mode: the main session acts as orchestrator, delegating to Sonnet 5.5 / Haiku 5.5 subagents at no more than `high` effort, and owns review, integration and quality.
 - 2026-10-09 User wants a complete scope first, then build; prefers decisions made with a recommendation rather than long option lists.
