@@ -19,7 +19,9 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☐ Helper daemon (`SMAppService` login item) + XPC
 
 ## Wave 3 — Phase 1 exit: add → search → grab → stream
-- ☐ Wire UI to real services (library, discover, search, activity)
+- ◐ Play pipeline (search → decide → stream with auto-fallback) + AppServices + real LibraryDataSource + settings + loopback demo swarm
+- ◐ Player window: glass transport, buffering pre-roll, tracks, keyboard, media keys, up-next
+- ☐ Wire remaining UI to real services (discover, calendar, activity)
 - ☐ Importer/renamer (APFS clone/hardlink, templates), monitoring + RSS
 - ☐ First-run onboarding, settings
 - ☐ End-to-end flow test against fixture swarm + fake indexer
