@@ -37,7 +37,9 @@ let package = Package(
             swiftSettings: [.unsafeFlags(["-Xcc", "-DGL_SILENCE_DEPRECATION"])],
             linkerSettings: [.linkedFramework("OpenGL"), .linkedFramework("QuartzCore")]
         ),
-        .executableTarget(name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine", "MarqueeEngine", "MarqueePlayer"]),
+        .executableTarget(
+            name: "Marquee", dependencies: ["MarqueeCore", "MarqueeUI", "TorrentEngine", "MarqueeEngine", "MarqueePlayer"],
+            resources: [.copy("Resources")]),
         .testTarget(
             name: "MarqueeCoreTests",
             dependencies: ["MarqueeCore"],

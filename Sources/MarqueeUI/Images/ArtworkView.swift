@@ -22,14 +22,16 @@ struct PlaceholderArtView: View {
                 colors: [.white.opacity(0.28), .clear],
                 center: flip ? .topLeading : .topTrailing, startRadius: 0, endRadius: 220
             )
-            Image(systemName: art.symbol)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .padding(10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .scaleEffect(0.55)
-                .foregroundStyle(.white.opacity(0.30))
-                .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+            if !art.symbol.isEmpty {
+                Image(systemName: art.symbol)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .scaleEffect(0.55)
+                    .foregroundStyle(.white.opacity(0.30))
+                    .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+            }
             LinearGradient(colors: [.clear, .black.opacity(0.22)], startPoint: .center, endPoint: .bottom)
         }
         .accessibilityHidden(true)

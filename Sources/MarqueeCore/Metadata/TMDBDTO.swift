@@ -421,3 +421,95 @@ struct SeriesDetailsDTO: Decodable, Sendable {
             recommendations: (recommendations?.results ?? []).compactMap { $0.series() })
     }
 }
+
+
+struct PersonDTO: Decodable, Sendable {
+    var id: Int?
+    var name: String?
+    var biography: String?
+    var birthday: String?
+    var deathday: String?
+    var placeOfBirth: String?
+    var profilePath: String?
+    var knownForDepartment: String?
+    var homepage: String?
+    var imdbId: String?
+
+    var model: PersonDetails? {
+        guard let id, let name else { return nil }
+        func nonEmpty(_ s: String?) -> String? { s.flatMap { $0.isEmpty ? nil : $0 } }
+        return PersonDetails(
+            id: id, name: name, biography: nonEmpty(biography), birthday: TMDBDate.parse(birthday),
+            deathday: TMDBDate.parse(deathday), placeOfBirth: nonEmpty(placeOfBirth),
+            profilePath: profilePath.map(ImagePath.init), knownForDepartment: knownForDepartment,
+            homepage: nonEmpty(homepage), imdbID: nonEmpty(imdbId))
+    }
+}
+
+struct PersonCreditsDTO: Decodable, Sendable {
+    struct Item: Decodable, Sendable {
+        var id: Int?
+        var mediaType: String?
+        var title: String?
+        var name: String?
+        var character: String?
+        var job: String?
+        var department: String?
+        var releaseDate: String?
+        var firstAirDate: String?
+        var posterPath: String?
+        var backdropPath: String?
+        var voteAverage: Double?
+        var voteCount: Int?
+        var popularity: Double?
+        var episodeCount: Int?
+        var overview: String?
+
+        var model: PersonCredit? {
+            guard let id, let media = mediaType.flatMap(PersonCredit.Media.init(rawValue:)),
+                  let title = title ?? name else { return nil }
+            func nonEmpty(_ s: String?) -> String? { s.flatMap { $0.isEmpty ? nil : $0 } }
+            return PersonCredit(
+                media: media, titleID: id, title: title, character: nonEmpty(character), job: nonEmpty(job),
+                department: nonEmpty(department), date: TMDBDate.parse(releaseDate ?? firstAirDate),
+                posterPath: posterPath.map(ImagePath.init), backdropPath: backdropPath.map(ImagePath.init),
+                voteAverage: voteAverage, voteCount: voteCount, popularity: popularity,
+                episodeCount: episodeCount, overview: nonEmpty(overview))
+        }
+    }
+    var cast: [Item]?
+    var crew: [Item]?
+
+    var model: PersonCredits {
+        PersonCredits(cast: (cast ?? []).compactMap(\.model), crew: (crew ?? []).compactMap(\.model))
+    }
+}
+
+struct CollectionDTO: Decodable, Sendable {
+    var id: Int?
+    var name: String?
+    var overview: String?
+    var posterPath: String?
+    var backdropPath: String?
+    var parts: [ResultDTO]?
+
+    var model: CollectionDetails? {
+        guard let id, let name else { return nil }
+        let films = (parts ?? []).compactMap { $0.movie() }.sorted {
+            ($0.releaseDate ?? .distantFuture) < ($1.releaseDate ?? .distantFuture)
+        }
+        return CollectionDetails(
+            id: id, name: name, overview: overview.flatMap { $0.isEmpty ? nil : $0 },
+            posterPath: posterPath.map(ImagePath.init), backdropPath: backdropPath.map(ImagePath.init), parts: films)
+    }
+}
+
+struct ProviderCatalogueDTO: Decodable, Sendable {
+    var results: [WatchProvidersDTO.Provider]?
+    var model: [WatchProvider] {
+        (results ?? []).compactMap { p in
+            guard let id = p.providerId, let name = p.providerName else { return nil }
+            return WatchProvider(id: id, name: name, logoPath: p.logoPath.map(ImagePath.init), displayPriority: p.displayPriority)
+        }.sorted { ($0.displayPriority ?? .max) < ($1.displayPriority ?? .max) }
+    }
+}

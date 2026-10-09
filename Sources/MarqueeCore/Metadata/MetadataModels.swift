@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 // MARK: - Images
 
@@ -18,7 +19,7 @@ public struct ImagePath: Sendable, Hashable, Codable {
     }
 
     /// Full URL for a chosen size, e.g. `.w500` or `.original`.
-    public func url(size: ImageSize = .w500, configuration: ImageConfiguration = .default) -> URL? {
+    public func url(size: ImageSize = .w500, configuration: ImageConfiguration = .current) -> URL? {
         var base = configuration.baseURL
         if !base.hasSuffix("/") { base += "/" }
         let p = path.hasPrefix("/") ? path : "/" + path
@@ -59,6 +60,16 @@ public struct ImageConfiguration: Sendable, Codable, Equatable {
         stillSizes: ["w92", "w185", "w300", "original"],
         logoSizes: ["w45", "w92", "w154", "w185", "w300", "w500", "original"]
     )
+
+    private static let override = Mutex<ImageConfiguration?>(nil)
+
+    /// The configuration image URLs are built with: TMDB's CDN unless a launch mode (fixtures) redirects it.
+    public static var current: ImageConfiguration { override.withLock { $0 } ?? .default }
+
+    /// Redirects every `ImagePath.url(size:)` to another base URL (fixture artwork served from disk).
+    public static func setOverride(baseURL: String?) {
+        override.withLock { $0 = baseURL.map { var c = ImageConfiguration.default; c.baseURL = $0; return c } }
+    }
 }
 
 // MARK: - Shared
@@ -68,6 +79,15 @@ public struct Page<Element: Sendable & Codable & Equatable>: Sendable, Codable, 
     public var totalPages: Int
     public var totalResults: Int
     public var results: [Element]
+
+    public init(page: Int = 1, totalPages: Int = 1, totalResults: Int? = nil, results: [Element]) {
+        self.page = page
+        self.totalPages = totalPages
+        self.totalResults = totalResults ?? results.count
+        self.results = results
+    }
+
+    public var hasMore: Bool { page < totalPages }
 }
 
 public struct Genre: Sendable, Codable, Hashable, Identifiable {
@@ -117,6 +137,11 @@ public struct Video: Sendable, Codable, Hashable, Identifiable {
     /// YouTube watch URL when hosted on YouTube.
     public var youtubeURL: URL? {
         site == "YouTube" ? URL(string: "https://www.youtube.com/watch?v=\(key)") : nil
+    }
+
+    /// Opens the original trailer on YouTube or TMDB in the user's browser.
+    public var externalURL: URL? {
+        youtubeURL ?? URL(string: "https://www.themoviedb.org/video/\(id)")
     }
 }
 
@@ -190,6 +215,10 @@ public struct MovieSummary: Sendable, Codable, Hashable, Identifiable {
     public var popularity: Double?
     public var genreIDs: [Int]
     public var originalLanguage: String?
+
+    public init(id: Int, title: String, originalTitle: String? = nil, overview: String? = nil, posterPath: ImagePath? = nil, backdropPath: ImagePath? = nil, releaseDate: Date? = nil, voteAverage: Double? = nil, voteCount: Int? = nil, popularity: Double? = nil, genreIDs: [Int] = [], originalLanguage: String? = nil) {
+        self.id = id; self.title = title; self.originalTitle = originalTitle; self.overview = overview; self.posterPath = posterPath; self.backdropPath = backdropPath; self.releaseDate = releaseDate; self.voteAverage = voteAverage; self.voteCount = voteCount; self.popularity = popularity; self.genreIDs = genreIDs; self.originalLanguage = originalLanguage
+    }
 }
 
 public struct MovieDetails: Sendable, Codable, Hashable, Identifiable {
@@ -273,6 +302,10 @@ public struct SeriesSummary: Sendable, Codable, Hashable, Identifiable {
     public var genreIDs: [Int]
     public var originCountry: [String]
     public var originalLanguage: String?
+
+    public init(id: Int, name: String, originalName: String? = nil, overview: String? = nil, posterPath: ImagePath? = nil, backdropPath: ImagePath? = nil, firstAirDate: Date? = nil, voteAverage: Double? = nil, voteCount: Int? = nil, popularity: Double? = nil, genreIDs: [Int] = [], originCountry: [String] = [], originalLanguage: String? = nil) {
+        self.id = id; self.name = name; self.originalName = originalName; self.overview = overview; self.posterPath = posterPath; self.backdropPath = backdropPath; self.firstAirDate = firstAirDate; self.voteAverage = voteAverage; self.voteCount = voteCount; self.popularity = popularity; self.genreIDs = genreIDs; self.originCountry = originCountry; self.originalLanguage = originalLanguage
+    }
 }
 
 public struct EpisodeInfo: Sendable, Codable, Hashable, Identifiable {
@@ -286,6 +319,10 @@ public struct EpisodeInfo: Sendable, Codable, Hashable, Identifiable {
     public var runtime: Int?
     public var stillPath: ImagePath?
     public var voteAverage: Double?
+
+    public init(id: Int, seasonNumber: Int, episodeNumber: Int, name: String, overview: String? = nil, airDate: Date? = nil, runtime: Int? = nil, stillPath: ImagePath? = nil, voteAverage: Double? = nil) {
+        self.id = id; self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber; self.name = name; self.overview = overview; self.airDate = airDate; self.runtime = runtime; self.stillPath = stillPath; self.voteAverage = voteAverage
+    }
 }
 
 public struct SeasonSummary: Sendable, Codable, Hashable, Identifiable {
@@ -361,6 +398,10 @@ public struct PersonSummary: Sendable, Codable, Hashable, Identifiable {
     public var name: String
     public var profilePath: ImagePath?
     public var knownForDepartment: String?
+
+    public init(id: Int, name: String, profilePath: ImagePath? = nil, knownForDepartment: String? = nil) {
+        self.id = id; self.name = name; self.profilePath = profilePath; self.knownForDepartment = knownForDepartment
+    }
 }
 
 /// An entry from search/multi or trending/all.
@@ -375,6 +416,90 @@ public enum SearchResult: Sendable, Codable, Hashable {
         case .series(let s): s.id
         case .person(let p): p.id
         }
+    }
+}
+
+// MARK: - People, collections, providers
+
+public struct PersonDetails: Sendable, Codable, Hashable, Identifiable {
+    public var id: Int
+    public var name: String
+    public var biography: String?
+    public var birthday: Date?
+    public var deathday: Date?
+    public var placeOfBirth: String?
+    public var profilePath: ImagePath?
+    public var knownForDepartment: String?
+    public var homepage: String?
+    public var imdbID: String?
+
+    public init(id: Int, name: String, biography: String? = nil, birthday: Date? = nil, deathday: Date? = nil,
+                placeOfBirth: String? = nil, profilePath: ImagePath? = nil, knownForDepartment: String? = nil,
+                homepage: String? = nil, imdbID: String? = nil) {
+        self.id = id; self.name = name; self.biography = biography; self.birthday = birthday
+        self.deathday = deathday; self.placeOfBirth = placeOfBirth; self.profilePath = profilePath
+        self.knownForDepartment = knownForDepartment; self.homepage = homepage; self.imdbID = imdbID
+    }
+}
+
+/// One line of a person's filmography (a cast or crew credit on a movie or show).
+public struct PersonCredit: Sendable, Codable, Hashable, Identifiable {
+    public enum Media: String, Sendable, Codable { case movie, tv }
+    public var media: Media
+    public var titleID: Int
+    public var title: String
+    /// Character played (cast credits).
+    public var character: String?
+    /// Job held (crew credits), e.g. "Director".
+    public var job: String?
+    public var department: String?
+    public var date: Date?
+    public var posterPath: ImagePath?
+    public var backdropPath: ImagePath?
+    public var voteAverage: Double?
+    public var voteCount: Int?
+    public var popularity: Double?
+    public var episodeCount: Int?
+    public var overview: String?
+
+    public var id: String { "\(media.rawValue)-\(titleID)-\(job ?? character ?? "")" }
+    public var isCrew: Bool { job != nil }
+
+    public init(media: Media, titleID: Int, title: String, character: String? = nil, job: String? = nil,
+                department: String? = nil, date: Date? = nil, posterPath: ImagePath? = nil,
+                backdropPath: ImagePath? = nil, voteAverage: Double? = nil, voteCount: Int? = nil,
+                popularity: Double? = nil, episodeCount: Int? = nil, overview: String? = nil) {
+        self.media = media; self.titleID = titleID; self.title = title; self.character = character
+        self.job = job; self.department = department; self.date = date; self.posterPath = posterPath
+        self.backdropPath = backdropPath; self.voteAverage = voteAverage; self.voteCount = voteCount
+        self.popularity = popularity; self.episodeCount = episodeCount; self.overview = overview
+    }
+}
+
+public struct PersonCredits: Sendable, Codable, Hashable {
+    public var cast: [PersonCredit]
+    public var crew: [PersonCredit]
+    public static let empty = PersonCredits(cast: [], crew: [])
+
+    public init(cast: [PersonCredit], crew: [PersonCredit]) {
+        self.cast = cast
+        self.crew = crew
+    }
+}
+
+public struct CollectionDetails: Sendable, Codable, Hashable, Identifiable {
+    public var id: Int
+    public var name: String
+    public var overview: String?
+    public var posterPath: ImagePath?
+    public var backdropPath: ImagePath?
+    /// Films in the collection, release order.
+    public var parts: [MovieSummary]
+
+    public init(id: Int, name: String, overview: String? = nil, posterPath: ImagePath? = nil,
+                backdropPath: ImagePath? = nil, parts: [MovieSummary] = []) {
+        self.id = id; self.name = name; self.overview = overview; self.posterPath = posterPath
+        self.backdropPath = backdropPath; self.parts = parts
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import MarqueeCore
 import MarqueeUI
 
 /// ⌘K overlay: fuzzy filter over titles and actions, fully keyboard driven
@@ -12,6 +13,8 @@ struct CommandPalette: View {
     @State private var highlighted = 0
     @State private var index: FuzzyIndex<Entry>?
     @State private var results: [Entry] = []
+    @State private var catalogueHits: [BrowseHit] = []
+    @State private var selectedPerson: PersonSummary?
     @FocusState private var fieldFocused: Bool
 
     enum Target: Sendable {
@@ -22,6 +25,8 @@ struct CommandPalette: View {
         case settings
         case welcome
         case gallery
+        case external(String)
+        case person(PersonSummary)
     }
 
     struct Entry: Identifiable, Sendable {
@@ -61,6 +66,11 @@ struct CommandPalette: View {
         .onChange(of: query) { _, _ in
             highlighted = 0
             refresh()
+        }
+        .task(id: query) { await searchCatalogue() }
+        .sheet(item: $selectedPerson) { person in
+            PersonFilmographySheet(person: person) { model.open($0) }
+                .frame(minWidth: 680, minHeight: 560)
         }
     }
 
@@ -200,7 +210,34 @@ struct CommandPalette: View {
                 target: .title(t.id), keywords: t.genres.joined(separator: " ")
             ))
         }
+        for hit in catalogueHits {
+            switch hit.payload {
+            case .title(let item):
+                entries.append(Entry(id: item.id, title: item.title, subtitle: "TMDB · " + item.subtitle,
+                                     systemImage: item.kind == .movie ? "film" : "tv", tag: item.kind == .movie ? "Movie" : "Series",
+                                     target: .external(item.id), keywords: item.genres.joined(separator: " ")))
+            case .person(let person):
+                entries.append(Entry(id: "person:\(person.id)", title: person.name, subtitle: "TMDB · Person",
+                                     systemImage: "person", tag: "Person", target: .person(person), keywords: person.knownForDepartment ?? ""))
+            }
+        }
         index = FuzzyIndex(entries) { $0.title + " " + $0.keywords }
+    }
+
+    private func searchCatalogue() async {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard model.isPaletteShown, q.count >= 2, model.services?.hasMetadataKey == true else {
+            catalogueHits = []
+            rebuildIndex()
+            refresh()
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(220))
+        guard !Task.isCancelled else { return }
+        do { catalogueHits = try await model.services?.searchBrowse(q) ?? [] }
+        catch { catalogueHits = [] }
+        rebuildIndex()
+        refresh()
     }
 
     private func refresh() {
@@ -227,6 +264,10 @@ struct CommandPalette: View {
         case .title(let id):
             if model.selection == .home || model.selection == nil { model.path = [id] }
             else { model.path.append(id) }
+        case .external(let id):
+            if model.selection == .home || model.selection == nil { model.path = [id] }
+            else { model.path.append(id) }
+        case .person(let person): selectedPerson = person
         case .go(let item): model.go(to: item)
         case .toggleSidebar: model.toggleSidebar()
         case .addTitle: model.isAddSheetShown = true

@@ -1,0 +1,15 @@
+{
+  "_id": "52571e9d19c29571d5003c3f",
+  "id": 3572,
+  "season_number": 1,
+  "name": "Season 1",
+  "overview": "High school chemistry teacher Walter White's life is suddenly transformed.",
+  "air_date": "2008-01-20",
+  "poster_path": "/1BP4xYv9ZG4ZVHkL7ocOziBbSYH.jpg",
+  "episodes": [
+    {"id": 62085, "season_number": 1, "episode_number": 1, "name": "Pilot", "overview": "Walter White is diagnosed with cancer.", "air_date": "2008-01-20", "runtime": 58, "still_path": "/ydlY3iPfeOAvu8gVqrxPoMvzNCn.jpg", "vote_average": 8.1},
+    {"id": 62086, "season_number": 1, "episode_number": 2, "name": "Cat's in the Bag...", "air_date": "2008-01-27", "runtime": 48, "still_path": null},
+    {"id": 62087, "season_number": 1, "episode_number": 3, "name": "...And the Bag's in the River", "air_date": null, "runtime": null},
+    {"id": null, "episode_number": 4, "name": "Broken entry"}
+  ]
+}

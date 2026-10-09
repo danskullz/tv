@@ -98,7 +98,9 @@ public struct PosterCard: View {
 
     @ViewBuilder
     private var cornerBadge: some View {
-        switch item.availability {
+        if item.isInLibrary {
+            badgeIcon("checkmark")
+        } else { switch item.availability {
         case .downloading:
             ZStack {
                 Circle().fill(.black.opacity(0.55))
@@ -118,6 +120,7 @@ public struct PosterCard: View {
             if item.watch == .watched {
                 badgeIcon("checkmark")
             }
+        }
         }
     }
 

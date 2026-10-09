@@ -43,6 +43,7 @@ final class AppServices {
     // MARK: Storage
 
     nonisolated let isDemo: Bool
+    nonisolated let usesTMDBFixtures: Bool
     nonisolated let database: AppDatabase
     nonisolated let secrets: any SecretStore
     nonisolated let library: GRDBLibraryRepository
@@ -77,8 +78,9 @@ final class AppServices {
 
     // MARK: Init
 
-    init(demo: Bool = false, database: AppDatabase? = nil, secrets: (any SecretStore)? = nil) throws {
+    init(demo: Bool = false, tmdbFixtures: Bool = false, database: AppDatabase? = nil, secrets: (any SecretStore)? = nil) throws {
         isDemo = demo
+        usesTMDBFixtures = tmdbFixtures
         let db: AppDatabase
         if let database {
             db = database
@@ -160,7 +162,7 @@ final class AppServices {
 
     func refreshStatus() async {
         indexerCount = ((try? await indexerRecords.all()) ?? []).filter(\.enabled).count
-        hasMetadataKey = (try? secrets.get(account: Self.tmdbAccount)) != nil
+        hasMetadataKey = usesTMDBFixtures || (try? secrets.get(account: Self.tmdbAccount)) != nil
     }
 
     @ObservationIgnored var libraryDidChange: @MainActor () -> Void = {}
@@ -193,6 +195,7 @@ final class AppServices {
 
     /// The credential saved in the Keychain. A long JWT-looking value is a v4 read token; anything else is a v3 key.
     nonisolated func tmdbCredential() -> TMDBCredential? {
+        if usesTMDBFixtures { return .apiKey("fixture-mode") }
         guard let raw = try? secrets.get(account: Self.tmdbAccount), !raw.isEmpty else { return nil }
         return Self.credential(from: raw)
     }
@@ -215,6 +218,12 @@ final class AppServices {
 
     /// The shared client, or nil until a key is saved.
     func tmdb() -> TMDBClient? {
+        if usesTMDBFixtures {
+            if let tmdbClient, tmdbClient.key == "__fixtures__" { return tmdbClient.client }
+            let client = TMDBClient(credential: .apiKey("fixture-mode"), transport: FixtureMetadataTransport())
+            tmdbClient = ("__fixtures__", client)
+            return client
+        }
         guard let raw = try? secrets.get(account: Self.tmdbAccount), !raw.isEmpty else { return nil }
         if let tmdbClient, tmdbClient.key == raw { return tmdbClient.client }
         let client = TMDBClient(

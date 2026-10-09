@@ -113,12 +113,14 @@ public struct PosterItem: Identifiable, Hashable, Sendable {
     public var downloadFraction: Double?
     public var quality: Quality?
     public var genres: [String]
+    /// True when this catalogue result is already in the local library.
+    public var isInLibrary: Bool
 
     public init(
         id: ID, kind: MediaKind, title: String, subtitle: String = "", year: Int = 0,
         addedAt: Date = .distantPast, poster: Artwork, backdrop: Artwork? = nil,
         watch: WatchState = .unwatched, availability: Availability = .local,
-        downloadFraction: Double? = nil, quality: Quality? = nil, genres: [String] = []
+        downloadFraction: Double? = nil, quality: Quality? = nil, genres: [String] = [], isInLibrary: Bool = false
     ) {
         self.id = id
         self.kind = kind
@@ -133,6 +135,7 @@ public struct PosterItem: Identifiable, Hashable, Sendable {
         self.downloadFraction = downloadFraction
         self.quality = quality
         self.genres = genres
+        self.isInLibrary = isInLibrary
     }
 }
 

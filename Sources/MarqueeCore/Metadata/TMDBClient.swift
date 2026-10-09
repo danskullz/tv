@@ -105,6 +105,26 @@ public actor TMDBClient {
         return s
     }
 
+    // MARK: People & collections
+
+    public func person(id: Int) async throws -> PersonDetails {
+        let dto: PersonDTO = try await get("person/\(id)", [], ttl: cachePolicy.details)
+        guard let p = dto.model else { throw MetadataError.decoding("person \(id) is missing its id or name") }
+        return p
+    }
+
+    /// Movies and shows a person appeared in or worked on.
+    public func personCredits(id: Int) async throws -> PersonCredits {
+        let dto: PersonCreditsDTO = try await get("person/\(id)/combined_credits", [], ttl: cachePolicy.details)
+        return dto.model
+    }
+
+    public func collection(id: Int) async throws -> CollectionDetails {
+        let dto: CollectionDTO = try await get("collection/\(id)", [], ttl: cachePolicy.details)
+        guard let c = dto.model else { throw MetadataError.decoding("collection \(id) is missing its id or name") }
+        return c
+    }
+
     // MARK: Trending & discover
 
     public func trending(_ media: TrendingMedia = .all, window: TrendingWindow = .week, page: Int = 1) async throws -> Page<SearchResult> {
@@ -128,6 +148,16 @@ public actor TMDBClient {
     public func trendingSeries(window: TrendingWindow = .week, page: Int = 1) async throws -> Page<SeriesSummary> {
         let dto: PageDTO<ResultDTO> = try await get("trending/tv/\(window.rawValue)",
                                                     [.init(name: "page", value: String(page))], ttl: cachePolicy.trending)
+        return dto.map { $0.series() }
+    }
+
+    public func popularMovies(page: Int = 1) async throws -> Page<MovieSummary> {
+        let dto: PageDTO<ResultDTO> = try await get("movie/popular", [.init(name: "page", value: String(page))], ttl: cachePolicy.trending)
+        return dto.map { $0.movie() }
+    }
+
+    public func popularSeries(page: Int = 1) async throws -> Page<SeriesSummary> {
+        let dto: PageDTO<ResultDTO> = try await get("tv/popular", [.init(name: "page", value: String(page))], ttl: cachePolicy.trending)
         return dto.map { $0.series() }
     }
 
@@ -156,6 +186,13 @@ public actor TMDBClient {
     public func seriesGenres() async throws -> [Genre] {
         let dto: GenresDTO = try await get("genre/tv/list", [], ttl: cachePolicy.genres)
         return (dto.genres ?? []).compactMap(\.model)
+    }
+
+    /// Streaming services available in `region`, most prominent first.
+    public func watchProviders(region: String, media: TrendingMedia = .movie) async throws -> [WatchProvider] {
+        let path = media == .tv ? "watch/providers/tv" : "watch/providers/movie"
+        let dto: ProviderCatalogueDTO = try await get(path, [.init(name: "watch_region", value: region.uppercased())], ttl: cachePolicy.genres)
+        return dto.model
     }
 
     /// Looks up titles by IMDb (`tt…`) or TVDB id.

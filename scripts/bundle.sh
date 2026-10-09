@@ -13,6 +13,9 @@ VENDOR="${MPV_VENDOR_DIR:-$ROOT/Vendor/mpv}"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN" "$APP/Contents/MacOS/Marquee"
+# SwiftPM's executable resources are kept in a sibling bundle; ship it with the app.
+RESOURCE_BUNDLE="$(dirname "$BIN")/Marquee_Marquee.bundle"
+if [ -d "$RESOURCE_BUNDLE" ]; then cp -R "$RESOURCE_BUNDLE" "$APP/Contents/Resources/"; fi
 # Drop local symbols (~half the executable; §5.6 size budget). Crash symbolication will use dSYMs later.
 strip -x "$APP/Contents/MacOS/Marquee"
 
