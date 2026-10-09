@@ -22,8 +22,9 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☑ Play pipeline (search → decide → stream with auto-fallback) + AppServices + real LibraryDataSource + settings + loopback demo swarm (`-demoSwarm YES`)
 - ☑ Player window: glass transport, buffering pre-roll, tracks, keyboard, media keys, up-next
 - ☑ All playback goes through PlayerPresenter (typed statuses, episode list, same-window Up Next, resume)
-- ☐ Wire remaining UI to real services (discover, calendar, activity)
-- ☐ Importer/renamer (APFS clone/hardlink, templates), monitoring + RSS
+- ◐ Discover, global search, calendar, rich title pages, "Why this release?" (TMDB fixtures mode for screenshots)
+- ◐ Importer/renamer (APFS clone/hardlink/copy, naming templates, probe, safe replace via Trash, local-first playback) + quality-group persistence fix
+- ◐ Monitoring modes, wanted/cutoff, RSS automation + delay profiles, DownloadManager (queue/limits/ratio/free-space/battery), health issues
 - ◐ First-run onboarding links to real settings panes; guided checklist still static
 - ☑ End-to-end flow test against fixture swarm + fake indexer (`DemoSwarmPipelineTests`)
 
