@@ -208,6 +208,30 @@ import Testing
         #expect(results[1].rejections.map(\.code) == ["sizeTooSmall"])
     }
 
+    @Test func specialsSkipTheMaximumSize() {
+        // Specials are sized against the series' regular episode runtime, which is often wrong for
+        // them, so an oversized S00E01 is accepted while the minimum still catches junk.
+        let wanted = WantedItem.episode("Show", season: 0, episodes: [1], runtimeMinutes: 45, seasonEpisodeCount: 3)
+        let big = qualityMakeCandidate("Show.S00E01.1080p.WEB-DL.H.264-GRP", sizeGB: 30)  // 682 MB/min > 350 max
+        let tiny = qualityMakeCandidate("Show.S00E01.1080p.WEB-DL.H.264-TINY", sizeGB: 0.1)
+        let results = ReleaseDecisionEngine.decide([big, tiny], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))
+        #expect(results[0].isAccepted)
+        #expect(results[1].rejections.map(\.code) == ["sizeTooSmall"])
+        // The same file as a regular episode is still rejected as too large.
+        let regular = WantedItem.episode("Show", season: 1, episodes: [1], runtimeMinutes: 45, seasonEpisodeCount: 10)
+        let bigRegular = qualityMakeCandidate("Show.S01E01.1080p.WEB-DL.H.264-GRP", sizeGB: 30)
+        let plain = ReleaseDecisionEngine.decide([bigRegular], in: DecisionContext(wanted: regular, profile: profile, now: qualityNow))
+        #expect(plain[0].rejections.map(\.code) == ["sizeTooLarge"])
+    }
+
+    @Test func absoluteNumberedReleaseMatchesEpisodePlay() {
+        // Anime absolute numbering ("Show - 01") matches S01E01 once the Play request threads it through.
+        let wanted = WantedItem.episode(
+            "Show", season: 1, episodes: [1], absolute: [1], runtimeMinutes: 24, seasonEpisodeCount: 12)
+        let c = qualityMakeCandidate("Show - 01 1080p WEB-DL H.264-GRP", sizeGB: 1.5)
+        #expect(ReleaseDecisionEngine.decide([c], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))[0].isAccepted)
+    }
+
     @Test func packPolicyForSingleEpisodes() {
         let wanted = WantedItem.episode("Show", season: 1, episodes: [3], runtimeMinutes: 45, seasonEpisodeCount: 10)
         let pack = qualityMakeCandidate("Show.S01.1080p.WEB-DL.H.264-GRP", sizeGB: 30)

@@ -170,6 +170,12 @@ public struct ReleaseDecisionEngine: Sendable {
 
         let contentOK = rejections.isEmpty
 
+        /// A single special: sized against the series' regular episode runtime, which is often wrong.
+        let isSpecialEpisode: Bool = {
+            if case .episodes(let season?, _, _, _) = context.wanted.scope { return season == 0 }
+            return false
+        }()
+
         // Quality.
         let tier = QualityTier.derive(from: candidate.parsed)
         let tierRank = tier.rank
@@ -191,7 +197,9 @@ public struct ReleaseDecisionEngine: Sendable {
             rejections.append(.formatScoreBelowMinimum(score: score, minimum: context.profile.minFormatScore))
         }
 
-        // Size per runtime.
+        // Size per runtime. Specials (season 0) vary wildly in length and are sized against the
+        // series' regular episode runtime, so the maximum is waived for them; the minimum still
+        // catches samples and junk.
         var mbPerMinute: Double?
         if let size = candidate.release.size, size > 0, let minutes = context.wanted.coveredRuntimeMinutes(for: candidate.parsed) {
             let value = Double(size) / 1_048_576 / minutes
@@ -200,7 +208,7 @@ public struct ReleaseDecisionEngine: Sendable {
                 let definition = definitionByTier[tierRank]
                 if value < definition.minMBPerMinute {
                     rejections.append(.sizeTooSmall(mbPerMinute: value, minimum: definition.minMBPerMinute))
-                } else if let maximum = definition.maxMBPerMinute, value > maximum {
+                } else if !isSpecialEpisode, let maximum = definition.maxMBPerMinute, value > maximum {
                     rejections.append(.sizeTooLarge(mbPerMinute: value, maximum: maximum))
                 }
             }

@@ -307,7 +307,7 @@ public enum PlayPipelineError: Error, Sendable, Equatable {
                 ? "Your indexers didn't answer. Check them in Settings and try again."
                 : "Couldn't find anything to play. Your indexers returned no releases for this title."
         case .nothingSuitable(let found, let summary):
-            "Found \(found) release\(found == 1 ? "" : "s"), but none suit your quality settings (\(summary))."
+            "Found \(found) release\(found == 1 ? "" : "s"), but none matched this episode (\(summary)). Try adjusting the quality profile or picking a release from search."
         case .allAttemptsFailed(let attempts, _):
             "Tried \(attempts) release\(attempts == 1 ? "" : "s") but none of them could be played right now. Try again later or choose another quality."
         }

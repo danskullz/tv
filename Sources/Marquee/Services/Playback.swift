@@ -118,8 +118,8 @@ extension AppServices {
             title: playTitle, scope: context.scope, profile: profile,
             episodes: context.episodes.map {
                 PackEpisode(
-                    ref: EpisodeRef(season: $0.seasonNumber, episode: $0.episodeNumber), title: $0.title,
-                    isAired: Self.isAired($0))
+                    ref: EpisodeRef(season: $0.seasonNumber, episode: $0.episodeNumber), absolute: $0.absoluteNumber,
+                    title: $0.title, isAired: Self.isAired($0))
             },
             episodeID: context.current?.id)
     }

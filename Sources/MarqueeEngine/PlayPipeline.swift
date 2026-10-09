@@ -164,7 +164,8 @@ public actor PlayPipeline {
         case .episode(let ref):
             let wanted = episodeWanted(request, ref)
             let seasonWanted = WantedItem.episode(
-                t.name, season: ref.season, episodes: [ref.episode], runtimeMinutes: runtime,
+                t.name, season: ref.season, episodes: [ref.episode], absolute: absoluteNumbers(request, ref),
+                runtimeMinutes: runtime,
                 seasonEpisodeCount: seasonCount(request, ref.season), aliases: t.aliases)
             return [
                 Stage(query: episodeQuery(t, ref, ids: true), wanted: wanted, label: "episode by id"),
@@ -187,8 +188,14 @@ public actor PlayPipeline {
 
     private func episodeWanted(_ request: PlayRequest, _ ref: EpisodeRef) -> WantedItem {
         WantedItem.episode(
-            request.title.name, season: ref.season, episodes: [ref.episode], runtimeMinutes: request.title.runtimeMinutes,
+            request.title.name, season: ref.season, episodes: [ref.episode],
+            absolute: absoluteNumbers(request, ref), runtimeMinutes: request.title.runtimeMinutes,
             seasonEpisodeCount: seasonCount(request, ref.season), aliases: request.title.aliases)
+    }
+
+    /// Absolute numbers the library knows for `ref` (anime ordering); empty for regular episodes.
+    private func absoluteNumbers(_ request: PlayRequest, _ ref: EpisodeRef) -> [Int] {
+        request.episodes.first { $0.ref == ref }?.absolute.map { [$0] } ?? []
     }
 
     private func seasonCount(_ request: PlayRequest, _ season: Int) -> Int? {
