@@ -26,15 +26,23 @@ struct TitleDetailScreen: View {
         .heroScrollEdge()
         .toolbar(removing: .title)
         .followsLiveProgress()
-        .task(id: id) {
+        .task(id: LoadKey(id: id, revision: model.titlesRevision)) {
             let loaded = try? await model.source.detail(for: id)
+            let firstLoad = detail == nil
             detail = loaded
             missing = loaded == nil
             let arriving = loaded?.seasons.first { $0.episodes.contains { $0.availability == .downloading } }
-            if let first = arriving ?? loaded?.seasons.first(where: { $0.firstUnwatched != nil }) ?? loaded?.seasons.first {
+            if firstLoad,
+                let first = arriving ?? loaded?.seasons.first(where: { $0.firstUnwatched != nil }) ?? loaded?.seasons.first
+            {
                 expanded = [first.number]
             }
         }
+    }
+
+    private struct LoadKey: Equatable {
+        var id: PosterItem.ID
+        var revision: Int
     }
 
     private var skeleton: some View {
@@ -85,7 +93,7 @@ struct TitleDetailScreen: View {
         }
         if let g = d.item.genres.first { parts.append(g) }
         if let s = d.score { parts.append("★ " + s.formatted(.number.precision(.fractionLength(1)))) }
-        return parts
+        return parts.filter { !$0.isEmpty }
     }
 
     @ViewBuilder
@@ -103,7 +111,7 @@ struct TitleDetailScreen: View {
                 PlayButton("Play", context: item.title) { model.play(item) }
             }
             if item.kind == .series {
-                Button { model.play(item) } label: { Label("Play from Episode 1", systemImage: "backward.end.fill") }
+                Button { model.playSeason(item, season: d.seasons.first { $0.number > 0 }?.number ?? 1, fromStart: true) } label: { Label("Play from Episode 1", systemImage: "backward.end.fill") }
                     .buttonStyle(.marqueeSecondary)
             }
         }
@@ -169,9 +177,9 @@ struct TitleDetailScreen: View {
                 .accessibilityValue(Text(isOpen ? "Expanded" : "Collapsed"))
                 .accessibilityHint(Text("Shows or hides episodes"))
                 Spacer()
-                Button { model.play(d.item) } label: { Label("Play Season", systemImage: "play.fill") }
+                Button { model.playSeason(d.item, season: season.number, fromStart: false) } label: { Label("Play Season", systemImage: "play.fill") }
                     .accessibilityLabel(Text("Play \(season.title)"))
-                Button { model.play(d.item) } label: { Label("Play from Episode 1", systemImage: "backward.end.fill") }
+                Button { model.playSeason(d.item, season: season.number, fromStart: true) } label: { Label("Play from Episode 1", systemImage: "backward.end.fill") }
                     .accessibilityLabel(Text("Play \(season.title) from episode 1"))
             }
             .buttonStyle(.bordered)
@@ -181,7 +189,7 @@ struct TitleDetailScreen: View {
             if isOpen {
                 LazyVStack(spacing: 0) {
                     ForEach(season.episodes) { ep in
-                        EpisodeRow(ep, onPlay: { model.play(d.item) }, onToggleWatched: { toggleWatched(ep) })
+                        EpisodeRow(ep, onPlay: { model.play(d.item, episode: ep) }, onToggleWatched: { toggleWatched(ep) })
                         if ep.id != season.episodes.last?.id {
                             Divider().padding(.leading, 160)
                         }
@@ -198,7 +206,9 @@ struct TitleDetailScreen: View {
         guard var d = detail,
               let si = d.seasons.firstIndex(where: { $0.number == ep.season }),
               let ei = d.seasons[si].episodes.firstIndex(where: { $0.id == ep.id }) else { return }
-        d.seasons[si].episodes[ei].watch = ep.watch == .watched ? .unwatched : .watched
+        let nowWatched = ep.watch != .watched
+        d.seasons[si].episodes[ei].watch = nowWatched ? .watched : .unwatched
+        model.setEpisodeWatched(d.item, ep, nowWatched)
         withMotion { detail = d }
     }
 

@@ -3,7 +3,7 @@ import MarqueeUI
 
 @main
 struct MarqueeApp: App {
-    @State private var model = AppModel()
+    @State private var model = AppModel.forLaunch()
 
     var body: some Scene {
         WindowGroup {
@@ -24,6 +24,7 @@ struct MarqueeApp: App {
 
         Settings {
             SettingsView()
+                .environment(model)
         }
 
         Window("Component Gallery", id: "gallery") {
@@ -41,6 +42,10 @@ struct AppCommands: Commands {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("Add to Library…") { model.isAddSheetShown = true }
+                .keyboardShortcut("n", modifiers: .command)
+        }
         CommandGroup(after: .sidebar) {
             Button("Toggle Sidebar") { model.toggleSidebar() }
                 .keyboardShortcut("s", modifiers: [.command, .option])

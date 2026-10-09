@@ -40,6 +40,9 @@ else
   rmdir "$APP/Contents/Frameworks"
 fi
 
+# Tiny pre-encoded clip the demo mode (-demoSwarm YES) falls back to on Macs with no video encoder.
+[ -f "$ROOT/Tests/MarqueePlayerTests/Fixtures/test-clip.mp4" ] && cp "$ROOT/Tests/MarqueePlayerTests/Fixtures/test-clip.mp4" "$APP/Contents/Resources/demo-clip.mp4"
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

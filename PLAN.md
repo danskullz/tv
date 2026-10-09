@@ -19,12 +19,12 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - ☐ Helper daemon (`SMAppService` login item) + XPC
 
 ## Wave 3 — Phase 1 exit: add → search → grab → stream
-- ◐ Play pipeline (search → decide → stream with auto-fallback) + AppServices + real LibraryDataSource + settings + loopback demo swarm
+- ☑ Play pipeline (search → decide → stream with auto-fallback) + AppServices + real LibraryDataSource + settings + loopback demo swarm (`-demoSwarm YES`)
 - ◐ Player window: glass transport, buffering pre-roll, tracks, keyboard, media keys, up-next
 - ☐ Wire remaining UI to real services (discover, calendar, activity)
 - ☐ Importer/renamer (APFS clone/hardlink, templates), monitoring + RSS
-- ☐ First-run onboarding, settings
-- ☐ End-to-end flow test against fixture swarm + fake indexer
+- ◐ First-run onboarding links to real settings panes; guided checklist still static
+- ☑ End-to-end flow test against fixture swarm + fake indexer (`DemoSwarmPipelineTests`)
 
 ## Follow-ups from reviews
 - Metadata: public memberwise inits on domain models (needed for UI mocks/wiring); disk cache size cap + eviction; popular/upcoming/person/collection endpoints.
@@ -39,3 +39,4 @@ Execution tracker for [SCOPE.md](SCOPE.md) §10. Each item is a workstream owned
 - Player: Metal/EDR path (libmpv render API is OpenGL-only; needs a libplacebo/Metal presenter fed by VideoToolbox IOSurfaces) — HDR is tone-mapped to SDR meanwhile; intermittent video-thread stall seen twice with terminal logging on (unexplained); arm64 slice built but never run; `mpv-configuration` embeds the build path.
 - Release/legal (before public release): hardened-runtime library validation vs LGPL relinking (recommend documenting re-sign over disabling library validation); mirror the 8 LGPL source tarballs as release assets; EULA reverse-engineering clause; Acknowledgements screen (FreeType credit). See docs/licenses.md.
 - Quality: persisting `QualityProfileConfig` flattens quality groups (needs a JSON column/repository — data loss otherwise); general-regex custom formats cost ~1.5–3 µs/candidate each (500 candidates ~5–7 ms) — add literal prefilters; stored vs compressed RAR needs torrent metadata; streamability weights need tuning against real swarms; parser doesn't flag `-Sample` suffix.
+- Pipeline/app (vertical slice): no importer yet, so finished streams are not played from disk and library cards never reach `.local`; Discover/Calendar/Search-TMDB still placeholders; temporary `TemporaryPlayerPresenter` (Sources/Marquee/Services/PlayerPresenting.swift) to be swapped for `PlayerPresenter`; "Why this release?" UI not built (grab log has the data); measured-throughput and "try a smaller version" not wired; re-adding an existing torrent hash on replay is unguarded; Monitor/Download buttons on the detail page are still stubs; Torznab `.torrent` download URLs redirecting to magnets are not followed; library folders in Settings > Library are still placeholders.

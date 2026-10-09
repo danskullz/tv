@@ -32,7 +32,11 @@ struct LibraryScreen: View {
     var body: some View {
         Group {
             if visible.isEmpty {
-                if model.titles.isEmpty { loading } else { noResults }
+                if model.titles.isEmpty {
+                    if model.hasLoaded { emptyLibrary } else { loading }
+                } else {
+                    noResults
+                }
             } else {
                 PosterGrid(
                     items: visible,
@@ -112,6 +116,16 @@ struct LibraryScreen: View {
             .padding(Tokens.Spacing.gutter)
             .shimmering()
         }
+    }
+
+    private var emptyLibrary: some View {
+        EmptyStateView(
+            title: kind == .movie ? "No movies yet" : "No shows yet",
+            message: "Add something and press Play. Marquee finds a release and starts streaming while it downloads.",
+            systemImage: kind == .movie ? "film" : "tv",
+            tips: ["Press ⌘N to search for a title."],
+            actionTitle: "Add to Library"
+        ) { model.isAddSheetShown = true }
     }
 
     private var noResults: some View {

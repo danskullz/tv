@@ -54,6 +54,8 @@ struct Toast: Identifiable, Equatable {
 @Observable
 final class AppModel {
     let source: any LibraryDataSource
+    /// The real services; nil when running on mock data (`-mockData YES`).
+    let services: AppServices?
     let lifecycle = AppLifecycle()
     let tracker: DownloadTracker
 
@@ -61,6 +63,9 @@ final class AppModel {
     var path: [PosterItem.ID] = []
     var columnVisibility: NavigationSplitViewVisibility = .all
     var isPaletteShown = false
+    var isAddSheetShown = false
+    /// False until the first library fetch finishes, so empty states don't flash while loading.
+    private(set) var hasLoaded = false
     var toast: Toast?
     private(set) var titles: [PosterItem] = [] { didSet { titlesRevision += 1 } }
     private(set) var titlesRevision = 0
@@ -69,17 +74,50 @@ final class AppModel {
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     @ObservationIgnored private var removed: [(index: Int, item: PosterItem)] = []
 
-    init(source: any LibraryDataSource = MockLibrary()) {
+    init(source: any LibraryDataSource = MockLibrary(), services: AppServices? = nil) {
         self.source = source
+        self.services = services
         self.tracker = DownloadTracker(source: source, lifecycle: lifecycle)
         if let raw = UserDefaults.standard.string(forKey: "initialScreen"), let item = SidebarItem(rawValue: raw) {
             selection = item
+        }
+        services?.announce = { [weak self] title, detail, symbol in
+            self?.show(Toast(title: title, detail: detail, systemImage: symbol), duration: 6)
+        }
+        services?.libraryDidChange = { [weak self] in
+            Task { await self?.reloadLibrary() }
+        }
+    }
+
+    /// Builds the model for this launch: real services by default, mock data with `-mockData YES`,
+    /// the self-contained demo content with `-demoSwarm YES`.
+    static func forLaunch() -> AppModel {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "mockData") { return AppModel() }
+        do {
+            let services = try AppServices(demo: defaults.bool(forKey: "demoSwarm"))
+            return AppModel(source: services.libraryReader, services: services)
+        } catch {
+            let model = AppModel()
+            model.show(Toast(
+                title: String(localized: "Couldn't open your library"),
+                detail: String(localized: "Showing sample data instead."), systemImage: "exclamationmark.triangle"), duration: 8)
+            return model
+        }
+    }
+
+    func reloadLibrary() async {
+        titles = (try? await source.library()) ?? titles
+        if let activity = try? await source.activity() {
+            activeDownloads = activity.filter(\.isActive).count
         }
     }
 
     func load() async {
         lifecycle.start()
+        await services?.prepare()
         titles = (try? await source.library()) ?? []
+        hasLoaded = true
         if let activity = try? await source.activity() {
             activeDownloads = activity.filter(\.isActive).count
         }
@@ -110,6 +148,30 @@ final class AppModel {
     // MARK: Actions
 
     func play(_ item: PosterItem) {
+        if let services, let id = UUID(uuidString: item.id) {
+            guard item.availability != .unaired else {
+                show(Toast(title: String(localized: "Not released yet"), detail: String(localized: "Come back when \(item.title) is out."), systemImage: "calendar"))
+                return
+            }
+            Task { await services.play(.title(id)) }
+            return
+        }
+        playMock(item)
+    }
+
+    /// Plays one episode of a series.
+    func play(_ item: PosterItem, episode: EpisodeModel) {
+        guard let services, let id = UUID(uuidString: item.id) else { return playMock(item) }
+        Task { await services.play(.episode(id, season: episode.season, episode: episode.number)) }
+    }
+
+    /// Plays a season as a binge. `fromStart` begins at episode 1 instead of the first unwatched one.
+    func playSeason(_ item: PosterItem, season: Int, fromStart: Bool) {
+        guard let services, let id = UUID(uuidString: item.id) else { return playMock(item) }
+        Task { await services.play(.season(id, season: season, startingAt: fromStart ? 1 : nil)) }
+    }
+
+    private func playMock(_ item: PosterItem) {
         let detail: String
         let icon: String
         switch item.availability {
@@ -132,14 +194,25 @@ final class AppModel {
     func setWatched(_ watched: Bool, for id: PosterItem.ID) {
         guard let i = titles.firstIndex(where: { $0.id == id }) else { return }
         titles[i].watch = watched ? .watched : .unwatched
+        if let services, let uuid = UUID(uuidString: id) {
+            Task { await services.setWatched(titleID: uuid, watched) }
+        }
         show(Toast(title: watched ? String(localized: "Marked as watched") : String(localized: "Marked as unwatched"),
                    systemImage: watched ? "checkmark.circle.fill" : "eye.slash"))
+    }
+
+    func setEpisodeWatched(_ item: PosterItem, _ episode: EpisodeModel, _ watched: Bool) {
+        guard let services, let titleID = UUID(uuidString: item.id) else { return }
+        Task { await services.setEpisodeWatched(titleID: titleID, season: episode.season, episode: episode.number, watched) }
     }
 
     func remove(_ id: PosterItem.ID) {
         guard let i = titles.firstIndex(where: { $0.id == id }) else { return }
         let item = titles.remove(at: i)
         removed.append((i, item))
+        if let services, let uuid = UUID(uuidString: id) {
+            Task { try? await services.library.softDelete(titleId: uuid) }
+        }
         show(Toast(
             title: String(localized: "Removed \(item.title)"),
             detail: String(localized: "Files stay in the Trash until you empty it."),
@@ -151,6 +224,9 @@ final class AppModel {
     private func undoRemove() {
         guard let last = removed.popLast() else { return }
         titles.insert(last.item, at: min(last.index, titles.count))
+        if let services, let uuid = UUID(uuidString: last.item.id) {
+            Task { try? await services.library.restore(titleId: uuid) }
+        }
         toast = nil
     }
 

@@ -4,23 +4,26 @@ import MarqueeUI
 /// Settings scene (⌘,). Panes are placeholders that show the structure: sensible defaults up top,
 /// deep controls behind the "Show advanced settings" switch (SCOPE §5.2 progressive disclosure).
 struct SettingsView: View {
+    @AppStorage("settings.tab") private var tab = "general"
+
     var body: some View {
-        TabView {
-            Tab("General", systemImage: "gearshape") { GeneralPane() }
-            Tab("Library", systemImage: "books.vertical") { LibraryPane() }
-            Tab("Indexers", systemImage: "antenna.radiowaves.left.and.right") { IndexersPane() }
-            Tab("Downloads", systemImage: "arrow.down.circle") { DownloadsPane() }
-            Tab("Streaming", systemImage: "bolt.horizontal.circle") { StreamingPane() }
-            Tab("Playback", systemImage: "play.rectangle") { PlaybackPane() }
-            Tab("Subtitles", systemImage: "captions.bubble") { SubtitlesPane() }
+        TabView(selection: $tab) {
+            Tab("General", systemImage: "gearshape", value: "general") { GeneralPane() }
+            Tab("Library", systemImage: "books.vertical", value: "library") { LibraryPane() }
+            Tab("Metadata", systemImage: "film.stack", value: "metadata") { MetadataPane() }
+            Tab("Indexers", systemImage: "antenna.radiowaves.left.and.right", value: "indexers") { IndexersPane() }
+            Tab("Downloads", systemImage: "arrow.down.circle", value: "downloads") { DownloadsPane() }
+            Tab("Streaming", systemImage: "bolt.horizontal.circle", value: "streaming") { StreamingPane() }
+            Tab("Playback", systemImage: "play.rectangle", value: "playback") { PlaybackPane() }
+            Tab("Subtitles", systemImage: "captions.bubble", value: "subtitles") { SubtitlesPane() }
         }
         .scenePadding()
-        .frame(width: 600, height: 460)
+        .frame(width: 620, height: 520)
     }
 }
 
 /// Shared chrome: grouped form plus the Advanced switch at the bottom of every pane.
-private struct Pane<Content: View>: View {
+struct Pane<Content: View>: View {
     @AppStorage("showAdvancedSettings") private var showAdvanced = false
     @ViewBuilder var content: Content
 
@@ -37,7 +40,7 @@ private struct Pane<Content: View>: View {
     }
 }
 
-private struct Advanced<Content: View>: View {
+struct Advanced<Content: View>: View {
     @AppStorage("showAdvancedSettings") private var showAdvanced = false
     @ViewBuilder var content: Content
 
@@ -78,6 +81,7 @@ struct LibraryPane: View {
 
     var body: some View {
         Pane {
+            QualityDefaultSection()
             Section("Folders") {
                 LabeledContent("Movies") { Text("~/Movies/Marquee/Movies").foregroundStyle(.secondary) }
                 LabeledContent("TV Shows") { Text("~/Movies/Marquee/TV").foregroundStyle(.secondary) }
@@ -97,51 +101,6 @@ struct LibraryPane: View {
                     Text("Move").tag(3)
                 }
                 Toggle("Move replaced files to the Trash", isOn: .constant(true)).disabled(true)
-            }
-        }
-    }
-}
-
-struct IndexersPane: View {
-    var body: some View {
-        Pane {
-            Section {
-                EmptyStateView(
-                    title: "No indexers yet",
-                    message: "Marquee doesn't include any sources. Add your own Torznab indexer, or import them from Prowlarr or Jackett.",
-                    systemImage: "antenna.radiowaves.left.and.right",
-                    actionTitle: "Add Indexer…"
-                ) {}
-                .frame(height: 230)
-            }
-            Advanced {
-                Toggle("Parallel search with de-duplication", isOn: .constant(true))
-                Stepper("Minimum seeders: 2", value: .constant(2))
-            }
-        }
-    }
-}
-
-struct DownloadsPane: View {
-    @State private var limit = 0.0
-    @State private var killSwitch = true
-
-    var body: some View {
-        Pane {
-            Section("Location") {
-                LabeledContent("Download folder") { Text("~/Downloads/Marquee").foregroundStyle(.secondary) }
-                LabeledContent("Free space") { Text("412 GB").foregroundStyle(.secondary) }
-            }
-            Section("Speed") {
-                LabeledContent("Download limit") {
-                    Slider(value: $limit, in: 0...100) { Text("Limit") }.frame(width: 180)
-                    Text(limit == 0 ? "Unlimited" : "\(Int(limit)) MB/s").monospacedDigit().frame(width: 76, alignment: .trailing)
-                }
-                Toggle("Pause while on battery", isOn: .constant(false))
-            }
-            Advanced {
-                Toggle("Bind to VPN interface with kill switch", isOn: $killSwitch)
-                Toggle("Enable DHT, PEX and local peer discovery", isOn: .constant(true))
             }
         }
     }

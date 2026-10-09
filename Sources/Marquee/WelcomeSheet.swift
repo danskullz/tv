@@ -5,18 +5,25 @@ import MarqueeUI
 struct WelcomeSheet: View {
     let onDone: () -> Void
 
+    @Environment(AppModel.self) private var model
+    @Environment(\.openSettings) private var openSettings
+
     private struct Step: Identifiable {
         let id: Int
         let symbol: String
         let title: LocalizedStringKey
         let detail: LocalizedStringKey
+        /// Settings tab this step links to.
+        var tab: String?
+        var linkTitle: LocalizedStringKey = "Open Settings"
     }
 
     private let steps: [Step] = [
         Step(id: 1, symbol: "switch.2", title: "Standalone or connect", detail: "Run everything inside Marquee, or use it as a front end for your existing Sonarr and Radarr."),
-        Step(id: 2, symbol: "externaldrive", title: "Pick your folders", detail: "Choose where your library and downloads live. External drives are fine."),
-        Step(id: 3, symbol: "antenna.radiowaves.left.and.right", title: "Add an indexer", detail: "Paste a Torznab URL or import from Prowlarr or Jackett. Marquee doesn't include any."),
-        Step(id: 4, symbol: "dial.medium", title: "Choose a quality preset", detail: "Compare size per hour and device compatibility at a glance."),
+        Step(id: 2, symbol: "externaldrive", title: "Pick your folders", detail: "Choose where your downloads live. External drives are fine.", tab: "downloads", linkTitle: "Choose Folder"),
+        Step(id: 7, symbol: "key", title: "Add your TMDB key", detail: "A free key from themoviedb.org gives Marquee posters, synopses and episode lists.", tab: "metadata", linkTitle: "Add Key"),
+        Step(id: 3, symbol: "antenna.radiowaves.left.and.right", title: "Add an indexer", detail: "Paste a Torznab URL and API key. Marquee doesn't include any sources.", tab: "indexers", linkTitle: "Add Indexer"),
+        Step(id: 4, symbol: "dial.medium", title: "Choose a quality preset", detail: "Pick how big and how sharp your streams should be.", tab: "library", linkTitle: "Choose Preset"),
         Step(id: 5, symbol: "network.badge.shield.half.filled", title: "Optional extras", detail: "VPN interface check, Trakt sign-in and subtitle languages."),
         Step(id: 6, symbol: "play.circle.fill", title: "Press Play", detail: "Import an existing library or search for something and watch it in seconds."),
     ]
@@ -62,6 +69,14 @@ struct WelcomeSheet: View {
                             Text(step.detail).font(.subheadline).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                        if let tab = step.tab {
+                            Spacer(minLength: 8)
+                            Button(step.linkTitle) {
+                                UserDefaults.standard.set(tab, forKey: "settings.tab")
+                                openSettings()
+                            }
+                            .controlSize(.small)
+                        }
                     }
                     .padding(.vertical, 7)
                     .accessibilityElement(children: .combine)
@@ -80,14 +95,14 @@ struct WelcomeSheet: View {
             .padding(Tokens.Spacing.l + 4)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 780, height: 520)
+        .frame(width: 800, height: 560)
     }
 
     private var readiness: some View {
         VStack(alignment: .leading, spacing: 6) {
             check("Engine", ok: true)
-            check("Indexers", ok: false)
-            check("Library", ok: false)
+            check("Indexers", ok: (model.services?.indexerCount ?? 0) > 0)
+            check("Metadata", ok: model.services?.hasMetadataKey ?? false)
         }
         .padding(Tokens.Spacing.m - 2)
         .frame(maxWidth: .infinity, alignment: .leading)

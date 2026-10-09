@@ -80,6 +80,11 @@ public protocol LibraryRepository: Sendable {
     func save(_ title: Title) async throws
     func setEpisodeMonitored(_ episodeId: UUID, _ monitored: Bool) async throws
 
+    /// Merges metadata into an existing series: seasons and episodes are matched by number, existing rows
+    /// keep their ids and monitored flags (only title, air date, runtime and numbering are refreshed) and
+    /// unknown ones are inserted. Nothing is deleted.
+    func mergeSeasons(titleId: UUID, seasons: [SeasonDraft]) async throws
+
     /// Prefix-matching full-text search over title, sort title and overview (live titles only).
     func searchLibrary(query: String, limit: Int) async throws -> [Title]
 
@@ -156,6 +161,46 @@ public struct GRDBLibraryRepository: LibraryRepository {
             try db.execute(
                 sql: "UPDATE episode SET monitored = ?, updatedAt = ? WHERE id = ?",
                 arguments: [monitored, Date(), episodeId])
+        }
+    }
+
+    public func mergeSeasons(titleId: UUID, seasons: [SeasonDraft]) async throws {
+        try await database.writer.write { db in
+            guard try Title.exists(db, key: titleId) else { throw LibraryError.notFound(titleId) }
+            let now = Date()
+            for draft in seasons {
+                var season = try Season
+                    .filter(Column("titleId") == titleId && Column("seasonNumber") == draft.seasonNumber).fetchOne(db)
+                if season == nil {
+                    let created = Season(
+                        titleId: titleId, seasonNumber: draft.seasonNumber, monitored: draft.monitored,
+                        createdAt: now, updatedAt: now)
+                    try created.insert(db)
+                    season = created
+                }
+                guard let season else { continue }
+                for e in draft.episodes {
+                    if var existing = try Episode
+                        .filter(Column("titleId") == titleId && Column("seasonNumber") == draft.seasonNumber
+                            && Column("episodeNumber") == e.episodeNumber).fetchOne(db)
+                    {
+                        existing.title = e.title ?? existing.title
+                        existing.airDate = e.airDate ?? existing.airDate
+                        existing.runtime = e.runtime ?? existing.runtime
+                        existing.absoluteNumber = e.absoluteNumber ?? existing.absoluteNumber
+                        existing.tvdbId = e.tvdbId ?? existing.tvdbId
+                        existing.updatedAt = now
+                        try existing.update(db)
+                    } else {
+                        try Episode(
+                            titleId: titleId, seasonId: season.id, seasonNumber: draft.seasonNumber,
+                            episodeNumber: e.episodeNumber, absoluteNumber: e.absoluteNumber, airDate: e.airDate,
+                            monitored: e.monitored, title: e.title, runtime: e.runtime, tvdbId: e.tvdbId,
+                            createdAt: now, updatedAt: now
+                        ).insert(db)
+                    }
+                }
+            }
         }
     }
 

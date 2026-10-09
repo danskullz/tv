@@ -19,6 +19,12 @@ struct RootView: View {
                     }
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
+                            Button { model.isAddSheetShown = true } label: {
+                                Label("Add to Library", systemImage: "plus")
+                            }
+                            .help(Text("Add a movie or show (⌘N)"))
+                        }
+                        ToolbarItem(placement: .primaryAction) {
                             Button { withMotion { model.isPaletteShown = true } } label: {
                                 Label("Jump to…", systemImage: "command")
                             }
@@ -30,6 +36,7 @@ struct RootView: View {
         }
         .overlay { CommandPalette() }
         .overlay(alignment: .bottom) { ToastView(toast: model.toast) }
+        .sheet(isPresented: $model.isAddSheetShown) { AddTitleSheet() }
         .sheet(isPresented: $showWelcome, onDismiss: { hasSeenWelcome = true }) {
             WelcomeSheet { showWelcome = false }
         }

@@ -101,7 +101,7 @@ public struct EpisodeRow: View {
     }
 
     private var metaLine: String {
-        var parts = [Formatters.runtime(minutes: episode.runtimeMinutes)]
+        var parts = episode.runtimeMinutes > 0 ? [Formatters.runtime(minutes: episode.runtimeMinutes)] : []
         if let date = episode.airDate {
             parts.append(episode.availability == .unaired
                          ? String(localized: "Airs \(Formatters.shortDate(date))")
@@ -143,7 +143,7 @@ public struct EpisodeRow: View {
     }
 
     private var spokenState: String {
-        var parts = [Formatters.runtime(minutes: episode.runtimeMinutes)]
+        var parts = episode.runtimeMinutes > 0 ? [Formatters.runtime(minutes: episode.runtimeMinutes)] : []
         switch episode.watch {
         case .watched: parts.append(String(localized: "Watched"))
         case .inProgress(let f): parts.append(String(localized: "\(Formatters.percent(f)) watched"))

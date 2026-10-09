@@ -18,6 +18,7 @@ struct CommandPalette: View {
         case title(PosterItem.ID)
         case go(SidebarItem)
         case toggleSidebar
+        case addTitle
         case settings
         case welcome
         case gallery
@@ -180,6 +181,7 @@ struct CommandPalette: View {
             (String(localized: "Go to Calendar"), "calendar", "go-calendar", .go(.calendar), "calendar schedule upcoming"),
             (String(localized: "Go to Activity"), "arrow.down.circle", "go-activity", .go(.activity), "activity downloads queue imports"),
             (String(localized: "Go to Search"), "magnifyingglass", "go-search", .go(.search), "search find"),
+            (String(localized: "Add to Library…"), "plus", "add-title", .addTitle, "add new movie show search tmdb"),
             (String(localized: "Toggle Sidebar"), "sidebar.left", "sidebar", .toggleSidebar, "sidebar hide show"),
             (String(localized: "Open Settings"), "gearshape", "settings", .settings, "settings preferences options"),
             (String(localized: "Show Welcome Guide"), "hand.wave", "welcome", .welcome, "welcome setup first run onboarding"),
@@ -227,6 +229,7 @@ struct CommandPalette: View {
             else { model.path.append(id) }
         case .go(let item): model.go(to: item)
         case .toggleSidebar: model.toggleSidebar()
+        case .addTitle: model.isAddSheetShown = true
         case .settings: openSettings()
         case .welcome: NotificationCenter.default.post(name: .showWelcome, object: nil)
         case .gallery: openWindow(id: "gallery")
