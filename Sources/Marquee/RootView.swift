@@ -10,7 +10,13 @@ struct RootView: View {
     var body: some View {
         @Bindable var model = model
         NavigationSplitView(columnVisibility: $model.columnVisibility) {
-            SidebarView(selection: $model.selection, activeCount: model.activeDownloads)
+            SidebarView(
+                selection: Binding(get: { model.selection }, set: {
+                    guard let next = $0 else { return }
+                    model.go(to: next)
+                }),
+                activeCount: model.activeDownloads
+            )
         } detail: {
             NavigationStack(path: $model.path) {
                 screen
