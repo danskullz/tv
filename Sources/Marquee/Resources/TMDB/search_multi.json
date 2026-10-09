@@ -1,0 +1,13 @@
+{
+  "page": 1,
+  "results": [
+    {"adult": false, "backdrop_path": "/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg", "id": 693134, "title": "Dune: Part Two", "original_title": "Dune: Part Two", "overview": "Paul Atreides unites with the Fremen.", "poster_path": "/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", "media_type": "movie", "original_language": "en", "genre_ids": [878, 12], "popularity": 312.5, "release_date": "2024-02-27", "vote_average": 8.2, "vote_count": 5400},
+    {"backdrop_path": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg", "id": 1396, "name": "Breaking Bad", "original_name": "Breaking Bad", "overview": "A chemistry teacher turns to crime.", "poster_path": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg", "media_type": "tv", "original_language": "en", "genre_ids": [18, 80], "popularity": 280.1, "first_air_date": "2008-01-20", "vote_average": 8.9, "vote_count": 12800, "origin_country": ["US"]},
+    {"id": 287, "name": "Brad Pitt", "profile_path": "/cckcYc2v0yh1tc9QjRelptcOBko.jpg", "media_type": "person", "known_for_department": "Acting"},
+    {"id": 5, "media_type": "collection", "name": "Ignored Collection"},
+    {"id": null, "media_type": "movie", "title": null},
+    {"id": 603, "media_type": "movie", "title": "The Matrix", "release_date": "", "poster_path": null, "genre_ids": null, "vote_average": null}
+  ],
+  "total_pages": 3,
+  "total_results": 52
+}

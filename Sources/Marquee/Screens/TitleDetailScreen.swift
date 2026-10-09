@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import MarqueeCore
 import MarqueeUI
 
 struct TitleDetailScreen: View {
@@ -8,10 +10,24 @@ struct TitleDetailScreen: View {
     @State private var detail: TitleDetail?
     @State private var expanded: Set<Int> = []
     @State private var missing = false
+    @State private var browseDetail: BrowseDetails?
+    @State private var browseError: String?
+    @State private var selectedPerson: PersonSummary?
+    @State private var showWhyRelease = false
 
     var body: some View {
         Group {
-            if let detail {
+            if AppServices.parseCatalogueID(id) != nil {
+                if let browseDetail { catalogueContent(browseDetail) }
+                else if let browseError {
+                    VStack(spacing: 12) {
+                        ErrorBanner(title: "Title details couldn't load", message: "Check your connection and retry.", details: browseError, fixTitle: "Retry") {
+                            Task { await loadCatalogueDetail() }
+                        }
+                        EmptyStateView(title: "Keep browsing", message: "The rest of Discover is still available.", systemImage: "wifi.exclamationmark")
+                    }.padding(.top, 30)
+                } else { skeleton }
+            } else if let detail {
                 content(detail)
             } else if missing {
                 EmptyStateView(
@@ -22,11 +38,15 @@ struct TitleDetailScreen: View {
                 skeleton
             }
         }
-        .navigationTitle(Text(verbatim: detail?.item.title ?? ""))
+        .navigationTitle(Text(verbatim: browseDetail?.item.title ?? detail?.item.title ?? ""))
         .heroScrollEdge()
         .toolbar(removing: .title)
         .followsLiveProgress()
         .task(id: LoadKey(id: id, revision: model.titlesRevision)) {
+            if AppServices.parseCatalogueID(id) != nil {
+                await loadCatalogueDetail()
+                return
+            }
             let loaded = try? await model.source.detail(for: id)
             let firstLoad = detail == nil
             detail = loaded
@@ -38,12 +58,178 @@ struct TitleDetailScreen: View {
                 expanded = [first.number]
             }
         }
+        .sheet(item: $selectedPerson) { person in
+            PersonFilmographySheet(person: person) { model.open($0) }
+                .frame(minWidth: 680, minHeight: 560)
+        }
+        .sheet(isPresented: $showWhyRelease) {
+            WhyReleaseSheet(titleID: id, title: detail?.item.title ?? "")
+                .frame(minWidth: 580, minHeight: 480)
+        }
     }
 
     private struct LoadKey: Equatable {
         var id: PosterItem.ID
         var revision: Int
     }
+
+    private func loadCatalogueDetail() async {
+        guard let services = model.services else { browseError = "Set up metadata in Settings to browse TMDB."; return }
+        browseError = nil
+        do { browseDetail = try await services.browseDetails(id: id) }
+        catch is CancellationError { }
+        catch { browseError = error.localizedDescription }
+    }
+
+    private func catalogueContent(_ d: BrowseDetails) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Tokens.Spacing.l) {
+                HeroHeader(
+                    title: d.item.title,
+                    eyebrow: d.item.kind == .movie ? String(localized: "Movie") : String(localized: "Series"),
+                    metadata: catalogueMetadata(d), overview: d.tagline ?? d.overview,
+                    backdrop: d.item.backdrop, height: 480
+                ) {
+                    if d.item.isInLibrary {
+                        Button {} label: { Label("In Your Library", systemImage: "checkmark.circle.fill") }
+                            .disabled(true).buttonStyle(.marqueePlay)
+                    } else {
+                        Button { want(d.item) } label: { Label("Want It", systemImage: "plus") }.buttonStyle(.marqueePlay)
+                    }
+                    if !d.trailers.isEmpty {
+                        Button { open(d.trailers.first?.externalURL) } label: { Label("Watch Trailer", systemImage: "play.rectangle") }
+                            .buttonStyle(.marqueeSecondary)
+                    }
+                }
+                VStack(alignment: .leading, spacing: Tokens.Spacing.xl) {
+                    if !d.overview.isEmpty { Text(verbatim: d.overview).font(.body).textSelection(.enabled).frame(maxWidth: 780, alignment: .leading) }
+                    legalAvailability(d)
+                    castAndCrew(d)
+                    if let collection = d.collection {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Collection").font(Tokens.Typography.sectionTitle)
+                            Text(verbatim: collection.name).font(.headline)
+                            if let overview = collection.overview, !overview.isEmpty {
+                                Text(verbatim: overview).font(.callout).foregroundStyle(.secondary).lineLimit(2)
+                            }
+                        }
+                        if !collection.parts.isEmpty {
+                            ShelfRow(ShelfModel(id: "collection-\(collection.id)", title: collection.name,
+                                                items: collection.parts.map(AppServices.poster)), onOpen: { model.open($0.id) })
+                        }
+                    }
+                    if !d.seasons.isEmpty { seasons(d) }
+                    if !d.recommendations.isEmpty {
+                        ShelfRow(ShelfModel(id: "similar-\(d.item.id)", title: "More Like This", items: d.recommendations), onOpen: { model.open($0.id) })
+                    }
+                }.padding(.horizontal, Tokens.Spacing.gutter).padding(.bottom, Tokens.Spacing.xl)
+            }
+        }.ignoresSafeArea(.container, edges: .top)
+    }
+
+    private func catalogueMetadata(_ d: BrowseDetails) -> [String] {
+        var parts = [d.item.year > 0 ? String(d.item.year) : nil, d.certification, d.runtime.map(Formatters.runtime(minutes:)),
+                     d.genres.first, d.score.map { "★ " + $0.formatted(.number.precision(.fractionLength(1))) }].compactMap { $0 }
+        if let imdb = d.imdbID { parts.append("IMDb \(imdb)") }
+        return parts
+    }
+
+    @ViewBuilder
+    private func legalAvailability(_ d: BrowseDetails) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Where to Watch Legally").font(Tokens.Typography.sectionTitle)
+            if d.providers.isEmpty {
+                Text("No streaming providers are listed for \(AppServices.regionCode). Availability varies by region.")
+                    .font(.callout).foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(d.providers) { provider in
+                            HStack(spacing: 8) {
+                                if let url = provider.logoPath?.url(size: .w92) {
+                                    ArtworkView(.remote(url, placeholder: PlaceholderArt(hue: RealLibrary.hue(provider.name), symbol: "play.tv")), targetSize: CGSize(width: 30, height: 30))
+                                        .frame(width: 30, height: 30).clipShape(RoundedRectangle(cornerRadius: 7))
+                                }
+                                Text(verbatim: provider.name).font(.subheadline.weight(.medium))
+                            }.padding(.vertical, 7).padding(.horizontal, 10).background(.quaternary, in: Capsule())
+                        }
+                    }
+                }
+            }
+            Text("Availability provided by TMDB. Check the service for current terms.").font(.caption).foregroundStyle(.tertiary)
+        }
+    }
+
+    @ViewBuilder
+    private func castAndCrew(_ d: BrowseDetails) -> some View {
+        if !d.cast.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Cast").font(Tokens.Typography.sectionTitle)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(d.cast.prefix(18)) { member in
+                            Button { selectedPerson = PersonSummary(id: member.id, name: member.name, profilePath: member.profilePath) } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ArtworkView(member.profilePath?.url(size: .w185).map { .remote($0, placeholder: PlaceholderArt(hue: RealLibrary.hue(member.name), symbol: "person.fill")) }
+                                        ?? .generated(PlaceholderArt(hue: RealLibrary.hue(member.name), symbol: "person.fill")), targetSize: CGSize(width: 76, height: 76))
+                                        .frame(width: 76, height: 76).clipShape(Circle())
+                                    Text(verbatim: member.name).font(.subheadline.weight(.medium)).lineLimit(1).frame(width: 116, alignment: .leading)
+                                    Text(verbatim: member.character ?? "Cast").font(.caption).foregroundStyle(.secondary).lineLimit(1).frame(width: 116, alignment: .leading)
+                                }
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+        if !d.crew.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Crew").font(Tokens.Typography.sectionTitle)
+                Text(verbatim: d.crew.prefix(5).map { "\($0.name) · \($0.job ?? $0.department ?? "Crew")" }.joined(separator: "   •   "))
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func seasons(_ d: BrowseDetails) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Seasons & Episodes").font(Tokens.Typography.sectionTitle)
+            ForEach(d.seasons) { season in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(verbatim: season.name).font(.headline)
+                    ForEach(season.episodes) { episode in
+                        HStack(spacing: 12) {
+                            ArtworkView(episode.stillPath?.url(size: .w300).map { .remote($0, placeholder: PlaceholderArt(hue: RealLibrary.hue(episode.name), symbol: "tv")) }
+                                ?? .generated(PlaceholderArt(hue: RealLibrary.hue(episode.name), symbol: "tv")), targetSize: CGSize(width: 150, height: 84))
+                                .frame(width: 150, height: 84).clipShape(RoundedRectangle(cornerRadius: 8))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Episode \(episode.episodeNumber) · \(episode.name)").font(.headline).lineLimit(1)
+                                if let date = episode.airDate { Text(date, style: .date).font(.caption).foregroundStyle(.secondary) }
+                                if let overview = episode.overview, !overview.isEmpty { Text(verbatim: overview).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                            }
+                            Spacer(minLength: 0)
+                        }.padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    private func want(_ item: PosterItem) {
+        guard let services = model.services else { return }
+        Task {
+            do {
+                let title = try await services.want(item)
+                model.show(Toast(title: String(localized: "Added \(title.title)"), detail: "Now monitored in your library.", systemImage: "checkmark.circle.fill"))
+            } catch LibraryError.alreadyInLibrary(let existing) {
+                model.show(Toast(title: "Already in your library", systemImage: "checkmark.circle.fill", actionTitle: "Show", action: {
+                    model.go(to: item.kind == .movie ? .movies : .tv); model.open(existing.uuidString)
+                }))
+            } catch { model.show(Toast(title: "Couldn't add title", detail: error.localizedDescription, systemImage: "exclamationmark.triangle")) }
+        }
+    }
+
+    private func open(_ url: URL?) { if let url { NSWorkspace.shared.open(url) } }
 
     private var skeleton: some View {
         VStack(alignment: .leading, spacing: Tokens.Spacing.l) {
@@ -125,6 +311,10 @@ struct TitleDetailScreen: View {
             model.show(Toast(title: String(localized: "Monitoring \(item.title)"), detail: String(localized: "New releases will download automatically."), systemImage: "eye.fill"))
         } label: { Label("Monitor", systemImage: "eye") }
             .buttonStyle(.marqueeSecondary)
+        if model.services != nil {
+            Button { showWhyRelease = true } label: { Label("Why This Release?", systemImage: "questionmark.circle") }
+                .buttonStyle(.plain)
+        }
     }
 
     // MARK: Movie

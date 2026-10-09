@@ -132,6 +132,7 @@ extension View {
     func softScrollEdge() -> some View {
         if #available(macOS 26, *) {
             scrollEdgeEffectStyle(.soft, for: .top)
+                .scrollEdgeEffectHidden(true, for: .leading)
         } else {
             self
         }

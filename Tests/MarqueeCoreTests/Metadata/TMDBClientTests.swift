@@ -181,6 +181,21 @@ private struct MetadataTMDBRequestTests {
         let genres = try await makeClient(MockTransport(fixture: "genres_movie")).movieGenres()
         #expect(genres.map(\.name) == ["Action", "Adventure", "Science Fiction"])
     }
+
+    @Test func popularAndRegionalProviderEndpoints() async throws {
+        let popularTransport = MockTransport(fixture: "discover_movie")
+        let popular = try await makeClient(popularTransport).popularMovies(page: 3)
+        #expect(popular.results.first?.title == "Blade Runner 2049")
+        #expect(popularTransport.requests[0].url?.path == "/3/movie/popular")
+        #expect(query(popularTransport.requests[0])["page"] == "3")
+
+        let providersBody = Data(#"{"results":[{"provider_id":8,"provider_name":"Netflix","display_priority":1},{"provider_id":9,"provider_name":"Prime","display_priority":3},{"provider_id":2,"provider_name":"Apple TV+","display_priority":2}]}"#.utf8)
+        let providerTransport = MockTransport { _, _ in MetadataHTTPResponse(status: 200, body: providersBody) }
+        let providers = try await makeClient(providerTransport).watchProviders(region: "gb", media: .tv)
+        #expect(providerTransport.requests[0].url?.path == "/3/watch/providers/tv")
+        #expect(query(providerTransport.requests[0])["watch_region"] == "GB")
+        #expect(providers.map(\.name) == ["Netflix", "Apple TV+", "Prime"])
+    }
 }
 
 // MARK: - Decoding
@@ -310,6 +325,27 @@ private struct MetadataTMDBDecodingTests {
         let m = try await makeClient(MockTransport(fixture: "movie_details")).movieDetails(id: 693134)
         let data = try JSONEncoder().encode(m)
         #expect(try JSONDecoder().decode(MovieDetails.self, from: data) == m)
+    }
+
+    @Test func personCollectionAndCombinedCreditsDecode() async throws {
+        let personJSON = Data(#"{"id":500,"name":"Fixture Performer","biography":"A local fixture.","birthday":"1980-05-12","known_for_department":"Acting"}"#.utf8)
+        let creditsJSON = Data(#"{"cast":[{"id":693134,"media_type":"movie","title":"Dune: Part Two","character":"Paul","release_date":"2024-02-27"},{"id":1,"media_type":"collection","name":"ignored"}],"crew":[{"id":1396,"media_type":"tv","name":"Breaking Bad","job":"Director","department":"Directing","first_air_date":"2008-01-20"}]}"#.utf8)
+        let collectionJSON = Data(#"{"id":100,"name":"Fixture Collection","parts":[{"id":2,"title":"Later","release_date":"2024-02-02"},{"id":1,"title":"Earlier","release_date":"2020-01-01"}]}"#.utf8)
+        let transport = MockTransport { request, _ in
+            let path = request.url?.path ?? ""
+            let body = path.hasSuffix("combined_credits") ? creditsJSON : path.contains("collection") ? collectionJSON : personJSON
+            return MetadataHTTPResponse(status: 200, body: body)
+        }
+        let client = makeClient(transport)
+        let person = try await client.person(id: 500)
+        #expect(person.name == "Fixture Performer")
+        #expect(person.knownForDepartment == "Acting")
+        let credits = try await client.personCredits(id: 500)
+        #expect(credits.cast.map(\.character) == ["Paul"])
+        #expect(credits.crew.first?.job == "Director")
+        let collection = try await client.collection(id: 100)
+        #expect(collection.parts.map(\.title) == ["Earlier", "Later"])
+        #expect(transport.requests.map { $0.url?.path } == ["/3/person/500", "/3/person/500/combined_credits", "/3/collection/100"])
     }
 }
 

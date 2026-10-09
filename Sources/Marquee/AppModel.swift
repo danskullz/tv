@@ -1,4 +1,5 @@
 import SwiftUI
+import MarqueeCore
 import MarqueeUI
 
 enum SidebarItem: String, CaseIterable, Hashable, Identifiable {
@@ -95,7 +96,12 @@ final class AppModel {
         let defaults = UserDefaults.standard
         if defaults.bool(forKey: "mockData") { return AppModel() }
         do {
-            let services = try AppServices(demo: defaults.bool(forKey: "demoSwarm"))
+            let fixtures = defaults.bool(forKey: "tmdbFixtures")
+            let fixtureDatabase = fixtures ? try AppDatabase.inMemory() : nil
+            let fixtureSecrets: (any SecretStore)? = fixtures ? InMemorySecretStore() : nil
+            let services = try AppServices(
+                demo: defaults.bool(forKey: "demoSwarm"), tmdbFixtures: fixtures,
+                database: fixtureDatabase, secrets: fixtureSecrets)
             return AppModel(source: services.libraryReader, services: services)
         } catch {
             let model = AppModel()
