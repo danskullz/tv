@@ -91,10 +91,11 @@ enum AppearanceChoice: String, CaseIterable, Identifiable {
 struct SidebarView: View {
     @Binding var selection: SidebarItem?
     let activeCount: Int
-    /// Row activation. Rows are explicit buttons with an explicit highlight: the outline's own
-    /// tap-to-select does not fire on this OS version, and `.badge()` breaks row highlighting,
-    /// so both are driven here instead of by `List(selection:)`.
+    /// Rows are explicit buttons with a Finder-style manual highlight. The outline's own
+    /// tap-to-select does not fire on this OS version, and `.badge()` breaks its row
+    /// highlighting, so the gray pill + accent label are drawn here instead.
     var onSelect: (SidebarItem) -> Void = { _ in }
+    @Environment(\.controlActiveState) private var controlActiveState
 
     var body: some View {
         List {
@@ -118,7 +119,8 @@ struct SidebarView: View {
     }
 
     private func row(_ item: SidebarItem) -> some View {
-        Button { onSelect(item) } label: {
+        let isSelected = selection == item
+        return Button { onSelect(item) } label: {
             HStack(spacing: 6) {
                 Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
                 if item == .activity, activeCount > 0 {
@@ -128,27 +130,32 @@ struct SidebarView: View {
                         .monospacedDigit()
                         .padding(.horizontal, 7)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(
-                            selection == item ? Color.white.opacity(0.28) : Color.primary.opacity(0.12)))
-                        .foregroundStyle(selection == item ? .white : .secondary)
+                        .background(Capsule().fill(Color.primary.opacity(isSelected ? 0.18 : 0.12)))
+                        .foregroundStyle(isSelected ? .primary : .secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(selection == item ? .white : .primary)
+        .foregroundStyle(rowForeground(selected: isSelected))
         .listRowBackground(
             Group {
-                if selection == item {
+                if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor)
+                        .fill(Color(nsColor: .unemphasizedSelectedContentBackgroundColor))
                         .padding(.vertical, 2)
                 } else {
                     Color.clear
                 }
             }
         )
+    }
+
+    /// Finder dims the selected label to primary when the window is inactive.
+    private func rowForeground(selected: Bool) -> Color {
+        guard selected else { return .primary }
+        return controlActiveState == .inactive ? .primary : .accentColor
     }
 }
 
