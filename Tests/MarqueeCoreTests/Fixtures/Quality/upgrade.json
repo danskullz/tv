@@ -1,0 +1,33 @@
+{
+  "name": "upgrade from an existing 720p WEB-DL",
+  "now": "2026-10-09T12:00:00Z",
+  "profile": "balanced",
+  "wanted": {"type": "movie", "title": "Arrival", "year": 2016, "runtime": 116},
+  "current": {"tier": "webDL720p", "score": 0},
+  "minimumSeeders": 1,
+  "expectTop": "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS",
+  "expectOrder": [
+    "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS",
+    "Arrival.2016.1080p.WEB-DL.DD5.1.H.264-GRP",
+    "Arrival.2016.1080p.WEBRip.x264-GRP",
+    "Arrival.2016.720p.WEB-DL.DDP5.1.Atmos.H.264-GRP"
+  ],
+  "expectRejections": {
+    "Arrival.2016.720p.WEB-DL.H.264-GRP": ["notAnUpgrade"],
+    "Arrival.2016.720p.HDTV.x264-GRP": ["notAnUpgrade"],
+    "Arrival.2016.2160p.WEB-DL.DDP5.1.H.265-GRP": ["qualityNotAllowed"],
+    "Arrival.2016.1080p.BluRay.x264-YIFY": ["formatScoreBelowMinimum"],
+    "Arrival.2016.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GRP": ["qualityNotAllowed"]
+  },
+  "releases": [
+    {"title": "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS", "seeders": 220, "sizeGB": 12, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.WEB-DL.DD5.1.H.264-GRP", "seeders": 400, "sizeGB": 5, "ageHours": 9000},
+    {"title": "Arrival.2016.720p.WEB-DL.H.264-GRP", "seeders": 300, "sizeGB": 2.5, "ageHours": 9000},
+    {"title": "Arrival.2016.720p.HDTV.x264-GRP", "seeders": 100, "sizeGB": 2, "ageHours": 9000},
+    {"title": "Arrival.2016.720p.WEB-DL.DDP5.1.Atmos.H.264-GRP", "seeders": 90, "sizeGB": 3, "ageHours": 9000},
+    {"title": "Arrival.2016.2160p.WEB-DL.DDP5.1.H.265-GRP", "seeders": 150, "sizeGB": 15, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.BluRay.x264-YIFY", "seeders": 700, "sizeGB": 2, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GRP", "seeders": 60, "sizeGB": 28, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.WEBRip.x264-GRP", "seeders": 12, "sizeGB": 4.5, "ageHours": 9000}
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "movie with 4K and 1080p options",
+  "now": "2026-10-09T12:00:00Z",
+  "profile": "best",
+  "wanted": {"type": "movie", "title": "Dune", "year": 2021, "runtime": 155},
+  "minimumSeeders": 5,
+  "freeSpaceGB": 100,
+  "blocklistHashes": ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+  "expectTop": "Dune.2021.2160p.UHD.BluRay.REMUX.DV.HDR10.HEVC.TrueHD.7.1.Atmos-CiNEPHiLES",
+  "expectOrder": [
+    "Dune.2021.2160p.UHD.BluRay.REMUX.DV.HDR10.HEVC.TrueHD.7.1.Atmos-CiNEPHiLES",
+    "Dune.2021.2160p.UHD.BluRay.x265.10bit.HDR.TrueHD.7.1.Atmos-FraMeSToR",
+    "Dune.2021.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR10Plus.H.265-FLUX",
+    "Dune.2021.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS",
+    "Dune.2021.1080p.WEB-DL.DDP5.1.H.264-GRP"
+  ],
+  "expectRejections": {
+    "Dune.2021.720p.BluRay.x264-YIFY": ["qualityNotAllowed", "formatScoreBelowMinimum"],
+    "Dune.2021.2160p.WEB-DL.x265.HDR-RARBG": ["sizeTooSmall"],
+    "Dune.2021.1080p.CAM.x264-NoGRP": ["qualityNotAllowed"],
+    "Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR10Plus.H.265-FLUX": ["wrongTitle"],
+    "Dune.1984.1080p.BluRay.x264-GRP": ["wrongYear"],
+    "Dune.2021.2160p.UHD.BluRay.x265.HDR.Atmos-LOWSEED": ["tooFewSeeders"],
+    "Dune.2021.1080p.BluRay.x264.3D.HSBS-GRP": ["formatScoreBelowMinimum"],
+    "Dune.2021.1080p.BluRay.x264-SPARKS-Sample": ["sizeTooSmall"],
+    "Dune.2021.2160p.WEB-DL.DDP5.1.Atmos.DV.H.265-BLOCKED": ["blocklisted"],
+    "Dune.2021.1080p.BluRay.x264-HUGE": ["sizeTooLarge"],
+    "Dune.2021.2160p.UHD.BluRay.REMUX.HDR10.HEVC.DTS-HD.MA.7.1-BIGGER": ["notEnoughFreeSpace"]
+  },
+  "releases": [
+    {"title": "Dune.2021.2160p.UHD.BluRay.x265.10bit.HDR.TrueHD.7.1.Atmos-FraMeSToR", "seeders": 120, "sizeGB": 58, "ageHours": 4000},
+    {"title": "Dune.2021.2160p.UHD.BluRay.REMUX.DV.HDR10.HEVC.TrueHD.7.1.Atmos-CiNEPHiLES", "seeders": 85, "sizeGB": 68, "ageHours": 4100},
+    {"title": "Dune.2021.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR10Plus.H.265-FLUX", "seeders": 300, "sizeGB": 22, "ageHours": 5000},
+    {"title": "Dune.2021.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS", "seeders": 450, "sizeGB": 14, "ageHours": 6000},
+    {"title": "Dune.2021.1080p.WEB-DL.DDP5.1.H.264-GRP", "seeders": 380, "sizeGB": 6.5, "ageHours": 6500},
+    {"title": "Dune.2021.720p.BluRay.x264-YIFY", "seeders": 900, "sizeGB": 1.2, "ageHours": 7000},
+    {"title": "Dune.2021.2160p.WEB-DL.x265.HDR-RARBG", "seeders": 150, "sizeGB": 2.1, "ageHours": 5000},
+    {"title": "Dune.2021.1080p.CAM.x264-NoGRP", "seeders": 60, "sizeGB": 2, "ageHours": 8000},
+    {"title": "Dune.Part.Two.2024.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR10Plus.H.265-FLUX", "seeders": 800, "sizeGB": 24, "ageHours": 900},
+    {"title": "Dune.1984.1080p.BluRay.x264-GRP", "seeders": 70, "sizeGB": 9, "ageHours": 9000},
+    {"title": "Dune.2021.2160p.UHD.BluRay.x265.HDR.Atmos-LOWSEED", "seeders": 2, "sizeGB": 55, "ageHours": 3000},
+    {"title": "Dune.2021.1080p.BluRay.x264.3D.HSBS-GRP", "seeders": 40, "sizeGB": 12, "ageHours": 6000},
+    {"title": "Dune.2021.1080p.BluRay.x264-SPARKS-Sample", "seeders": 30, "sizeGB": 0.5, "ageHours": 6000},
+    {"title": "Dune.2021.2160p.WEB-DL.DDP5.1.Atmos.DV.H.265-BLOCKED", "seeders": 200, "sizeGB": 21, "ageHours": 5000, "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"title": "Dune.2021.1080p.BluRay.x264-HUGE", "seeders": 50, "sizeGB": 90, "ageHours": 6000},
+    {"title": "Dune.2021.2160p.UHD.BluRay.REMUX.HDR10.HEVC.DTS-HD.MA.7.1-BIGGER", "seeders": 90, "sizeGB": 105, "ageHours": 4000}
+  ]
+}

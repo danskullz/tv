@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "name": "Example community bundle",
+  "formats": [
+    {
+      "name": "DV with HDR10 fallback",
+      "specifications": [
+        {"name": "Dolby Vision", "type": "hdr", "value": "dolbyVision", "required": true},
+        {"name": "HDR10 base layer", "type": "hdr", "value": "HDR10"}
+      ]
+    },
+    {
+      "name": "Scene groups",
+      "specifications": [
+        {"name": "Scene groups", "type": "releaseGroup", "value": "SPARKS|GECKOS|AMIABLE|CtrlHD"}
+      ]
+    },
+    {
+      "name": "Lossless audio 5.1+",
+      "specifications": [
+        {"name": "TrueHD", "type": "audioCodec", "value": "TrueHD"},
+        {"name": "DTS-HD MA", "type": "audioCodec", "value": "DTS-HD MA"},
+        {"name": "FLAC", "type": "audioCodec", "value": "flac"},
+        {"name": "Surround", "type": "audioChannels", "value": "5.1", "required": true, "negate": false}
+      ]
+    },
+    {
+      "name": "No remux / not oversized",
+      "specifications": [
+        {"name": "Not a remux", "type": "source", "value": "remux", "negate": true, "required": true},
+        {"name": "Under 40 GiB", "type": "size", "max": 40, "required": true}
+      ]
+    },
+    {
+      "name": "Regex: repack or proper",
+      "specifications": [
+        {"name": "Repack", "type": "releaseTitle", "value": "\\b(repack|proper)[0-9]?\\b"}
+      ]
+    },
+    {
+      "name": "Streaming: Apple TV+ / Netflix",
+      "specifications": [
+        {"name": "ATVP", "type": "streamingService", "value": "ATVP"},
+        {"name": "NF", "type": "streamingService", "value": "NF"}
+      ]
+    },
+    {
+      "name": "Unwanted: hardcoded subs",
+      "specifications": [
+        {"name": "Hardcoded", "type": "releaseFlag", "value": "hardcodedSubs"}
+      ]
+    },
+    {
+      "name": "Freeleech",
+      "specifications": [
+        {"name": "Freeleech", "type": "indexerFlag", "value": "freeleech"}
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "name": "UHD Community",
+      "allowed": ["webDL2160p", "webRip2160p", "bluray2160p", "webDL1080p", "bluray1080p"],
+      "cutoff": "bluray2160p",
+      "upgradeAllowed": true,
+      "minFormatScore": 0,
+      "upgradeUntilFormatScore": 250,
+      "minFormatScoreIncrement": 5,
+      "sizePreference": "larger",
+      "formatScores": {
+        "DV with HDR10 fallback": 150,
+        "Scene groups": 20,
+        "Lossless audio 5.1+": 75,
+        "No remux / not oversized": 10,
+        "Regex: repack or proper": 5,
+        "Streaming: Apple TV+ / Netflix": 15,
+        "Unwanted: hardcoded subs": -10000,
+        "Freeleech": 5,
+        "Format that does not exist": 99
+      }
+    }
+  ]
+}

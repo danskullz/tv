@@ -1,0 +1,26 @@
+{
+  "name": "season wanted: packs vs singles",
+  "now": "2026-10-09T12:00:00Z",
+  "profile": "balanced",
+  "wanted": {"type": "season", "title": "The Bear", "season": 1, "episodeCount": 8, "runtime": 30},
+  "minimumSeeders": 2,
+  "expectTop": "The.Bear.S01.1080p.WEB-DL.DDP5.1.H.264-NTb",
+  "expectRejections": {
+    "The.Bear.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb": ["wrongEpisode"],
+    "The.Bear.S02.1080p.WEB-DL.DDP5.1.H.264-NTb": ["wrongEpisode"],
+    "The.Bear.S01.2160p.WEB-DL.DDP5.1.H.265-NTb": ["qualityNotAllowed"]
+  },
+  "expectAccepted": [
+    "The.Bear.S01.1080p.WEB-DL.DDP5.1.H.264-NTb",
+    "The.Bear.S01-S03.1080p.WEB-DL.DDP5.1.H.264-NTb",
+    "The.Bear.Complete.Series.720p.WEB-DL.H.264-GRP"
+  ],
+  "releases": [
+    {"title": "The.Bear.S01.1080p.WEB-DL.DDP5.1.H.264-NTb", "seeders": 410, "sizeGB": 16, "ageHours": 5000},
+    {"title": "The.Bear.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb", "seeders": 500, "sizeGB": 2, "ageHours": 5000},
+    {"title": "The.Bear.S02.1080p.WEB-DL.DDP5.1.H.264-NTb", "seeders": 380, "sizeGB": 20, "ageHours": 3000},
+    {"title": "The.Bear.S01-S03.1080p.WEB-DL.DDP5.1.H.264-NTb", "seeders": 150, "sizeGB": 60, "ageHours": 400},
+    {"title": "The.Bear.Complete.Series.720p.WEB-DL.H.264-GRP", "seeders": 40, "sizeGB": 30, "ageHours": 400},
+    {"title": "The.Bear.S01.2160p.WEB-DL.DDP5.1.H.265-NTb", "seeders": 90, "sizeGB": 40, "ageHours": 5000}
+  ]
+}

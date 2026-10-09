@@ -1,0 +1,31 @@
+{
+  "name": "everything rejected: cutoff already met",
+  "now": "2026-10-09T12:00:00Z",
+  "profile": "balanced",
+  "wanted": {"type": "movie", "title": "Arrival", "year": 2016, "runtime": 116},
+  "current": {"tier": "bluray1080p", "score": 60},
+  "minimumSeeders": 1,
+  "expectTop": null,
+  "expectRejections": {
+    "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS": ["cutoffMet"],
+    "Arrival.2016.1080p.WEB-DL.DD5.1.H.264-GRP": ["cutoffMet"],
+    "Arrival.2016.720p.WEB-DL.H.264-GRP": ["cutoffMet"],
+    "Arrival.2016.2160p.WEB-DL.DDP5.1.H.265-GRP": ["qualityNotAllowed"],
+    "Arrival.2016.1080p.BluRay.x264-YIFY": ["formatScoreBelowMinimum", "cutoffMet"],
+    "Arrival.2016.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GRP": ["qualityNotAllowed"],
+    "Arrival.2016.1080p.BluRay.x264-DEADSWARM": ["tooFewSeeders", "cutoffMet"],
+    "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-LOLA-Sample": ["sizeTooSmall", "cutoffMet"],
+    "Interstellar.2014.1080p.BluRay.x264-SPARKS": ["wrongTitle"]
+  },
+  "releases": [
+    {"title": "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-SPARKS", "seeders": 220, "sizeGB": 12, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.WEB-DL.DD5.1.H.264-GRP", "seeders": 400, "sizeGB": 5, "ageHours": 9000},
+    {"title": "Arrival.2016.720p.WEB-DL.H.264-GRP", "seeders": 300, "sizeGB": 2.5, "ageHours": 9000},
+    {"title": "Arrival.2016.2160p.WEB-DL.DDP5.1.H.265-GRP", "seeders": 150, "sizeGB": 15, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.BluRay.x264-YIFY", "seeders": 700, "sizeGB": 2, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GRP", "seeders": 60, "sizeGB": 28, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.BluRay.x264-DEADSWARM", "seeders": 0, "sizeGB": 9, "ageHours": 9000},
+    {"title": "Arrival.2016.1080p.BluRay.x264.DTS-HD.MA.5.1-LOLA-Sample", "seeders": 20, "sizeGB": 0.3, "ageHours": 9000},
+    {"title": "Interstellar.2014.1080p.BluRay.x264-SPARKS", "seeders": 500, "sizeGB": 14, "ageHours": 9000}
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "TV episode with pack and single releases",
+  "now": "2026-10-09T12:00:00Z",
+  "profile": "balanced",
+  "wanted": {"type": "episode", "title": "Severance", "season": 2, "episodes": [5], "runtime": 50, "seasonEpisodeCount": 10},
+  "minimumSeeders": 2,
+  "indexerPriorities": {"A": 10, "B": 25},
+  "expectTop": "Severance.S02E05.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX",
+  "expectTopIndexer": "A",
+  "expectOrder": [
+    "Severance.S02E05.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX",
+    "Severance.S02E05.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX",
+    "Severance.S02E05.PROPER.1080p.WEB-DL.DDP5.1.H.264-FLUX"
+  ],
+  "expectRejections": {
+    "Severance.S02E05.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX": ["qualityNotAllowed"],
+    "Severance.S02E04.1080p.WEB-DL.DDP5.1.H.264-FLUX": ["wrongEpisode"],
+    "Severance.S01E05.1080p.WEB-DL.DDP5.1.H.264-FLUX": ["wrongEpisode"],
+    "Severance.S02E05.1080p.WEB-DL.DDP5.1.H.264-YIFY": ["formatScoreBelowMinimum"],
+    "Severance.S02E05.480p.WEB-DL.x264-GRP": ["qualityNotAllowed"],
+    "Severance.S02E05.1080p.WEB-DL.DDP5.1.H.264-GRP": ["tooFewSeeders"],
+    "The.Office.S02E05.1080p.WEB-DL.DDP5.1.H.264-FLUX": ["wrongTitle"]
+  },
+  "expectAccepted": [
+    "Severance.S02E05.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX",
+    "Severance.S02.1080p.WEB-DL.DDP5.1.H.264-FLUX",
+    "Severance.S02E05.HDTV.x264-LOL"
+  ],
+  "releases": [
+    {"title": "Severance.S02E05.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX", "seeders": 520, "sizeGB": 3.9, "ageHours": 200, "indexer": "A"},
+    {"title": "Severance.S02E05.1080p.WEB-DL.DDP5.1.Atmos.H.264-FLUX", "seeders": 900, "sizeGB": 3.9, "ageHours": 200, "indexer": "B", "guid": "dup"},
+    {"title": "Severance.S02E05.1080p.WEB.h264-ETHEL", "seeders": 410, "sizeGB": 2.8, "ageHours": 210, "indexer": "A"},
+    {"title": "Severance.S02E05.720p.WEB.h264-ETHEL", "seeders": 380, "sizeGB": 1.4, "ageHours": 210, "indexer": "A"},
+    {"title": "Severance.S02E05.2160p.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX", "seeders": 600, "sizeGB": 12, "ageHours": 200, "indexer": "A"},
+    {"title": "Severance.S02.1080p.WEB-DL.DDP5.1.H.264-FLUX", "seeders": 700, "sizeGB": 38, "ageHours": 100, "indexer": "A"},
+    {"title": "Severance.S02E04.1080p.WEB-DL.DDP5.1.H.264-FLUX", "seeders": 450, "sizeGB": 3.8, "ageHours": 400, "indexer": "A"},
+    {"title": "Severance.S01E05.1080p.WEB-DL.DDP5.1.H.264-FLUX", "seeders": 300, "sizeGB": 3.7, "ageHours": 9000, "indexer": "A"},
+    {"title": "Severance.S02E05.1080p.WEB-DL.DDP5.1.H.264-YIFY", "seeders": 200, "sizeGB": 1.5, "ageHours": 190, "indexer": "A"},
+    {"title": "Severance.S02E05.HDTV.x264-LOL", "seeders": 3, "sizeGB": 0.4, "ageHours": 205, "indexer": "A"},
+    {"title": "Severance.S02E05.480p.WEB-DL.x264-GRP", "seeders": 50, "sizeGB": 0.3, "ageHours": 205, "indexer": "A"},
+    {"title": "Severance.S02E05.1080p.WEB-DL.DDP5.1.H.264-GRP", "seeders": 1, "sizeGB": 3.5, "ageHours": 150, "indexer": "A"},
+    {"title": "The.Office.S02E05.1080p.WEB-DL.DDP5.1.H.264-FLUX", "seeders": 90, "sizeGB": 2.1, "ageHours": 7000, "indexer": "A"},
+    {"title": "Severance.S02E05.PROPER.1080p.WEB-DL.DDP5.1.H.264-FLUX", "seeders": 90, "sizeGB": 3.9, "ageHours": 150, "indexer": "A"}
+  ]
+}
