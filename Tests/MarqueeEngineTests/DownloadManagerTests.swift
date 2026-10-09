@@ -225,6 +225,57 @@ import TorrentEngine
         await manager.stop()
     }
 
+    @Test func configureStartsQueuedDownloadsWhenAnActiveSlotOpens() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: GRDBHealthIssueRepository(database),
+            configuration: .init(maximumActiveDownloads: 1, reservedFreeSpaceBytes: 0),
+            freeSpace: { _ in Int64.max })
+        try await manager.start()
+        let first = makeDownloadRequest(hash: String(repeating: "c", count: 40), title: "Slot one")
+        let second = makeDownloadRequest(hash: String(repeating: "d", count: 40), title: "Slot two")
+        try await addTitle(for: first, to: database)
+        try await addTitle(for: second, to: database)
+        _ = try await manager.add(first)
+        _ = try await manager.add(second)
+        #expect(try await repository.torrent(infoHash: second.release.infoHash!)?.state == .queued)
+
+        try await manager.configure(.init(maximumActiveDownloads: 2, reservedFreeSpaceBytes: 0))
+        #expect(try await repository.torrent(infoHash: second.release.infoHash!)?.state == .downloading)
+        #expect(engine.addedHashes == [first.release.infoHash!, second.release.infoHash!])
+        await manager.stop()
+    }
+
+    @Test func configureUpdatesGlobalAndActivePerTorrentLimits() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: GRDBHealthIssueRepository(database),
+            configuration: .init(reservedFreeSpaceBytes: 0), freeSpace: { _ in Int64.max })
+        try await manager.start()
+        var request = makeDownloadRequest(hash: String(repeating: "e", count: 40), title: "Rate limits")
+        request.downloadLimit = 100
+        request.uploadLimit = 200
+        try await addTitle(for: request, to: database)
+        _ = try await manager.add(request)
+
+        var torrent = try #require(await repository.torrent(infoHash: request.release.infoHash!))
+        torrent.downloadLimit = 300
+        torrent.uploadLimit = 400
+        try await repository.update(torrent)
+        try await manager.configure(.init(
+            globalDownloadLimit: 900, globalUploadLimit: 600, reservedFreeSpaceBytes: 0))
+
+        #expect(engine.globalDownloadLimit == 900)
+        #expect(engine.globalUploadLimit == 600)
+        #expect(engine.downloadLimits[request.release.infoHash!] == 300)
+        #expect(engine.uploadLimits[request.release.infoHash!] == 400)
+        await manager.stop()
+    }
+
     @Test func resumeDataRestoresIntoTheNextSession() async throws {
         let database = try AppDatabase.inMemory()
         let repository = GRDBTorrentRepository(database)
@@ -345,6 +396,9 @@ private final class FakeManagedTorrentEngine: ManagedTorrentEngine, @unchecked S
     var addedHashes: [String] { state.withLock { $0.addedHashes } }
     var magnetURIs: [String] { state.withLock { $0.magnetURIs } }
     var uploadLimits: [String: Int] { state.withLock { $0.uploadLimits } }
+    var downloadLimits: [String: Int] { state.withLock { $0.downloadLimits } }
+    var globalDownloadLimit: Int? { state.withLock { $0.globalDownloadLimit } }
+    var globalUploadLimit: Int? { state.withLock { $0.globalUploadLimit } }
     var resumeAdds: [String] { state.withLock { $0.resumeAdds } }
     func events() -> AsyncStream<TorrentEvent> { stream }
 

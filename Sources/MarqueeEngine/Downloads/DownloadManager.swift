@@ -322,6 +322,12 @@ public actor DownloadManager {
         try await engine.setGlobalDownloadLimit(configuration.globalDownloadLimit)
         try await engine.setGlobalUploadLimit(configuration.globalUploadLimit)
         try await applyBatteryPolicy()
+        for torrent in try await torrents.managedDownloads()
+            where (torrent.state == .downloading || torrent.state == .checking || torrent.state == .seeding)
+                && !torrent.pausedByUser && !torrent.pausedForBattery && !torrent.pausedByQueue
+        {
+            try await applyLimits(to: torrent)
+        }
     }
 
     /// Refuses insufficient-space grabs before creating a torrent or payload row.
@@ -448,9 +454,9 @@ public actor DownloadManager {
                 torrent.pausedForBattery = false
                 torrent.state = .queued
                 try await torrents.update(torrent)
-                try await reconcileQueue()
             }
         }
+        try await reconcileQueue()
         await refreshSleepAssertion()
     }
 
@@ -632,8 +638,10 @@ public actor DownloadManager {
     }
 
     private func applyLimits(to torrent: Torrent) async throws {
-        if let limit = torrent.downloadLimit { try await engine.setDownloadLimit(TorrentID(hex: torrent.infoHash), bytesPerSecond: limit) }
-        if let limit = torrent.uploadLimit { try await engine.setUploadLimit(TorrentID(hex: torrent.infoHash), bytesPerSecond: limit) }
+        try await engine.setDownloadLimit(
+            TorrentID(hex: torrent.infoHash), bytesPerSecond: torrent.downloadLimit ?? 0)
+        try await engine.setUploadLimit(
+            TorrentID(hex: torrent.infoHash), bytesPerSecond: torrent.uploadLimit ?? 0)
     }
 
     private func enforceFreeSpace(size: Int64?, at path: URL, titleID: UUID, title: String) async throws {
