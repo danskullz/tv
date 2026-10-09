@@ -4,11 +4,12 @@ import GRDB
 /// `SchemaMigrationTests` snapshots the v1 schema and fails if it changes.
 enum Schema {
     /// Identifiers of every migration, in order.
-    static let migrationIdentifiers = ["v1"]
+    static let migrationIdentifiers = ["v1", "v2"]
 
     static func makeMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1") { db in try db.execute(sql: v1) }
+        migrator.registerMigration("v2") { db in try db.execute(sql: v2) }
         return migrator
     }
 
@@ -369,5 +370,38 @@ enum Schema {
         INSERT INTO titleSearch(titleId, title, sortTitle, overview)
         VALUES (new.id, new.title, new.sortTitle, COALESCE(new.overview, ''));
     END;
+    """
+
+    /// Monitoring and download management: movie availability dates on titles; download bookkeeping on
+    /// torrents (what they were grabbed for, seed goals, cumulative upload); the data needed to restore a
+    /// torrent after a relaunch, kept out of `torrent` so list queries never load it.
+    static let v2 = """
+    ALTER TABLE title ADD COLUMN releaseDate DATETIME;
+    ALTER TABLE title ADD COLUMN inCinemasDate DATETIME;
+    ALTER TABLE title ADD COLUMN digitalReleaseDate DATETIME;
+    ALTER TABLE title ADD COLUMN physicalReleaseDate DATETIME;
+
+    ALTER TABLE torrent ADD COLUMN grabId BLOB;
+    ALTER TABLE torrent ADD COLUMN episodeIds TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE torrent ADD COLUMN uploadedBytes INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE torrent ADD COLUMN pausedByUser BOOLEAN NOT NULL DEFAULT 0;
+    ALTER TABLE torrent ADD COLUMN pausedByQueue BOOLEAN NOT NULL DEFAULT 0;
+    ALTER TABLE torrent ADD COLUMN pausedForBattery BOOLEAN NOT NULL DEFAULT 0;
+    ALTER TABLE torrent ADD COLUMN seedRatioGoal REAL;
+    ALTER TABLE torrent ADD COLUMN seedTimeGoalMinutes INTEGER;
+    ALTER TABLE torrent ADD COLUMN downloadLimit INTEGER;
+    ALTER TABLE torrent ADD COLUMN uploadLimit INTEGER;
+    ALTER TABLE torrent ADD COLUMN importedAt DATETIME;
+
+    -- kind: 'magnet' (UTF-8 URI), 'file' (.torrent bytes) or 'resume' (libtorrent resume data).
+    CREATE TABLE torrentPayload (
+        infoHash TEXT PRIMARY KEY NOT NULL REFERENCES torrent(infoHash) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        data BLOB NOT NULL,
+        updatedAt DATETIME NOT NULL
+    );
+
+    CREATE INDEX healthIssue_code_entity ON healthIssue(code, entityId) WHERE resolvedAt IS NULL;
+    CREATE INDEX title_monitored ON title(kind) WHERE monitored = 1 AND deletedAt IS NULL;
     """
 }

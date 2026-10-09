@@ -37,6 +37,28 @@ public struct TorrentStatus: Sendable {
     public var piecesHave: Int
     /// 0 until metadata is known.
     public var pieceCount: Int
+
+    public init(
+        state: TorrentState, isPaused: Bool, hasMetadata: Bool, hasError: Bool, progress: Double,
+        totalWanted: Int64, totalWantedDone: Int64, payloadDownloaded: Int64, payloadUploaded: Int64,
+        downloadRate: Int, uploadRate: Int, peerCount: Int, seedCount: Int, piecesHave: Int, pieceCount: Int
+    ) {
+        self.state = state
+        self.isPaused = isPaused
+        self.hasMetadata = hasMetadata
+        self.hasError = hasError
+        self.progress = progress
+        self.totalWanted = totalWanted
+        self.totalWantedDone = totalWantedDone
+        self.payloadDownloaded = payloadDownloaded
+        self.payloadUploaded = payloadUploaded
+        self.downloadRate = downloadRate
+        self.uploadRate = uploadRate
+        self.peerCount = peerCount
+        self.seedCount = seedCount
+        self.piecesHave = piecesHave
+        self.pieceCount = pieceCount
+    }
 }
 
 public struct TorrentFile: Sendable, Hashable {

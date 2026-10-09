@@ -52,12 +52,15 @@ final class AppServices {
     nonisolated let blocklist: GRDBBlocklistRepository
     nonisolated let grabs: GRDBGrabRepository
     nonisolated let torrents: GRDBTorrentRepository
+    nonisolated let health: GRDBHealthIssueRepository
 
     // MARK: Engine
 
     @ObservationIgnored nonisolated let coordinator: IndexerSearchCoordinator
     @ObservationIgnored nonisolated let engineHost = EngineHost()
     @ObservationIgnored nonisolated let monitor: DownloadMonitor
+    @ObservationIgnored private var downloads: DownloadManager?
+    @ObservationIgnored private var automation: ReleaseAutomation?
     @ObservationIgnored private var pipeline: PlayPipeline?
     /// Plays in flight (kept alive until their last player window closes).
     @ObservationIgnored var activePlaybacks: [ActivePlayback] = []
@@ -103,6 +106,7 @@ final class AppServices {
         blocklist = GRDBBlocklistRepository(db)
         grabs = GRDBGrabRepository(db)
         torrents = GRDBTorrentRepository(db)
+        health = GRDBHealthIssueRepository(db)
         coordinator = IndexerSearchCoordinator(secrets: self.secrets)
         let host = engineHost
         monitor = DownloadMonitor(session: { host.current }, torrents: GRDBTorrentRepository(db))
@@ -135,6 +139,9 @@ final class AppServices {
             } catch {
                 announce("Couldn't start the demo content", error.localizedDescription, "exclamationmark.triangle")
             }
+        }
+        if let managed = try? await torrents.managedDownloads(), !managed.isEmpty {
+            _ = try? await downloadManager()
         }
         await refreshStatus()
     }
@@ -299,6 +306,35 @@ final class AppServices {
 
     // MARK: Engine
 
+    /// Lazily starts the managed-download engine, distinct from stream-specific tuning.
+    func downloadManager() async throws -> DownloadManager {
+        if let downloads { return downloads }
+        let session = try engineHost.session(loopbackOnly: isDemo)
+        let folder = downloadFolder
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let manager = DownloadManager(
+            engine: SessionDownloadEngine(session), torrents: torrents, health: health,
+            blocklist: blocklist, sleepAssertion: IOPMSleepAssertion())
+        try await manager.start()
+        downloads = manager
+        return manager
+    }
+
+    /// Starts RSS work only after the caller supplies at least one wanted item and an indexer is available.
+    func startReleaseAutomation(targets: @escaping ReleaseAutomation.TargetProvider) async throws {
+        guard automation == nil else { return }
+        guard let wanted = try? await targets(), !wanted.isEmpty else { return }
+        await reloadIndexers()
+        guard await CoordinatorSearcher(coordinator).enabledIndexerCount() > 0 else { return }
+        let manager = try await downloadManager()
+        let service = ReleaseAutomation(
+            search: CoordinatorSearcher(coordinator), targets: targets, grabber: manager,
+            grabs: grabs, blocklist: blocklist, history: history, health: health,
+            indexers: indexerRecords, refreshIndexers: { [weak self] in await self?.reloadIndexers() })
+        automation = service
+        await service.start()
+    }
+
     /// Creates the torrent session and the Play pipeline on first use.
     func playPipeline() async throws -> PlayPipeline {
         if let pipeline { return pipeline }
@@ -323,8 +359,12 @@ final class AppServices {
     func shutdownBlocking() {
         let host = engineHost
         let swarm = demoSwarm
+        let downloads = downloads
+        let automation = automation
         let done = DispatchSemaphore(value: 0)
         Task.detached {
+            await automation?.stop()
+            await downloads?.stop()
             await host.shutdown()
             await swarm?.stop()
             done.signal()

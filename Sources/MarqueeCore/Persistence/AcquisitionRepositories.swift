@@ -9,6 +9,8 @@ public protocol IndexerRepository: Sendable {
     /// Inserts or replaces by id.
     func upsert(_ indexer: Indexer) async throws
     func setEnabled(id: UUID, _ enabled: Bool) async throws
+    /// Persists rolling search health and sets a temporary auto-disable window at the threshold.
+    func recordSearchOutcome(id: UUID, succeeded: Bool, threshold: Int, disableFor: TimeInterval, now: Date) async throws
     func delete(id: UUID) async throws
 }
 
@@ -35,6 +37,27 @@ public struct GRDBIndexerRepository: IndexerRepository {
         try await database.writer.write { db in
             try db.execute(
                 sql: "UPDATE indexer SET enabled = ?, updatedAt = ? WHERE id = ?", arguments: [enabled, Date(), id])
+        }
+    }
+
+    public func recordSearchOutcome(
+        id: UUID, succeeded: Bool, threshold: Int = 5, disableFor: TimeInterval = 6 * 60 * 60,
+        now: Date = Date()
+    ) async throws {
+        try await database.writer.write { db in
+            guard var indexer = try Indexer.fetchOne(db, key: id) else { return }
+            if succeeded {
+                indexer.failureCount = 0
+                indexer.disabledUntil = nil
+                indexer.lastSuccessAt = now
+            } else {
+                indexer.failureCount += 1
+                if indexer.failureCount >= max(1, threshold), indexer.enabled {
+                    indexer.disabledUntil = now.addingTimeInterval(max(60, disableFor))
+                }
+            }
+            indexer.updatedAt = now
+            try indexer.update(db)
         }
     }
 
@@ -124,7 +147,8 @@ extension Indexer {
         let base = components?.url ?? url
         let apiPath = path.isEmpty || path == "/" ? "/api" : path
         return IndexerDefinition(
-            id: id, name: name, baseURL: base, apiPath: apiPath, enabled: enabled, priority: priority,
+            id: id, name: name, baseURL: base, apiPath: apiPath,
+            enabled: enabled && (disabledUntil.map { $0 <= Date() } ?? true), priority: priority,
             categories: categories, minimumSeeders: minimumSeeders)
     }
 }

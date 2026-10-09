@@ -47,6 +47,11 @@ public struct Title: Codable, FetchableRecord, PersistableRecord, Identifiable, 
     public var deletedAt: Date?
     public var createdAt: Date
     public var updatedAt: Date
+    /// Movie release dates (TMDB), which decide when a monitored movie becomes eligible for search.
+    public var releaseDate: Date?
+    public var inCinemasDate: Date?
+    public var digitalReleaseDate: Date?
+    public var physicalReleaseDate: Date?
 
     public init(
         id: UUID = UUID(), kind: TitleKind, tmdbId: Int? = nil, tvdbId: Int? = nil,
@@ -56,8 +61,13 @@ public struct Title: Codable, FetchableRecord, PersistableRecord, Identifiable, 
         qualityProfileId: UUID? = nil, rootFolderId: UUID? = nil, path: String? = nil,
         seriesType: SeriesType? = nil, addedAt: Date = Date(), posterPath: String? = nil,
         backdropPath: String? = nil, deletedAt: Date? = nil, createdAt: Date = Date(),
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(), releaseDate: Date? = nil, inCinemasDate: Date? = nil, digitalReleaseDate: Date? = nil,
+        physicalReleaseDate: Date? = nil
     ) {
+        self.releaseDate = releaseDate
+        self.inCinemasDate = inCinemasDate
+        self.digitalReleaseDate = digitalReleaseDate
+        self.physicalReleaseDate = physicalReleaseDate
         self.id = id
         self.kind = kind
         self.tmdbId = tmdbId

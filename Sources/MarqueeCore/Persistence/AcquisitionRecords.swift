@@ -123,6 +123,26 @@ public struct Torrent: Codable, FetchableRecord, PersistableRecord, Identifiable
     public var completedAt: Date?
     public var createdAt: Date
     public var updatedAt: Date
+    /// The grab (decision-log entry) that produced this download, if any.
+    public var grabId: UUID?
+    /// Library episodes this download was grabbed for (empty for movies).
+    public var episodeIds: [UUID]
+    /// Cumulative payload uploaded across app launches.
+    public var uploadedBytes: Int64
+    /// The user paused it; automatic queueing and power rules never resume it.
+    public var pausedByUser: Bool
+    /// Paused because an active-download slot is unavailable.
+    public var pausedByQueue: Bool
+    /// Paused by the battery power policy, never conflated with a user pause.
+    public var pausedForBattery: Bool
+    /// Stop seeding at this share ratio / after this many minutes (nil = use the app's default policy).
+    public var seedRatioGoal: Double?
+    public var seedTimeGoalMinutes: Int?
+    /// Bytes per second; nil = unlimited.
+    public var downloadLimit: Int?
+    public var uploadLimit: Int?
+    /// When the completion sink (importer) finished with it.
+    public var importedAt: Date?
 
     public var id: String { infoHash }
 
@@ -130,8 +150,23 @@ public struct Torrent: Codable, FetchableRecord, PersistableRecord, Identifiable
         infoHash: String, name: String, state: TorrentState = .queued, savePath: String,
         size: Int64? = nil, progress: Double = 0, titleId: UUID? = nil, isStreaming: Bool = false,
         keepAfterStream: Bool = true, lastError: String? = nil, addedAt: Date = Date(),
-        completedAt: Date? = nil, createdAt: Date = Date(), updatedAt: Date = Date()
+        completedAt: Date? = nil, createdAt: Date = Date(), updatedAt: Date = Date(),
+        grabId: UUID? = nil, episodeIds: [UUID] = [], uploadedBytes: Int64 = 0, pausedByUser: Bool = false,
+        pausedByQueue: Bool = false, pausedForBattery: Bool = false,
+        seedRatioGoal: Double? = nil, seedTimeGoalMinutes: Int? = nil, downloadLimit: Int? = nil,
+        uploadLimit: Int? = nil, importedAt: Date? = nil
     ) {
+        self.grabId = grabId
+        self.episodeIds = episodeIds
+        self.uploadedBytes = uploadedBytes
+        self.pausedByUser = pausedByUser
+        self.pausedByQueue = pausedByQueue
+        self.pausedForBattery = pausedForBattery
+        self.seedRatioGoal = seedRatioGoal
+        self.seedTimeGoalMinutes = seedTimeGoalMinutes
+        self.downloadLimit = downloadLimit
+        self.uploadLimit = uploadLimit
+        self.importedAt = importedAt
         self.infoHash = infoHash.lowercased()
         self.name = name
         self.state = state
