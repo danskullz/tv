@@ -125,7 +125,8 @@ private struct PlayerTopBar: View {
                 PlayerGlassCircleButton(systemImage: "xmark", label: "Close player") { session.requestClose() }
                     .onHover { session.controlsHoverChanged($0) }
             }
-            .padding(.horizontal, 28)
+            .padding(.leading, 28)
+            .padding(.trailing, 20)
             .padding(.top, session.isFullScreen ? 28 : 10)
             .foregroundStyle(.white)
             Spacer()
