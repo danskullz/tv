@@ -60,6 +60,52 @@ import TorrentEngine
         #expect(try await health.active().map(\.code) == ["diskSpaceLow"])
     }
 
+    @Test func retriesAnErroredTorrentFromItsStoredPayload() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let health = GRDBHealthIssueRepository(database)
+        let hash = String(repeating: "6", count: 40)
+        let request = makeDownloadRequest(hash: hash, title: "Retry me")
+        try await addTitle(for: request, to: database)
+        let storedMagnet = "magnet:?xt=urn:btih:\(hash)&tr=https%3A%2F%2Ftracker.example%2Fannounce"
+        try await repository.upsert(Torrent(
+            infoHash: hash, name: request.release.title, state: .error, savePath: request.savePath.path,
+            size: request.release.size, titleId: request.titleId, lastError: "tracker failure"))
+        try await repository.savePayload(infoHash: hash, .magnet(storedMagnet))
+
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: health,
+            configuration: .init(reservedFreeSpaceBytes: 0), freeSpace: { _ in Int64.max })
+        try await manager.start()
+        let retried = try await manager.add(request)
+        #expect(retried.state == .downloading)
+        #expect(retried.lastError == nil)
+        #expect(engine.addedHashes == [hash])
+        #expect(engine.magnetURIs == [storedMagnet])
+        await manager.stop()
+    }
+
+    @Test func appliesUploadLimitWhenQueuedCompletedTorrentStartsSeeding() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let hash = String(repeating: "7", count: 40)
+        try await repository.upsert(Torrent(
+            infoHash: hash, name: "Completed", state: .queued,
+            savePath: FileManager.default.temporaryDirectory.path, size: 100, progress: 1,
+            uploadLimit: 512))
+        try await repository.savePayload(infoHash: hash, TorrentPayload(kind: .resume, data: Data(hash.utf8)))
+
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: GRDBHealthIssueRepository(database),
+            configuration: .init(maximumActiveSeeds: 1), freeSpace: { _ in Int64.max })
+        try await manager.start()
+        #expect(try await repository.torrent(infoHash: hash)?.state == .seeding)
+        #expect(engine.uploadLimits[hash] == 512)
+        await manager.stop()
+    }
+
     @Test func resumeDataRestoresIntoTheNextSession() async throws {
         let database = try AppDatabase.inMemory()
         let repository = GRDBTorrentRepository(database)
@@ -132,6 +178,7 @@ private func addTitle(for request: DownloadRequest, to database: AppDatabase) as
 private final class FakeManagedTorrentEngine: ManagedTorrentEngine, @unchecked Sendable {
     private struct State {
         var addedHashes: [String] = []
+        var magnetURIs: [String] = []
         var resumeAdds: [String] = []
         var paused: Set<String> = []
         var statuses: [String: TorrentStatus] = [:]
@@ -152,6 +199,8 @@ private final class FakeManagedTorrentEngine: ManagedTorrentEngine, @unchecked S
     }
 
     var addedHashes: [String] { state.withLock { $0.addedHashes } }
+    var magnetURIs: [String] { state.withLock { $0.magnetURIs } }
+    var uploadLimits: [String: Int] { state.withLock { $0.uploadLimits } }
     var resumeAdds: [String] { state.withLock { $0.resumeAdds } }
     func events() -> AsyncStream<TorrentEvent> { stream }
 
@@ -162,6 +211,7 @@ private final class FakeManagedTorrentEngine: ManagedTorrentEngine, @unchecked S
         let id = TorrentID(hex: hash.lowercased())
         state.withLock { s in
             s.addedHashes.append(id.hex)
+            s.magnetURIs.append(uri)
             if paused { s.paused.insert(id.hex) }
             s.statuses[id.hex] = status(paused: paused)
         }

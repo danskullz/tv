@@ -22,7 +22,10 @@ import Testing
             savePath: FileManager.default.temporaryDirectory.appending(path: "marquee-automation-tests"))
         let now = date(2026, 10, 9)
         let release = makeAutomationRelease(publishDate: now)
-        let searcher = FakeReleaseSearcher(releases: [release])
+        let searcher = FakeReleaseSearcher(
+            releases: [release], outcomes: [IndexerSearchOutcome(
+                indexerID: release.indexerID, indexerName: release.indexerName,
+                status: .failure(.timeout))])
         let grabber = FakeReleaseGrabber()
         let automation = ReleaseAutomation(
             search: searcher, targets: { [target] }, grabber: grabber,
@@ -31,6 +34,7 @@ import Testing
             sourceResolver: { _ in .magnet("magnet:?xt=urn:btih:\(release.infoHash!)") })
 
         let held = await automation.syncRSS(now: now)
+        #expect(held.indexerFailures == 1)
         #expect(held.grabbed == 0)
         #expect(held.delayed == 1)
         #expect(await grabber.requests.isEmpty)
@@ -40,6 +44,7 @@ import Testing
         #expect(heldRows[0].reason["rejections"] != nil)
 
         let released = await automation.syncRSS(now: now.addingTimeInterval(61 * 60))
+        #expect(released.indexerFailures == 1)
         #expect(released.grabbed == 1)
         #expect(released.delayed == 0)
         #expect(await grabber.requests.count == 1)
@@ -64,7 +69,7 @@ import Testing
             magnetURL: URL(string: "magnet:?xt=urn:btih:\(String(repeating: "b", count: 40))"),
             infoHash: String(repeating: "b", count: 40), seeders: 10, publishDate: date(2026, 10, 9))
         let searcher = FakeReleaseSearcher(releases: [release])
-        let grabber = FakeReleaseGrabber()
+        let grabber = FakeReleaseGrabber(state: .error)
         let refresher = FakeAutomationRefresher()
         let automation = ReleaseAutomation(
             search: searcher, targets: { [] }, grabber: grabber,
@@ -79,8 +84,11 @@ import Testing
         #expect(await refresher.count == 0)
 
         let searched = await automation.searchNow(target: target, now: date(2026, 10, 9))
-        #expect(searched.grabbed == 1)
+        #expect(searched.grabbed == 0)
         #expect(await searcher.queries == [.movie(title: title.title, year: nil, imdbID: nil, tmdbID: nil)])
+        let grabs = try await GRDBGrabRepository(database).grabs(titleId: title.id)
+        #expect(grabs.count == 1)
+        #expect(grabs[0].outcome == .failed)
         await automation.stop()
     }
 }
@@ -95,23 +103,30 @@ private func makeAutomationRelease(publishDate: Date) -> IndexerRelease {
 
 private actor FakeReleaseSearcher: ReleaseSearching {
     private let releases: [IndexerRelease]
+    private let outcomes: [IndexerSearchOutcome]
     private let count: Int
     private(set) var queries: [TorznabQuery] = []
-    init(releases: [IndexerRelease], count: Int = 1) { self.releases = releases; self.count = count }
+    init(releases: [IndexerRelease], outcomes: [IndexerSearchOutcome] = [], count: Int = 1) {
+        self.releases = releases
+        self.outcomes = outcomes
+        self.count = count
+    }
     func search(_ query: TorznabQuery) async -> CoordinatedSearchResult {
         queries.append(query)
-        return CoordinatedSearchResult(releases: releases)
+        return CoordinatedSearchResult(releases: releases, outcomes: outcomes)
     }
     func enabledIndexerCount() async -> Int { count }
 }
 
 private actor FakeReleaseGrabber: ReleaseGrabber {
+    private let state: MarqueeCore.TorrentState
     private(set) var requests: [DownloadRequest] = []
+    init(state: MarqueeCore.TorrentState = .queued) { self.state = state }
     func add(_ request: DownloadRequest) async throws -> Torrent {
         requests.append(request)
         return Torrent(
             infoHash: request.release.infoHash ?? "unknown", name: request.release.title,
-            savePath: request.savePath.path, titleId: request.titleId)
+            state: state, savePath: request.savePath.path, titleId: request.titleId)
     }
 }
 

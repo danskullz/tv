@@ -171,6 +171,7 @@ public enum DownloadManagerError: Error, Sendable, Equatable {
     case noDownloadLink
     case insufficientSpace(required: Int64, available: Int64)
     case alreadyManaged(String)
+    case torrentStillInError(String)
     case unsupportedPayload
 }
 
@@ -247,7 +248,41 @@ public actor DownloadManager {
             payload = TorrentPayload(kind: .file, data: bytes)
         }
         if let existing = try await torrents.torrent(infoHash: resolvedHash) {
-            guard existing.state != .error else { return existing }
+            if existing.state == .error {
+                if loadedHashes.contains(existing.infoHash) {
+                    try await engine.remove(TorrentID(hex: existing.infoHash), deleteFiles: false)
+                    loadedHashes.remove(existing.infoHash)
+                }
+                var retry = existing
+                retry.name = request.release.title
+                retry.state = .queued
+                retry.progress = 0
+                retry.titleId = request.titleId
+                retry.grabId = request.grabId
+                retry.episodeIds = request.episodeIds
+                retry.size = request.release.size ?? retry.size
+                retry.lastError = nil
+                retry.completedAt = nil
+                retry.uploadedBytes = 0
+                retry.importedAt = nil
+                retry.isStreaming = false
+                retry.pausedByUser = false
+                retry.pausedByQueue = false
+                retry.pausedForBattery = false
+                retry.seedRatioGoal = request.seedRatioGoal ?? request.release.minimumRatio ?? configuration.defaultSeedRatioGoal
+                retry.seedTimeGoalMinutes = request.seedTimeGoalMinutes
+                    ?? request.release.minimumSeedTime.map { Int(($0 / 60).rounded(.up)) }
+                    ?? configuration.defaultSeedTimeGoalMinutes
+                retry.downloadLimit = request.downloadLimit
+                retry.uploadLimit = request.uploadLimit
+                let savedPayload = try await torrents.payload(infoHash: resolvedHash) ?? payload
+                try await torrents.update(retry)
+                try await torrents.savePayload(infoHash: resolvedHash, savedPayload)
+                try await health.resolve(code: "downloadFailed", entityId: resolvedHash)
+                try await health.resolve(code: "downloadHashFailed", entityId: resolvedHash)
+                try await reconcileQueue()
+                return try await torrents.torrent(infoHash: resolvedHash) ?? retry
+            }
             throw DownloadManagerError.alreadyManaged(existing.infoHash)
         }
         try FileManager.default.createDirectory(at: request.savePath, withIntermediateDirectories: true)
@@ -441,6 +476,7 @@ public actor DownloadManager {
                 if torrent.progress >= 1 {
                     guard seedsInUse < configuration.maximumActiveSeeds else { continue }
                     try await addStoredTorrent(torrent)
+                    try await applyLimits(to: torrent)
                     try await engine.resume(TorrentID(hex: torrent.infoHash))
                     torrent.state = .seeding
                     torrent.pausedByQueue = false
@@ -458,6 +494,7 @@ public actor DownloadManager {
                 }
             } else if torrent.state == .paused, torrent.pausedByQueue {
                 if torrent.progress >= 1, seedsInUse < configuration.maximumActiveSeeds {
+                    try await applyLimits(to: torrent)
                     try await engine.resume(TorrentID(hex: torrent.infoHash))
                     torrent.state = .seeding
                     torrent.pausedByQueue = false
@@ -505,6 +542,8 @@ public actor DownloadManager {
                 fixAction: "retryDownload", entityId: id.hex)
             await blocklistFailure(infoHash: id.hex, reason: "Torrent data failed its integrity check.")
         case .error(let id, let message):
+            try? await engine.remove(id, deleteFiles: false)
+            loadedHashes.remove(id.hex)
             try? await torrents.updateProgress(infoHash: id.hex, progress: 0, state: .error, lastError: message)
             _ = try? await health.report(
                 code: "downloadFailed", severity: .error, message: message,

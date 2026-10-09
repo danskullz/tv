@@ -119,7 +119,9 @@ public actor ReleaseAutomation {
         guard await search.enabledIndexerCount() > 0 else { return AutomationRunResult() }
         let found = await search.search(.generic())
         await recordIndexerHealth(found, now: now)
-        return await process(found.releases, for: targets, origin: .rss, ignoreDelay: false, now: now)
+        var result = await process(found.releases, for: targets, origin: .rss, ignoreDelay: false, now: now)
+        result.indexerFailures = found.failedCount
+        return result
     }
 
     @discardableResult
@@ -128,7 +130,9 @@ public actor ReleaseAutomation {
         guard await search.enabledIndexerCount() > 0 else { return AutomationRunResult() }
         let found = await search.search(Self.query(for: target.wanted))
         await recordIndexerHealth(found, now: now)
-        return await process(found.releases, for: [target], origin: .searchNow, ignoreDelay: true, now: now)
+        var result = await process(found.releases, for: [target], origin: .searchNow, ignoreDelay: true, now: now)
+        result.indexerFailures = found.failedCount
+        return result
     }
 
     @discardableResult
@@ -141,7 +145,6 @@ public actor ReleaseAutomation {
             let found = await search.search(Self.query(for: target.wanted))
             await recordIndexerHealth(found, now: now)
             let result = await process(found.releases, for: [target], origin: .searchNow, ignoreDelay: true, now: now)
-            total.indexerFailures += found.failedCount
             total.searched += result.searched
             total.accepted += result.accepted
             total.grabbed += result.grabbed
@@ -192,7 +195,10 @@ public actor ReleaseAutomation {
                         episodeIds: target.wanted.episode.map { [$0.id] } ?? [], grabId: id,
                         savePath: target.savePath, seedRatioGoal: target.seedRatioGoal,
                         seedTimeGoalMinutes: target.seedTimeGoalMinutes)
-                    _ = try await grabber.add(request)
+                    let download = try await grabber.add(request)
+                    guard download.state != .error else {
+                        throw DownloadManagerError.torrentStillInError(download.infoHash)
+                    }
                     grabbedID = id
                     grabbedReleaseID = release.id
                     if let hash { hashesGrabbed.insert(hash) }
@@ -200,6 +206,12 @@ public actor ReleaseAutomation {
                     break
                 } catch DownloadManagerError.alreadyManaged {
                     break
+                } catch DownloadManagerError.torrentStillInError(let infoHash) {
+                    failedReleaseIDs.insert(release.id)
+                    await appendDecision(
+                        target: target, release: release, outcome: .failed,
+                        origin: origin, grabId: UUID(), score: decision.formatScore,
+                        reason: ["failure": .string("Torrent \(infoHash) remains in an error state after retry")])
                 } catch DownloadManagerError.insufficientSpace(let required, let available) {
                     failedReleaseIDs.insert(release.id)
                     result.delayed += 1
