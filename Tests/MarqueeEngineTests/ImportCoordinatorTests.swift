@@ -52,6 +52,38 @@ import Testing
         #expect(try await database.writer.read { try MediaFile.fetchCount($0) } == 0)
     }
 
+    @Test func concurrentDuplicateDownloadsOnlyImportOnce() async throws {
+        let fixture = try importFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let database = try AppDatabase.inMemory()
+        let (title, _) = try await importTestLibrary(database)
+        let coordinator = ImportCoordinator(
+            database: database, probe: FixedImportProbe(), rootDirectory: { fixture.library },
+            configuration: { ImportCoordinatorConfiguration(transferStrategy: .copy) })
+        let source = fixture.downloads.appendingPathComponent("Demo.Show.S01E01.1080p.WEB-DL.mkv")
+        try Data("a valid video fixture".utf8).write(to: source)
+        let event = CompletedDownload(
+            infoHash: "concurrent-duplicate", savePath: fixture.downloads.path,
+            releaseName: "Demo.Show.S01E01.1080p.WEB-DL-GRP",
+            files: [CompletedFile(
+                path: source.lastPathComponent,
+                target: .episodes(titleID: title.id, refs: [EpisodeRef(season: 1, episode: 1)]))])
+
+        let outcomes = try await withThrowingTaskGroup(of: [ImportCoordinatorEvent].self) { group in
+            group.addTask { try await coordinator.process(event) }
+            group.addTask { try await coordinator.process(event) }
+            var results: [[ImportCoordinatorEvent]] = []
+            for try await result in group { results.append(result) }
+            return results
+        }
+        let events = outcomes.compactMap(\.first)
+        let imported = events.filter { if case .imported = $0 { true } else { false } }
+        let skipped = events.filter { if case .skipped = $0 { true } else { false } }
+        #expect(imported.count == 1)
+        #expect(skipped.count == 1)
+        #expect(try await database.writer.read { try MediaFile.fetchCount($0) } == 1)
+    }
+
     @Test func verifiedUpgradeTrashesOldFileAndUndoRestoresIt() async throws {
         let fixture = try importFixture()
         defer { try? FileManager.default.removeItem(at: fixture.directory) }

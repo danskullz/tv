@@ -172,8 +172,9 @@ public actor ImportCoordinator: DownloadImporting {
     private func importFile(_ file: CompletedFile, from download: CompletedDownload) async throws -> ImportCoordinatorEvent {
         let source = try sourceURL(file.path, savePath: download.savePath)
         let key = download.infoHash.lowercased() + ":" + source.path
-        guard !inFlight.contains(key) else { return .skipped(path: file.path, reason: "This file is already being imported.") }
-        inFlight.insert(key)
+        guard inFlight.insert(key).inserted else {
+            return .skipped(path: file.path, reason: "This file is already being imported.")
+        }
         defer { inFlight.remove(key) }
         if try await hasReceipt(sourceKey: key) {
             return .skipped(path: file.path, reason: "This completed file was already imported.")
