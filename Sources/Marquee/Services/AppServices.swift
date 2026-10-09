@@ -163,6 +163,7 @@ final class AppServices {
             _ = try? await downloadManager()
         }
         await refreshStatus()
+        try? await startAutomaticReleaseAutomation()
     }
 
     /// `-demoEpisodeSeconds 150` makes the clips long enough for the player's Up Next card (it needs > 2 min).
@@ -316,12 +317,14 @@ final class AppServices {
         try secrets.set(apiKey, account: record.credentialRef ?? "")
         try await indexerRecords.upsert(record)
         await reloadIndexers()
+        try? await startAutomaticReleaseAutomation()
         return record
     }
 
     func setIndexerEnabled(_ indexer: Indexer, _ enabled: Bool) async {
         try? await indexerRecords.setEnabled(id: indexer.id, enabled)
         await reloadIndexers()
+        if enabled { try? await startAutomaticReleaseAutomation() }
     }
 
     func deleteIndexer(_ indexer: Indexer) async {
@@ -340,17 +343,18 @@ final class AppServices {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let manager = DownloadManager(
             engine: SessionDownloadEngine(session), torrents: torrents, health: health,
-            blocklist: blocklist, sleepAssertion: IOPMSleepAssertion(),
+            blocklist: blocklist,
+            completionSink: ManagedDownloadImportSink(session: session, importer: importCoordinator, library: library),
+            sleepAssertion: IOPMSleepAssertion(),
             powerSource: IOKitPowerSourceMonitor())
         try await manager.start()
         downloads = manager
         return manager
     }
 
-    /// Starts RSS work only after the caller supplies at least one wanted item and an indexer is available.
+    /// Starts coalesced RSS checks when an indexer exists. Empty target sets do not make network requests.
     func startReleaseAutomation(targets: @escaping ReleaseAutomation.TargetProvider) async throws {
         guard automation == nil else { return }
-        guard let wanted = try? await targets(), !wanted.isEmpty else { return }
         await reloadIndexers()
         guard await CoordinatorSearcher(coordinator).enabledIndexerCount() > 0 else { return }
         let manager = try await downloadManager()
@@ -360,6 +364,11 @@ final class AppServices {
             indexers: indexerRecords, refreshIndexers: { [weak self] in await self?.reloadIndexers() })
         automation = service
         await service.start()
+    }
+
+    func searchNow(_ target: AutomationTarget) async -> AutomationRunResult? {
+        guard let automation else { return nil }
+        return await automation.searchNow(target: target)
     }
 
     /// Creates the torrent session and the Play pipeline on first use.

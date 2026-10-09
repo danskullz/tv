@@ -489,6 +489,7 @@ public actor DownloadManager {
     public func saveResumeData() async {
         guard let managed = try? await torrents.managedDownloads() else { return }
         for torrent in managed {
+            guard loadedHashes.contains(torrent.infoHash) else { continue }
             do {
                 let data = try await engine.saveResumeData(TorrentID(hex: torrent.infoHash))
                 try await torrents.savePayload(infoHash: torrent.infoHash, TorrentPayload(kind: .resume, data: data))
@@ -699,10 +700,15 @@ public actor DownloadManager {
             if try await completionSink.completed(DownloadCompletion(torrent: torrent)) {
                 torrent.importedAt = Date()
                 try await torrents.update(torrent)
+                try await health.resolve(code: "downloadFailed", entityId: torrent.infoHash)
+                try await health.resolve(code: "importFailed", entityId: torrent.infoHash)
+            } else {
+                _ = try? await health.report(
+                    code: "importFailed", severity: .warning,
+                    message: "Couldn't import the completed download \(torrent.name).",
+                    fixAction: "retryImport", entityId: torrent.infoHash)
             }
-            try await health.resolve(code: "downloadFailed", entityId: torrent.infoHash)
         } catch {
-            await blocklistFailure(infoHash: torrent.infoHash, reason: "Import rejected: \(error)")
             _ = try? await health.report(
                 code: "importFailed", severity: .error, message: "Couldn't import \(torrent.name): \(error)",
                 fixAction: "retryImport", entityId: torrent.infoHash)

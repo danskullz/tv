@@ -71,6 +71,14 @@ public struct TorrentFile: Sendable, Hashable {
     public var offset: Int64
     /// 0 = skip, 1...7 (libtorrent default 4).
     public var priority: Int
+
+    public init(index: Int, path: String, size: Int64, offset: Int64, priority: Int) {
+        self.index = index
+        self.path = path
+        self.size = size
+        self.offset = offset
+        self.priority = priority
+    }
 }
 
 public struct TorrentMetadata: Sendable {
@@ -79,6 +87,14 @@ public struct TorrentMetadata: Sendable {
     public var pieceLength: Int
     public var pieceCount: Int
     public var files: [TorrentFile]
+
+    public init(name: String, totalSize: Int64, pieceLength: Int, pieceCount: Int, files: [TorrentFile]) {
+        self.name = name
+        self.totalSize = totalSize
+        self.pieceLength = pieceLength
+        self.pieceCount = pieceCount
+        self.files = files
+    }
 }
 
 /// Compact set of completed pieces.

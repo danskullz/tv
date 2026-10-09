@@ -60,6 +60,34 @@ import TorrentEngine
         #expect(try await health.active().map(\.code) == ["diskSpaceLow"])
     }
 
+    @Test func failedCompletionImportRemainsVisibleAndIsNotBlocklisted() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = GRDBTorrentRepository(database)
+        let health = GRDBHealthIssueRepository(database)
+        let blocklist = GRDBBlocklistRepository(database)
+        let engine = FakeManagedTorrentEngine()
+        let manager = DownloadManager(
+            engine: engine, torrents: repository, health: health, blocklist: blocklist,
+            configuration: .init(reservedFreeSpaceBytes: 0), freeSpace: { _ in Int64.max })
+        try await manager.start()
+        let hash = String(repeating: "f", count: 40)
+        let request = makeDownloadRequest(hash: hash, title: "Import failure")
+        try await addTitle(for: request, to: database)
+        _ = try await manager.add(request)
+        engine.emit(.finished(TorrentID(hex: hash)))
+
+        var completed: Torrent?
+        for _ in 0..<100 {
+            completed = try await repository.torrent(infoHash: hash)
+            if completed?.state == .seeding { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(try #require(completed).importedAt == nil)
+        #expect(try await health.active().contains { $0.code == "importFailed" && $0.entityId == hash })
+        #expect(try await blocklist.entries(titleId: request.titleId).isEmpty)
+        await manager.stop()
+    }
+
     @Test func refusesSpaceArithmeticOverflow() async throws {
         let database = try AppDatabase.inMemory()
         let repository = GRDBTorrentRepository(database)

@@ -214,7 +214,9 @@ extension AppServices {
         let result = CatalogueResult(
             kind: kind, tmdbID: tmdbID, title: item.title, year: item.year == 0 ? nil : item.year,
             overview: "", posterURL: nil, existing: nil)
-        return try await addToLibrary(result, preset: AppSettings.defaultPreset)
+        let title = try await addToLibrary(result, preset: AppSettings.defaultPreset)
+        try? await startAutomaticReleaseAutomation()
+        return title
     }
 
     func calendarEvents(from now: Date = Date(), days: Int = 120) async throws -> [CalendarEvent] {

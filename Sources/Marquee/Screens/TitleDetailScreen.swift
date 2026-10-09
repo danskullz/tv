@@ -302,18 +302,49 @@ struct TitleDetailScreen: View {
             }
         }
         if item.availability == .missing {
-            Button { model.show(Toast(title: String(localized: "Download started"), detail: item.title, systemImage: "arrow.down.circle.fill")) } label: {
+            Button { download(item) } label: {
                 Label("Download", systemImage: "arrow.down.circle")
             }
             .buttonStyle(.marqueeSecondary)
         }
         Button {
-            model.show(Toast(title: String(localized: "Monitoring \(item.title)"), detail: String(localized: "New releases will download automatically."), systemImage: "eye.fill"))
+            monitor(item)
         } label: { Label("Monitor", systemImage: "eye") }
             .buttonStyle(.marqueeSecondary)
         if model.services != nil {
             Button { showWhyRelease = true } label: { Label("Why This Release?", systemImage: "questionmark.circle") }
                 .buttonStyle(.plain)
+        }
+    }
+
+    private func monitor(_ item: PosterItem) {
+        guard let services = model.services, let titleID = UUID(uuidString: item.id) else { return }
+        Task {
+            do {
+                try await services.monitorTitle(titleID)
+                model.show(Toast(
+                    title: String(localized: "Monitoring \(item.title)"),
+                    detail: String(localized: "New releases will download automatically."),
+                    systemImage: "eye.fill"))
+            } catch {
+                model.show(Toast(title: "Couldn't monitor title", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"))
+            }
+        }
+    }
+
+    private func download(_ item: PosterItem) {
+        guard let services = model.services, let titleID = UUID(uuidString: item.id) else { return }
+        Task {
+            do {
+                let result = try await services.downloadNow(titleID: titleID)
+                if result.grabbed > 0 {
+                    model.show(Toast(title: "Download queued", detail: item.title, systemImage: "arrow.down.circle.fill"))
+                } else {
+                    model.show(Toast(title: "No release was grabbed", detail: "Check indexers, quality settings, or availability.", systemImage: "info.circle"))
+                }
+            } catch {
+                model.show(Toast(title: "Couldn't start download", detail: error.localizedDescription, systemImage: "exclamationmark.triangle"))
+            }
         }
     }
 
