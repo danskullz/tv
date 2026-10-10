@@ -47,8 +47,7 @@ struct DiscoverScreen: View {
         }
         .navigationTitle(Text("Discover"))
         .heroScrollEdge()
-        .toolbarBackground(.visible, for: .windowToolbar)
-        .toolbarColorScheme(.dark, for: .windowToolbar)
+        .toolbar(removing: .title)
         .onAppear { startLoad() }
         // `onAppear` can run before `AppServices.prepare()` has resolved the TMDB key (it is read
         // from the secret store at start-up) and it does not fire again, which used to leave a
