@@ -248,6 +248,64 @@ import Testing
         #expect(ReleaseDecisionEngine.decide([c], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))[0].isAccepted)
     }
 
+    @Test func omakeBatchesMatchSpecials() {
+        // Black Lagoon S00E02 ("The Magical Girl") only exists in omake batches, which parse
+        // movie-shaped ("[BBF] Black Lagoon - Omake ..."). They match season-0 wants as packs,
+        // and regular episodes reject them without burning a download attempt.
+        let omakeProfile = qualityProfile(allowing: [.webDL720p, .webDL1080p, .bluray1080p], cutoff: .bluray1080p)
+        let batch = qualityMakeCandidate("[BBF] Black Lagoon - Omake [BR][1280x720_x264_AAC]", sizeGB: 0.55)
+        let special = WantedItem.episode("Black Lagoon", season: 0, episodes: [2], runtimeMinutes: 3, seasonEpisodeCount: 7)
+        let matched = ReleaseDecisionEngine.decide([batch], in: DecisionContext(wanted: special, profile: omakeProfile, now: qualityNow))[0]
+        #expect(matched.isAccepted, "\(matched.rejections.map(\.message))")
+        let regular = WantedItem.episode("Black Lagoon", season: 1, episodes: [1], runtimeMinutes: 24, seasonEpisodeCount: 24)
+        #expect(ReleaseDecisionEngine.decide([batch], in: DecisionContext(wanted: regular, profile: omakeProfile, now: qualityNow))[0].rejections.map(\.code) == ["wrongEpisode"])
+        // A bare "Omake" name with no quality tags still matches (as an unidentified pack).
+        let bare = qualityMakeCandidate("Black Lagoon Omake", sizeGB: 0.5)
+        #expect(WantedItem.episode("Black Lagoon", season: 0, episodes: [2], runtimeMinutes: 3, seasonEpisodeCount: 7).match(bare.parsed) == .pack)
+        // "OVA"/"Special" names are left alone: only "omake" is unambiguous bonus content.
+        let ova = qualityMakeCandidate("Black Lagoon OVA 1080p WEB-DL H.264-GRP", sizeGB: 5)
+        #expect(ReleaseDecisionEngine.decide([ova], in: DecisionContext(wanted: special, profile: omakeProfile, now: qualityNow))[0].rejections.map(\.code) == ["wrongTitle"])
+    }
+
+    @Test func multiSeasonPacksSizeLikeOneSeason() {
+        // A 16.9 GB S01-S03 pack holds ~29 episodes across uneven seasons (24 + 5); sizing it
+        // against one season (24 x 24 min) accepts it, while the old seasons x count math rejected it.
+        let wanted = WantedItem.episode("Black Lagoon", season: 1, episodes: [1], runtimeMinutes: 24, seasonEpisodeCount: 24)
+        let pack = qualityMakeCandidate(
+            "Black.Lagoon.S01-S03.COMPLETE.1080p.BluRay.x264-GRP", seeders: 50, sizeGB: 16.9)
+        let decided = ReleaseDecisionEngine.decide([pack], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))[0]
+        #expect(decided.isAccepted && decided.isPack, "\(decided.rejections.map(\.message))")
+        // The real "+"-shaped complete title parses seasonless and matches the same way.
+        let plus = qualityMakeCandidate(
+            "[Anime Time] Black Lagoon (Complete Series) (Season 01+02+03+OST) [BD] [Dual Audio] [1080p][HEVC 10bit x265][AAC][Eng Sub]",
+            seeders: 50, sizeGB: 16.9)
+        #expect(ReleaseDecisionEngine.decide([plus], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))[0].isAccepted)
+        // Grossly mislabeled junk is still caught.
+        let junk = qualityMakeCandidate("Black.Lagoon.S01-S03.COMPLETE.1080p.BluRay.x264-GRP", seeders: 50, sizeGB: 0.3)
+        #expect(ReleaseDecisionEngine.decide([junk], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))[0].rejections.map(\.code) == ["sizeTooSmall"])
+    }
+
+    @Test func blocklistIsScopedToEpisodes() {
+        // A pack that failed for one episode (missing S00E02) still serves other episodes.
+        let thisEpisode = UUID(), otherEpisode = UUID()
+        let candidate = qualityMakeCandidate("Show.S01.1080p.WEB-DL.H.264-GRP", sizeGB: 30)
+        var list = ReleaseBlocklist()
+        list.add(infoHash: nil, title: candidate.release.title, reason: "missing S00E02", episodeID: thisEpisode)
+        let wanted = WantedItem.episode("Show", season: 1, episodes: [3], runtimeMinutes: 45, seasonEpisodeCount: 10)
+        func decide(_ episodeID: UUID?, _ list: ReleaseBlocklist) -> ReleaseDecision {
+            ReleaseDecisionEngine.decide(
+                [candidate], in: DecisionContext(
+                    wanted: wanted, profile: profile, blocklist: list, now: qualityNow, episodeID: episodeID))[0]
+        }
+        #expect(decide(otherEpisode, list).isAccepted)
+        #expect(decide(thisEpisode, list).rejections.map(\.code) == ["blocklisted"])
+        #expect(decide(nil, list).rejections.map(\.code) == ["blocklisted"])
+        // Global entries (no episode) still apply everywhere.
+        var global = ReleaseBlocklist()
+        global.add(infoHash: nil, title: candidate.release.title, reason: "dead")
+        #expect(decide(otherEpisode, global).rejections.map(\.code) == ["blocklisted"])
+    }
+
     @Test func packPolicyForSingleEpisodes() {
         let wanted = WantedItem.episode("Show", season: 1, episodes: [3], runtimeMinutes: 45, seasonEpisodeCount: 10)
         let pack = qualityMakeCandidate("Show.S01.1080p.WEB-DL.H.264-GRP", sizeGB: 30)

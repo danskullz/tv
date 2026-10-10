@@ -138,6 +138,11 @@ public struct WantedItem: Sendable, Hashable {
                     return parsed.isPack ? .pack : .exact
                 }
                 return mismatch
+            case .movie, .unknown:
+                // Omake batches ("<Show> - Omake") parse movie-shaped: bonus shorts with
+                // no season numbering. They belong to season 0 and to nothing else.
+                if season == 0, parsed.isSpecial { return .pack }
+                return mismatch
             case .seasonPack, .multiSeason:
                 guard let season else { return mismatch }
                 if parsed.seasons.contains(season) { return .pack }
@@ -164,8 +169,12 @@ public struct WantedItem: Sendable, Hashable {
         case .daily: return runtimeMinutes
         case .animeAbsolute: return runtimeMinutes * Double(max(1, parsed.absoluteEpisodes.count))
         case .seasonPack, .multiSeason:
+            // Per-season lengths are unknown, and seasons vary wildly (a 24-episode combined
+            // season next to a 5-episode OVA). Scaling by the season count false-rejects honest
+            // complete packs, so multi-season packs are sized like one season: still catches
+            // grossly mislabeled junk, never blocks a real pack.
             guard let episodeCount else { return nil }
-            return runtimeMinutes * Double(episodeCount * max(1, parsed.seasons.count))
+            return runtimeMinutes * Double(episodeCount)
         case .completeSeries: return nil
         }
     }
@@ -184,25 +193,41 @@ public struct CurrentFile: Sendable, Hashable, Codable {
 /// Releases that must never be grabbed again (failed, wrong content, dead). Built from persisted
 /// `BlocklistEntry` rows.
 public struct ReleaseBlocklist: Sendable, Hashable {
-    private var byHash: [String: String] = [:]
-    private var byTitle: [String: String] = [:]
+    private struct Entry: Hashable, Sendable {
+        var reason: String
+        var episodeID: UUID?
+    }
+
+    private var byHash: [String: Entry] = [:]
+    private var byTitle: [String: Entry] = [:]
 
     public init() {}
 
     public init(entries: [BlocklistEntry]) {
-        for entry in entries { add(infoHash: entry.infoHash, title: entry.releaseTitle, reason: entry.reason) }
+        for entry in entries {
+            add(infoHash: entry.infoHash, title: entry.releaseTitle, reason: entry.reason, episodeID: entry.episodeId)
+        }
     }
 
-    public mutating func add(infoHash: String?, title: String?, reason: String) {
-        if let infoHash { byHash[infoHash.lowercased()] = reason }
-        if let title { byTitle[title.lowercased()] = reason }
+    public mutating func add(infoHash: String?, title: String?, reason: String, episodeID: UUID? = nil) {
+        if let infoHash { byHash[infoHash.lowercased()] = Entry(reason: reason, episodeID: episodeID) }
+        if let title { byTitle[title.lowercased()] = Entry(reason: reason, episodeID: episodeID) }
     }
 
     /// The recorded reason when the release is blocklisted (matched by info hash, else exact title).
-    public func reason(for release: IndexerRelease) -> String? {
+    /// Entries recorded for one episode don't poison other episodes: a pack missing S00E02 can
+    /// still serve S01E01. Global entries (no episode) always apply; a nil `episodeID` query
+    /// applies everything, preserving previous behavior for movies and library-wide searches.
+    public func reason(for release: IndexerRelease, episodeID: UUID? = nil) -> String? {
         if isEmpty { return nil }
-        if let hash = release.infoHash?.lowercased(), let reason = byHash[hash] { return reason }
-        return byTitle[release.title.lowercased()]
+        func applies(_ entry: Entry) -> Bool {
+            guard let scoped = entry.episodeID else { return true }
+            guard let episodeID else { return true }
+            return scoped == episodeID
+        }
+        if let hash = release.infoHash?.lowercased(), let entry = byHash[hash], applies(entry) { return entry.reason }
+        if let entry = byTitle[release.title.lowercased()], applies(entry) { return entry.reason }
+        return nil
     }
 
     public var isEmpty: Bool { byHash.isEmpty && byTitle.isEmpty }

@@ -55,5 +55,7 @@
 {"name":"Show.Name.S06.GERMAN.DL.1080p.WEB.h264-GRP","title":"Show Name","kind":"seasonPack","seasons":[6],"languages":["german","multi"],"resolution":1080,"source":"webDL","videoCodec":"h264","group":"GRP"},
 {"name":"Show Name S01 Season 1 Complete","title":"Show Name","kind":"seasonPack","seasons":[1]},
 {"name":"Show.Name.S01E01-E10.720p.HDTV.x264-GRP","title":"Show Name","kind":"episode","seasons":[1],"episodes":[1,2,3,4,5,6,7,8,9,10],"resolution":720,"source":"hdtv","videoCodec":"h264","group":"GRP"},
-{"name":"Show Name Season 2 Episodes 1-8 720p","title":"Show Name","kind":"episode","seasons":[2],"episodes":[1,2,3,4,5,6,7,8],"resolution":720}
+{"name":"Show Name Season 2 Episodes 1-8 720p","title":"Show Name","kind":"episode","seasons":[2],"episodes":[1,2,3,4,5,6,7,8],"resolution":720},
+{"name":"[BBF] Black Lagoon - Omake [BR][1280x720_x264_AAC]","title":"Black Lagoon","kind":"movie","special":true,"resolution":720,"videoCodec":"h264","group":"BBF"},
+{"name":"[Rising Sun] Black Lagoon + Omake [BD - 1080p - H264 - FLAC]","title":"Black Lagoon","kind":"movie","special":true,"resolution":1080,"source":"bluRay","videoCodec":"h264","group":"Rising Sun"}
 ]

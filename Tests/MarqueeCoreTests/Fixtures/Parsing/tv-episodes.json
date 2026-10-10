@@ -134,5 +134,7 @@
 {"name":"Show.Name.S01E05.Episode.Title.Hardcoded.Subs.720p.HDTV.x264-GRP","title":"Show Name","kind":"episode","seasons":[1],"episodes":[5],"resolution":720,"source":"hdtv","videoCodec":"h264","group":"GRP"},
 {"name":"Show.Name.S01E05.HC.720p.WEB-DL.x264-GRP","title":"Show Name","kind":"episode","seasons":[1],"episodes":[5],"resolution":720,"source":"webDL","videoCodec":"h264","flags":["hardcodedSubs"],"group":"GRP"},
 {"name":"Show.Name.S01E05.720p.WEB-DL.x264.AC3.3D.HSBS-GRP","title":"Show Name","kind":"episode","seasons":[1],"episodes":[5],"resolution":720,"source":"webDL","videoCodec":"h264","audio":["ac3"],"flags":["threeD"],"group":"GRP"},
-{"name":"Show.Name.S01E05.Episode.Title.10bit.720p.HDTV.x265-GRP","title":"Show Name","kind":"episode","seasons":[1],"episodes":[5],"resolution":720,"source":"hdtv","videoCodec":"h265","bitDepth":10,"group":"GRP"}
+{"name":"Show.Name.S01E05.Episode.Title.10bit.720p.HDTV.x265-GRP","title":"Show Name","kind":"episode","seasons":[1],"episodes":[5],"resolution":720,"source":"hdtv","videoCodec":"h265","bitDepth":10,"group":"GRP"},
+{"name":"[BBF] Black Lagoon - Omake 02 [BR][1280x720_x264_AAC].mkv","title":"Black Lagoon","kind":"episode","seasons":[0],"episodes":[2],"special":true,"resolution":720,"videoCodec":"h264","group":"BBF"},
+{"name":"Black Lagoon Omake 3 (BD REMUX VOSTFR FANSUB PCM).mkv","title":"Black Lagoon","kind":"movie","special":true,"source":"remux","flags":["subbed"]}
 ]

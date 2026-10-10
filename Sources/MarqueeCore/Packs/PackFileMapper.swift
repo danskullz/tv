@@ -186,12 +186,26 @@ private struct Mapper {
                     refs: viaAbs, confidence: 0.7,
                     reason: "\(listLabel) isn't in the episode list; read as absolute number \(r.episodes.map(String.init).joined(separator: "-")) = \(refsLabel(viaAbs))")
             }
+            if let ref = titleMatch(r) {
+                return Resolved(
+                    refs: [ref], confidence: 0.7,
+                    reason: "\(listLabel) isn't in the episode list; file name matches the title of \(ref)")
+            }
             return Resolved(refs: refs, confidence: 0.5, reason: "\(listLabel) isn't in the episode list")
         }
 
         // Absolute numbers (anime) or bare episode numbers with no season.
         let nums = !r.episodes.isEmpty ? r.episodes : r.absoluteEpisodes
         if !nums.isEmpty {
+            if r.isSpecial, r.seasons.isEmpty {
+                // Omake-style numbering ("Omake 02") with no season: bonus shorts live in season 0.
+                let refs = nums.map { EpisodeRef(season: 0, episode: $0) }
+                if ctx.episodes.isEmpty || refs.allSatisfy(ctx.contains) {
+                    return Resolved(
+                        refs: refs, confidence: 0.9,
+                        reason: "Special \(nums.map(String.init).joined(separator: "-")) = \(refsLabel(refs))")
+                }
+            }
             if !r.absoluteEpisodes.isEmpty, r.episodes.isEmpty, let viaAbs = absoluteRefs(nums) {
                 return Resolved(refs: viaAbs, confidence: 0.88, reason: "Absolute episode \(nums.map(String.init).joined(separator: "-")) = \(refsLabel(viaAbs))")
             }
@@ -203,10 +217,19 @@ private struct Mapper {
                 if let viaAbs = absoluteRefs(nums) {
                     return Resolved(refs: viaAbs, confidence: 0.6, reason: "No season in the name; matched absolute number")
                 }
+                if let ref = titleMatch(r) {
+                    return Resolved(
+                        refs: [ref], confidence: 0.7,
+                        reason: "\(refsLabel(refs)) isn't in the episode list; file name matches the title of \(ref)")
+                }
                 return Resolved(refs: refs, confidence: 0.4, reason: "\(refsLabel(refs)) isn't in the episode list")
             }
             if let viaAbs = absoluteRefs(nums) {
                 return Resolved(refs: viaAbs, confidence: 0.6, reason: "No season in the name; matched absolute number")
+            }
+            if let ref = titleMatch(r) {
+                return Resolved(
+                    refs: [ref], confidence: 0.7, reason: "File name matches the title of \(ref)")
             }
             return Resolved(refs: [], confidence: 0.3, reason: "Episode number \(nums.map(String.init).joined(separator: "-")) found but the season is unknown")
         }

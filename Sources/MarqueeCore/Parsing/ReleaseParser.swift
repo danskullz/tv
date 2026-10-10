@@ -205,6 +205,14 @@ public enum ReleaseParser {
         r.absoluteEpisodes = sc.absolute
         r.airDate = sc.airDate
         r.isSpecial = sc.special || sc.seasons == [0]
+        // "Omake 02": omake numbering counts bonus shorts, which live in season 0. Absolute
+        // numbers only reach here when nothing season-like was found (see `isOmakeMarker`), so
+        // this rewrite is confined to bonus content; regular absolute numbering is untouched.
+        if sc.special, r.seasons.isEmpty, r.episodes.isEmpty, !r.absoluteEpisodes.isEmpty {
+            r.seasons = [0]
+            r.episodes = r.absoluteEpisodes
+            r.absoluteEpisodes = []
+        }
         r.resolution = sc.resolution
         r.source = sc.source
         r.videoCodec = sc.videoCodec

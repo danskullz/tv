@@ -174,7 +174,7 @@ public actor ReleaseAutomation {
                 wanted: target.wanted.item, profile: target.profile, formats: target.formats,
                 current: target.wanted.currentFile, blocklist: releaseBlocklist,
                 minimumSeeders: target.minimumSeeders, delayProfile: target.delayProfile,
-                now: now, ignoreDelay: ignoreDelay)
+                now: now, ignoreDelay: ignoreDelay, episodeID: target.wanted.episode?.id)
             let decisions = ReleaseDecisionEngine(context).decide(candidates)
             let accepted = decisions.filter(\.isAccepted)
             result.accepted += accepted.count

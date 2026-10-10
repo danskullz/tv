@@ -188,4 +188,47 @@ struct PackFileMapperTests {
         let r = PackFileMapper.map(files: files, series: c)
         #expect(r.assignments.map(\.episodes) == [[ref("S02E01")], [ref("S02E12")]])
     }
+
+    @Test func omakeBatchMapsToSpecials() {
+        // The real BBF omake batch file list: "Omake N" numbering with no season means season 0.
+        let files = layout([
+            ("[BBF] Black Lagoon - Omake 01 [BR][1280x720_x264_AAC].mp4", 21_259_631),
+            ("[BBF] Black Lagoon - Omake 02 [BR][1280x720_x264_AAC].mp4", 32_744_365),
+            ("[BBF] Black Lagoon - Omake 03 [BR][1280x720_x264_AAC].mp4", 62_307_966),
+            ("[BBF] Black Lagoon - Omake 04 [BR][1280x720_x264_AAC].mp4", 38_156_799),
+            ("[BBF] Black Lagoon - Omake 05 [BR][1280x720_x264_AAC].mp4", 340_292_423),
+            ("[BBF] Black Lagoon - Omake 06 [BR][1280x720_x264_AAC].mp4", 32_130_262),
+            ("[BBF] Black Lagoon - Omake 07 [BR][1280x720_x264_AAC].mp4", 39_838_896),
+        ])
+        let eps = (1...7).map { PackEpisode(ref: EpisodeRef(season: 0, episode: $0)) }
+        let r = PackFileMapper.map(
+            files: files, series: PackSeriesContext(title: "Black Lagoon", episodes: eps, targetSeasons: [0]))
+        #expect(r.assignments.map(\.episodes) == (1...7).map { [EpisodeRef(season: 0, episode: $0)] })
+        #expect(r.assignments.allSatisfy { $0.role == .special && $0.isPreferred })
+    }
+
+    @Test func episodeTitlesRescueUnmatchedAnimeNumbering() {
+        // Absolute numbers the library doesn't track ("025") would map to phantom S01E25;
+        // the episode title in the file name ("Collateral Massacre") maps them correctly instead.
+        var eps = (1...24).map { PackEpisode(ref: EpisodeRef(season: 1, episode: $0)) }
+        eps += [
+            PackEpisode(ref: ref("S00E08"), title: "Collateral Massacre"),
+            PackEpisode(ref: ref("S00E09"), title: "An Office Man's Tactics"),
+        ]
+        let files = layout([
+            ("[Anime Time] Black Lagoon - 025 - Collateral Massacre.mkv", 798 * mb),
+            ("[Anime Time] Black Lagoon - 026 - An Office Man's Tactics.mkv", 762 * mb),
+        ])
+        let r = PackFileMapper.map(
+            files: files, series: PackSeriesContext(title: "Black Lagoon", episodes: eps, targetSeasons: [1]))
+        #expect(r.assignments.map(\.episodes) == [[ref("S00E08")], [ref("S00E09")]])
+        #expect(r.assignments.allSatisfy { $0.role == .special })
+        // Same files when playing from season 0 (no season hint at all) resolve the same way.
+        let specials = PackFileMapper.map(
+            files: files,
+            series: PackSeriesContext(
+                title: "Black Lagoon",
+                episodes: Array(eps.suffix(2)), targetSeasons: [0]))
+        #expect(specials.assignments.map(\.episodes) == [[ref("S00E08")], [ref("S00E09")]])
+    }
 }

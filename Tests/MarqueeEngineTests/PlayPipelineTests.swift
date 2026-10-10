@@ -360,6 +360,41 @@ struct PlayPipelineTests {
         #expect(rig.transport.searches[5]["q"] == "Marquee Test Pattern")
     }
 
+    @Test("repeated releases across query stages are counted once")
+    func dedupesAcrossStages() async throws {
+        let bad = [
+            IndexerRelease(
+                indexerID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, indexerName: "A",
+                title: "Some.Other.Show.S01E01.1080p.WEB-DL.H264-XXX", guid: "a",
+                downloadURL: URL(string: "https://a.invalid/dl/a"), size: 1_500_000_000, seeders: 10),
+            IndexerRelease(
+                indexerID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, indexerName: "A",
+                title: "Some.Other.Show.S01E02.1080p.WEB-DL.H264-XXX", guid: "b",
+                downloadURL: URL(string: "https://a.invalid/dl/b"), size: 1_500_000_000, seeders: 10),
+        ]
+        let rig = try await pipelineRig(scripts: [.ready], releases: { _ in [] }, searcher: StaticSearcher(releases: bad))
+        let op = rig.pipeline.begin(pipelineRequest(rig.title))
+        // Episode scope runs 4 query stages; the same 2 releases come back every time.
+        await #expect(throws: PlayPipelineError.nothingSuitable(found: 2, summary: "2 different title")) {
+            _ = try await op.stream()
+        }
+    }
+
+    @Test("the rejection summary lists every reason, deterministically ordered")
+    func rejectionSummaryListsAll() {
+        #expect(PlayPipeline.rejectionSummary(counts: [:]) == "nothing matched")
+        #expect(PlayPipeline.rejectionSummary(counts: ["wrongTitle": 4, "tooFewSeeders": 2, "blocklisted": 1, "qualityNotAllowed": 1, "sizeTooSmall": 1])
+            == "4 different title, 2 too few seeders, 1 blocklisted, 1 quality not allowed, 1 too small")
+    }
+
+    @Test("uniform attempt failures are surfaced, mixed ones stay generic")
+    func uniformFailureSurfaced() {
+        #expect(PlayPipelineError.allAttemptsFailed(attempts: 3, lastReason: "This release doesn't include S00E02.").plainLanguage
+            == "Tried 3 releases but none of them could be played right now. This release doesn't include S00E02.")
+        #expect(PlayPipelineError.allAttemptsFailed(attempts: 2, lastReason: "").plainLanguage
+            == "Tried 2 releases but none of them could be played right now. Try again later or choose another quality.")
+    }
+
     @Test("ids are tried first and the title text is the fallback")
     func queryStages() async throws {
         let rig = try await pipelineRig(scripts: [.ready]) { query in

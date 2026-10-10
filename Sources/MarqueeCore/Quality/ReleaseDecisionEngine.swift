@@ -21,13 +21,16 @@ public struct DecisionContext: Sendable {
     public var indexerPriorities: [UUID: Int]
     /// When false, season packs are rejected while a single episode is wanted.
     public var allowPacksForEpisodes: Bool
+    /// Library episode the decision is for, if any: blocklist entries recorded for other
+    /// episodes don't apply (a pack missing S00E02 can still serve S01E01).
+    public var episodeID: UUID?
 
     public init(
         wanted: WantedItem, profile: QualityProfileConfig, formats: [CustomFormatConfig] = [],
         current: CurrentFile? = nil, blocklist: ReleaseBlocklist = ReleaseBlocklist(), minimumSeeders: Int = 1,
         freeSpaceBytes: Int64? = nil, reservedFreeSpaceBytes: Int64 = 0, delayProfile: DelayProfileConfig? = nil,
         now: Date = Date(), ignoreDelay: Bool = false, indexerPriorities: [UUID: Int] = [:],
-        allowPacksForEpisodes: Bool = true
+        allowPacksForEpisodes: Bool = true, episodeID: UUID? = nil
     ) {
         self.wanted = wanted
         self.profile = profile
@@ -42,6 +45,7 @@ public struct DecisionContext: Sendable {
         self.ignoreDelay = ignoreDelay
         self.indexerPriorities = indexerPriorities
         self.allowPacksForEpisodes = allowPacksForEpisodes
+        self.episodeID = episodeID
     }
 }
 
@@ -218,7 +222,9 @@ public struct ReleaseDecisionEngine: Sendable {
         if let seeders = candidate.release.seeders, seeders < context.minimumSeeders {
             rejections.append(.tooFewSeeders(found: seeders, required: context.minimumSeeders))
         }
-        if let reason = context.blocklist.reason(for: candidate.release) { rejections.append(.blocklisted(reason: reason)) }
+        if let reason = context.blocklist.reason(for: candidate.release, episodeID: context.episodeID) {
+            rejections.append(.blocklisted(reason: reason))
+        }
         if let free = context.freeSpaceBytes, let size = candidate.release.size, size + context.reservedFreeSpaceBytes > free {
             rejections.append(.notEnoughFreeSpace(required: size + context.reservedFreeSpaceBytes, available: free))
         }

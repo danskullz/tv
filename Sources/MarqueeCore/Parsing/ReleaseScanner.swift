@@ -620,6 +620,15 @@ struct Scanner {
         return l.hasPrefix("ncop") || l.hasPrefix("nced")
     }
 
+    /// Bonus-short markers terminate the title: "Black Lagoon - Omake 02" is the omake
+    /// batch, not a show called "Black Lagoon Omake". Only "omake" is this unambiguous;
+    /// "special(s)"/"ova" stay in the title (see `WantedItem.match`).
+    func isOmakeMarker(_ i: Int) -> Bool {
+        guard i > 0, i < toks.count else { return false }
+        let l = toks[i].l
+        return l == "omake" || l == "omakes"
+    }
+
     func completePhraseAt(_ i: Int) -> Bool {
         toks[i].l == "complete" && i + 1 < toks.count && Vocabulary.completeFollowers.contains(toks[i + 1].l)
     }
@@ -641,7 +650,7 @@ struct Scanner {
         for i in 0..<n where isYear(i) { hasYearLike = true; break }
         var hard = n
         for i in 0..<n {
-            if isStrongWord(i) || completePhraseAt(i) || isExtraMarker(i) || matchEpisode(i) != nil { hard = i; break }
+            if isStrongWord(i) || completePhraseAt(i) || isExtraMarker(i) || isOmakeMarker(i) || matchEpisode(i) != nil { hard = i; break }
         }
         // Year: last 4-digit year before the first hard marker (not at index 0).
         var cand = -1
@@ -889,6 +898,9 @@ struct Scanner {
         case "complete":
             if completePhraseAt(i) { completePhrase = true; mark(i, 2, quality: false); return 2 }
             completeWord = true; mark(i, 1, quality: false); return 1
+        case "omake", "omakes":
+            // Bonus shorts are always season-0 content; never part of the title.
+            special = true; mark(i, 1, quality: false); return 1
         case "vostfr", "subfrench", "truefrench":
             addLang(.french)
             if t.l != "truefrench" { flags.insert(.subbed) }

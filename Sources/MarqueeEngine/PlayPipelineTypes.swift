@@ -308,9 +308,17 @@ public enum PlayPipelineError: Error, Sendable, Equatable {
                 : "Couldn't find anything to play. Your indexers returned no releases for this title."
         case .nothingSuitable(let found, let summary):
             "Found \(found) release\(found == 1 ? "" : "s"), but none matched this episode (\(summary)). Try adjusting the quality profile or picking a release from search."
-        case .allAttemptsFailed(let attempts, _):
-            "Tried \(attempts) release\(attempts == 1 ? "" : "s") but none of them could be played right now. Try again later or choose another quality."
+        case .allAttemptsFailed(let attempts, let lastReason):
+            Self.attemptsFailedMessage(attempts: attempts, lastReason: lastReason)
         }
+    }
+
+    /// When every attempt failed the same way, that reason (e.g. the packs don't include this
+    /// episode) is more useful than a generic "try again". Mixed failures keep the generic.
+    static func attemptsFailedMessage(attempts: Int, lastReason: String) -> String {
+        let base = "Tried \(attempts) release\(attempts == 1 ? "" : "s") but none of them could be played right now."
+        if lastReason.isEmpty { return base + " Try again later or choose another quality." }
+        return base + " \(lastReason)"
     }
 }
 

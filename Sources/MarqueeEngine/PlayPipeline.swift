@@ -67,9 +67,11 @@ public actor PlayPipeline {
         var attempts = 0
         var tried = Set<String>()
         var failedHashes = Set<String>()
-        var lastReason = ""
-        var totalFound = 0
-        var lastSummary = "nothing matched"
+        var failureReasons: [String] = []
+        // Unique releases and rejection tallies across every stage (later stages re-find the
+        // same releases with different queries), so the failure message accounts for all of them.
+        var seenIDs = Set<String>()
+        var rejectionTally: [String: Int] = [:]
         var searched = 0, failedSearches = 0
 
         for stage in stages(for: request) {
@@ -80,20 +82,22 @@ public actor PlayPipeline {
             try Task.checkCancellation()
             searched = max(searched, found.outcomes.count)
             failedSearches = max(failedSearches, found.failedCount)
-            totalFound += found.releases.count
             guard !found.releases.isEmpty else { continue }
 
             let blocked = await currentBlocklist(titleID: request.title.id)
             let candidates = found.releases.map { ReleaseCandidate(release: $0) }
             let context = DecisionContext(
                 wanted: stage.wanted, profile: request.profile, formats: config.formats, blocklist: blocked,
-                minimumSeeders: config.minimumSeeders, ignoreDelay: true, allowPacksForEpisodes: true)
+                minimumSeeders: config.minimumSeeders, ignoreDelay: true, allowPacksForEpisodes: true,
+                episodeID: request.episodeID)
             let decisions = ReleaseDecisionEngine.decide(candidates, in: context)
             let ranked = StreamabilityScorer.rank(
                 decisions,
                 input: StreamabilityInput(
                     wanted: stage.wanted, measuredThroughputBytesPerSecond: config.measuredThroughputBytesPerSecond))
-            lastSummary = Self.rejectionSummary(decisions)
+            for decision in decisions where seenIDs.insert(decision.id).inserted {
+                for code in decision.rejections.map(\.code) { rejectionTally[code, default: 0] += 1 }
+            }
 
             // Resolve the top picks' download links concurrently before committing to attempt #1,
             // so a dead top pick is skipped without burning a full attempt timeout on it.
@@ -125,7 +129,7 @@ public actor PlayPipeline {
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch let failure as AttemptFailure {
-                    lastReason = failure.reason
+                    failureReasons.append(failure.reason)
                     if let hash = Self.effectiveInfoHash(of: release) { failedHashes.insert(hash) }
                     if attempts < config.maxAttempts {
                         emit(PlayStatus(
@@ -137,9 +141,12 @@ public actor PlayPipeline {
 
         let error: PlayPipelineError
         if attempts > 0 {
-            error = .allAttemptsFailed(attempts: attempts, lastReason: lastReason)
-        } else if totalFound > 0 {
-            error = .nothingSuitable(found: totalFound, summary: lastSummary)
+            // When every attempt failed the same way, say so: "the packs don't include this
+            // episode" beats a generic "none could be played".
+            let uniform = Set(failureReasons).count == 1 ? failureReasons.first : nil
+            error = .allAttemptsFailed(attempts: attempts, lastReason: uniform ?? failureReasons.last ?? "")
+        } else if !seenIDs.isEmpty {
+            error = .nothingSuitable(found: seenIDs.count, summary: Self.rejectionSummary(counts: rejectionTally))
         } else {
             error = .noResults(indexersSearched: searched, indexersFailed: failedSearches)
         }
@@ -636,7 +643,12 @@ public actor PlayPipeline {
     }
 
     static func rejectionSummary(_ decisions: [ReleaseDecision]) -> String {
-        let counts = Dictionary(grouping: decisions.flatMap(\.rejections), by: \.code).mapValues(\.count)
+        var counts: [String: Int] = [:]
+        for code in decisions.flatMap(\.rejections).map(\.code) { counts[code, default: 0] += 1 }
+        return rejectionSummary(counts: counts)
+    }
+
+    static func rejectionSummary(counts: [String: Int]) -> String {
         guard !counts.isEmpty else { return "nothing matched" }
         let readable: [String: String] = [
             "wrongTitle": "different title", "wrongEpisode": "different episode", "wrongYear": "different year",
