@@ -6,6 +6,7 @@ Living instructions for any AI agent working in this repo. **Keep this file curr
 Marquee (working title): native macOS app combining the *arr suite with a built-in torrent engine and streaming player. Repo: git@github.com:danskullz/tv.git
 
 ## Decisions & constraints
+- 2026-10-10 **Secrets live in a local file, never the Keychain.** `FileSecretStore` (`~/Library/Application Support/Marquee/secrets.json`, 0o700/0o600) is the only sanctioned store; Keychain items are ACL-bound to the signing identity, so ad-hoc-signed rebuilds prompted for access at every launch. `KeychainSecretMigration` reads the Keychain exactly once per machine (`UserDefaults` key `MarqueeMigratedKeychainSecrets`) to import keys saved by older builds, then the Keychain is never opened again — it must stay that way; don't reintroduce a read-through fallback.
 - 2026-10-09 Public release, **closed source**. Use LGPL builds of mpv/ffmpeg, dynamically linked; libtorrent is BSD.
 - 2026-10-09 **Intel Macs must be supported**: universal binary (arm64 + x86_64), every native dependency built for both. Minimum macOS 15.
 - 2026-10-09 **As lightweight and performant as possible**: native Swift only (no Electron/WebView), minimal dependencies, tiny idle cost, budgets in SCOPE.md §5.6 are release gates.

@@ -452,7 +452,7 @@ public actor IndexerClient {
         do {
             return try secrets.get(account: definition.apiKeyAccount)
         } catch {
-            throw IndexerError.invalidConfiguration("The API key couldn't be read from the Keychain.")
+            throw IndexerError.invalidConfiguration("The API key couldn't be read.")
         }
     }
 

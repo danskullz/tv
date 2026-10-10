@@ -20,10 +20,12 @@ public final class FileSecretStore: SecretStore, Sendable {
 
     private let file: URL
     private let storage: Mutex<[String: String]>
-    /// Read-through source consulted on a miss (typically the Keychain store), so existing
-    /// credentials migrate over on first use instead of asking the user again. Hits are written
-    /// back to the file.
-    private let fallback: (any SecretStore)?
+    /// Read-through source consulted on a miss, with hits written back to the file. The app does
+    /// not use this for the Keychain — a miss here must never cost the user a Keychain prompt, so
+    /// the one-shot `KeychainSecretMigration` imports legacy credentials up front instead.
+    /// Internal rather than private so tests can assert the launch path carries no read-through
+    /// source.
+    let fallback: (any SecretStore)?
 
     public init(file: URL = FileSecretStore.defaultURL, fallback: (any SecretStore)? = nil) {
         self.file = file
