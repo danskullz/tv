@@ -72,8 +72,20 @@ final class AppModel {
     private(set) var titlesRevision = 0
     private(set) var activeDownloads = 0
 
+    /// Screen aggregates live here, not in each screen's `@State`. A sidebar click swaps the view
+    /// out of the tree, which discards `@State`; anything a screen fetches into `@State` has to be
+    /// fetched again on the way back. Holding them on the model means coming back to a tab is a
+    /// synchronous read instead of a round trip behind a skeleton.
+    private(set) var homeShelves: [ShelfModel] = []
+    private(set) var didLoadHomeShelves = false
+    private(set) var activityItems: [ActivityItem] = []
+    private(set) var didLoadActivity = false
+
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     @ObservationIgnored private var removed: [(index: Int, item: PosterItem)] = []
+    /// In-flight refreshes, so several screens asking at once share one query.
+    @ObservationIgnored private var homeShelfTask: Task<[ShelfModel], Never>?
+    @ObservationIgnored private var activityTask: Task<[ActivityItem], Never>?
 
     init(source: any LibraryDataSource = MockLibrary(), services: AppServices? = nil) {
         self.source = source
@@ -117,6 +129,52 @@ final class AppModel {
         if let activity = try? await source.activity() {
             activeDownloads = activity.filter(\.isActive).count
         }
+        async let shelves: Void = refreshHomeShelves()
+        async let items: Void = refreshActivity()
+        _ = await (shelves, items)
+    }
+
+    /// Loads the Home shelves, sharing one in-flight query between callers.
+    func refreshHomeShelves() async {
+        if let task = homeShelfTask {
+            homeShelves = await task.value
+            return
+        }
+        let task = Task { [source] in (try? await source.homeShelves()) ?? [] }
+        homeShelfTask = task
+        let value = await task.value
+        homeShelfTask = nil
+        guard !Task.isCancelled else { return }
+        homeShelves = value
+        didLoadHomeShelves = true
+    }
+
+    /// Loads Activity, sharing one in-flight query between callers.
+    func refreshActivity() async {
+        if let task = activityTask {
+            let value = await task.value
+            applyActivity(value)
+            return
+        }
+        let task = Task { [source] in (try? await source.activity()) ?? [] }
+        activityTask = task
+        let value = await task.value
+        activityTask = nil
+        guard !Task.isCancelled else { return }
+        applyActivity(value)
+    }
+
+    private func applyActivity(_ fresh: [ActivityItem]) {
+        // Only churn the list when something actually changed: a download ticking its progress bar
+        // must not re-render every Activity row.
+        if fresh != activityItems { activityItems = fresh }
+        activeDownloads = fresh.filter(\.isActive).count
+        tracker.seed(fresh.map {
+            ProgressUpdate(
+                id: $0.id, fraction: $0.fraction, etaSeconds: $0.totalSeconds,
+                bytesPerSecond: $0.bytesPerSecond)
+        })
+        didLoadActivity = true
     }
 
     func load() async {
@@ -124,11 +182,35 @@ final class AppModel {
         await services?.prepare()
         titles = (try? await source.library()) ?? []
         hasLoaded = true
-        if let activity = try? await source.activity() {
-            activeDownloads = activity.filter(\.isActive).count
-        }
+        async let shelves: Void = refreshHomeShelves()
+        async let items: Void = refreshActivity()
+        _ = await (shelves, items)
         if let id = UserDefaults.standard.string(forKey: "initialDetail"), titles.contains(where: { $0.id == id }) {
             path = [id]
+        }
+        startTabWalkIfRequested()
+    }
+
+    /// Dev harness: `MARQUEE_TABS=2` walks the sidebar that many times after launch, so tab-switch
+    /// cost can be measured from the log without a human clicking (or an automation permission).
+    /// Off unless the variable is set, so it costs nothing in normal use.
+    private func startTabWalkIfRequested() {
+        guard let passes = PerfLog.envInt("MARQUEE_TABS"), passes > 0 else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: .seconds(2))
+            // Measure the interaction, not launch: zero the counters so the totals cover only the
+            // walk. Launch cost is a separate problem with a separate fix.
+            PerfLog.resetStalls()
+            for pass in 1...passes {
+                for item in SidebarItem.allCases {
+                    PerfLog.mark("WALK \(pass)->\(item.rawValue)")
+                    self.go(to: item)
+                    try? await Task.sleep(for: .milliseconds(700))
+                }
+            }
+            MainThreadWatchdog.shared.stop()
+            PerfLog.dumpStalls()
         }
     }
 
@@ -137,7 +219,12 @@ final class AppModel {
     // MARK: Navigation
 
     func go(to item: SidebarItem) {
-        withMotion { selection = item }
+        PerfLog.mark("tab->\(item.rawValue)")
+        // Deliberately not animated. `selection` swaps which screen is in the detail stack, so an
+        // animation here crossfades two complete hierarchies — a full poster grid's worth of views
+        // laid out twice — for 220 ms. Sidebar tab switches are instant in AppKit and macOS apps;
+        // this is what makes a switch feel instant here too.
+        selection = item
         path = []
     }
 

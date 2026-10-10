@@ -65,7 +65,7 @@ public struct PosterCard: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: item.title))
-        .accessibilityValue(Text(verbatim: Self.spokenState(item)))
+        .accessibilityValue(Text(verbatim: item.spokenState))
         .accessibilityAddTraits(.isButton)
         .accessibilityActions {
             if let actions {
@@ -79,6 +79,9 @@ public struct PosterCard: View {
     private var artwork: some View {
         let size = artworkSize
         let shape = RoundedRectangle(cornerRadius: Tokens.Radius.artwork, style: .continuous)
+        // The ring sits 3pt outside the artwork, so its radius grows by the same 3pt; keeping the
+        // artwork radius there makes the corners non-concentric and opens gaps at each one.
+        let ring = RoundedRectangle(cornerRadius: Tokens.Radius.artwork + 3, style: .continuous)
         return ArtworkView(style == .poster ? item.poster : item.backdrop, targetSize: size)
             .frame(width: size.width, height: size.height)
             .overlay(alignment: .topTrailing) { cornerBadge.padding(7) }
@@ -86,8 +89,11 @@ public struct PosterCard: View {
             .overlay { if hovering { hoverPlay } }
             .clipShape(shape)
             .overlay(shape.strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
-            .overlay(shape.strokeBorder(selectionColor, lineWidth: 3).padding(-3).opacity(selection == .none ? 0 : 1))
-            .shadow(color: .black.opacity(hovering ? Tokens.Shadow.cardOpacity : 0), radius: Tokens.Shadow.cardRadius, y: 6)
+            .overlay(ring.strokeBorder(selectionColor, lineWidth: 3).padding(-3).opacity(selection == .none ? 0 : 1))
+            // Applied only while hovering: a 14 pt blur shadow costs an offscreen render pass per
+            // card, and a grid of them was being paid on every render even at zero opacity.
+            .modifier(ConditionalShadow(visible: hovering, color: .black.opacity(Tokens.Shadow.cardOpacity),
+                                        radius: Tokens.Shadow.cardRadius, y: 6))
             .scaleEffect(hovering && !reduceMotion ? 1.03 : 1)
             .motion(Tokens.Motion.snappy, value: hovering)
     }
@@ -158,26 +164,22 @@ public struct PosterCard: View {
             .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
             .transition(.opacity)
     }
+}
 
-    static func spokenState(_ item: PosterItem) -> String {
-        var parts: [String] = []
-        if !item.subtitle.isEmpty { parts.append(item.subtitle) }
-        switch item.availability {
-        case .downloading:
-            if let f = item.downloadFraction { parts.append(String(localized: "Downloading, \(Formatters.percent(f))")) }
-            else { parts.append(String(localized: "Downloading")) }
-        case .queued: parts.append(String(localized: "Queued"))
-        case .importing: parts.append(String(localized: "Importing"))
-        case .missing: parts.append(String(localized: "Not downloaded"))
-        case .unaired: parts.append(String(localized: "Not released yet"))
-        case .local: break
+/// Applies a shadow only when `visible`. `.shadow(radius:)` always builds a shadow layer and an
+/// offscreen blur pass, so a zero-opacity shadow is still paid for on every card in a grid.
+private struct ConditionalShadow: ViewModifier {
+    let visible: Bool
+    let color: Color
+    let radius: CGFloat
+    let y: CGFloat
+
+    func body(content: Content) -> some View {
+        if visible {
+            content.shadow(color: color, radius: radius, y: y)
+        } else {
+            content
         }
-        switch item.watch {
-        case .watched: parts.append(String(localized: "Watched"))
-        case .inProgress(let f): parts.append(String(localized: "\(Formatters.percent(f)) watched"))
-        case .unwatched: break
-        }
-        return parts.joined(separator: ", ")
     }
 }
 

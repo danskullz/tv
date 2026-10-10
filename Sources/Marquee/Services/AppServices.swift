@@ -73,6 +73,13 @@ final class AppServices {
     @ObservationIgnored var announce: @MainActor (_ title: String, _ detail: String?, _ systemImage: String) -> Void = { _, _, _ in }
     @ObservationIgnored private var terminationObserver: NSObjectProtocol?
     @ObservationIgnored private var importEventTask: Task<Void, Never>?
+    /// Cached screen aggregates, so returning to a tab is a synchronous read rather than a rebuild.
+    /// Both are dropped whenever the library changes.
+    @ObservationIgnored var calendarCache: (value: [CalendarEvent], at: Date)?
+    @ObservationIgnored var catalogueCache: (value: DiscoverSnapshot, at: Date)?
+    /// How long the calendar and the catalogue shelves stay valid without a refresh.
+    static let calendarTTL: TimeInterval = 300
+    static let catalogueTTL: TimeInterval = 900
 
     // MARK: Observable status (first-run checklist, Settings)
 
@@ -202,6 +209,8 @@ final class AppServices {
 
     func libraryChanged() {
         libraryRevision += 1
+        calendarCache = nil
+        catalogueCache = nil
         libraryDidChange()
     }
 
@@ -247,6 +256,8 @@ final class AppServices {
         }
         tmdbClient = nil
         hasMetadataKey = !trimmed.isEmpty
+        // The cached shelves were built against the old key.
+        catalogueCache = nil
     }
 
     /// The shared client, or nil until a key is saved.

@@ -51,18 +51,22 @@ public struct ArtworkView: View {
     }
 
     public var body: some View {
-        PlaceholderArtView(art: artwork.placeholder)
-            .overlay {
-                if let url = artwork.url {
-                    RemoteImageLayer(url: url, targetSize: targetSize)
-                }
-            }
-            .clipped()
+        if let url = artwork.url {
+            // The placeholder is drawn *behind* the remote image only while it is missing. Keeping
+            // it permanently underneath cost three gradient layers plus a shadowed SF Symbol for
+            // every card in the grid, on every render, and CoreAnimation had to walk all of them —
+            // which is where tab-switch layout time was going.
+            RemoteImageLayer(url: url, placeholder: artwork.placeholder, targetSize: targetSize)
+                .clipped()
+        } else {
+            PlaceholderArtView(art: artwork.placeholder)
+        }
     }
 }
 
 private struct RemoteImageLayer: View {
     let url: URL
+    let placeholder: PlaceholderArt
     let targetSize: CGSize?
 
     @Environment(\.displayScale) private var displayScale
@@ -89,6 +93,7 @@ private struct RemoteImageLayer: View {
 
     var body: some View {
         ZStack {
+            if image == nil { PlaceholderArtView(art: placeholder) }
             if let preview, image == nil {
                 Image(decorative: preview, scale: 1)
                     .resizable()
@@ -99,12 +104,10 @@ private struct RemoteImageLayer: View {
                 Image(decorative: image, scale: displayScale)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
-        .motion(Tokens.Motion.fade, value: image != nil)
         .onGeometryChange(for: CGSize.self) { $0.size } action: { newSize in
             if targetSize == nil { measured = newSize }
         }
@@ -124,12 +127,19 @@ private struct RemoteImageLayer: View {
             image = hit
             return
         }
-        if image == nil, preview == nil {
-            preview = await pipeline.image(for: url, pixelSize: CGSize(width: 48, height: 48))
+        // Request the sharp image and the tiny preview together rather than one after the other.
+        // Serially, the sharp image could not start until the preview had finished reading and
+        // decoding the same file, so every cold artwork paid for the file twice.
+        async let tiny: CGImage? = image == nil && preview == nil
+            ? pipeline.image(for: url, pixelSize: CGSize(width: 48, height: 48))
+            : nil
+        async let full: CGImage? = pipeline.image(for: url, pixelSize: px)
+        if let first = await tiny, image == nil, preview == nil, !Task.isCancelled {
+            preview = first
         }
         guard !Task.isCancelled else { return }
-        if let full = await pipeline.image(for: url, pixelSize: px), !Task.isCancelled {
-            image = full
+        if let sharp = await full, !Task.isCancelled {
+            image = sharp
         }
     }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import MarqueeCore
 import Observation
 
 /// Tracks whether the app is visible / active so idle work stops and decoded images are released
@@ -23,6 +24,7 @@ public final class AppLifecycle {
 
     /// Begins observing application notifications. Call once after launch.
     public func start() {
+        MainThreadWatchdog.shared.start()
         guard observers.isEmpty else { return }
         let center = NotificationCenter.default
         func add(_ name: Notification.Name, _ handler: @escaping @MainActor (AppLifecycle) -> Void) {

@@ -6,9 +6,12 @@ import TorrentEngine
 
 struct ActivityScreen: View {
     @Environment(AppModel.self) private var model
-    @State private var items: [ActivityItem] = []
-    @State private var loaded = false
     @State private var dismissedFailure = false
+
+    /// Held on the model, not here: switching tabs removes this view and would otherwise throw the
+    /// list away and make every return trip start from skeletons.
+    private var items: [ActivityItem] { model.activityItems }
+    private var loaded: Bool { model.didLoadActivity }
 
     private var active: [ActivityItem] { items.filter { $0.isActive || $0.phase == .subtitles } }
     private var failed: [ActivityItem] { items.filter { $0.phase == .failed } }
@@ -74,16 +77,11 @@ struct ActivityScreen: View {
     }
 
     private func load() async {
-        let fresh = (try? await model.source.activity()) ?? []
+        let start = ContinuousClock.now
         let previousFailure = failed.first?.id
-        items = fresh
-        loaded = true
+        await model.refreshActivity()
+        PerfLog.record("ActivityScreen.load", seconds: PerfLog.seconds(since: start))
         if failed.first?.id != previousFailure { dismissedFailure = false }
-        model.tracker.seed(fresh.map {
-            ProgressUpdate(
-                id: $0.id, fraction: $0.fraction, etaSeconds: $0.totalSeconds,
-                bytesPerSecond: $0.bytesPerSecond)
-        })
     }
 
     /// Re-runs the search for a failed title and reports what happened.

@@ -50,6 +50,12 @@ struct DiscoverScreen: View {
         .toolbarBackground(.visible, for: .windowToolbar)
         .toolbarColorScheme(.dark, for: .windowToolbar)
         .onAppear { startLoad() }
+        // `onAppear` can run before `AppServices.prepare()` has resolved the TMDB key (it is read
+        // from the secret store at start-up) and it does not fire again, which used to leave a
+        // deep-linked Discover tab stuck on the empty state. React to the key arriving instead.
+        .onChange(of: model.services?.hasMetadataKey) { _, hasKey in
+            if hasKey == true { startLoad() }
+        }
         .onDisappear { loadTask?.cancel(); loadTask = nil }
     }
 
@@ -166,12 +172,16 @@ struct DiscoverScreen: View {
 
     private func load() async {
         guard let services, services.hasMetadataKey else { isLoading = false; return }
-        isLoading = true
+        // Only flash skeletons on a genuinely cold open; otherwise keep the shelves already shown
+        // and swap the data underneath them.
+        if snapshot == nil { isLoading = true }
         error = nil
         defer { isLoading = false }
+        let start = ContinuousClock.now
         do { snapshot = try await services.discoverSnapshot() }
         catch is CancellationError { }
         catch { self.error = error.localizedDescription }
+        PerfLog.record("DiscoverScreen.load", seconds: PerfLog.seconds(since: start))
     }
 
     private func startLoad() {

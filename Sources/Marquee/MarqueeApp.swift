@@ -1,4 +1,5 @@
 import SwiftUI
+import MarqueeCore
 import MarqueeUI
 
 @main

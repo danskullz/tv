@@ -4,12 +4,16 @@ import SwiftUI
 
 struct CalendarScreen: View {
     @Environment(AppModel.self) private var model
-    @State private var events: [CalendarEvent] = []
     @State private var displayedMonth = Calendar.current.startOfDay(for: Date())
     @State private var selectedDay = Calendar.current.startOfDay(for: Date())
     @State private var mode: Mode = .month
-    @State private var isLoading = true
+    @State private var didLoad = false
     @State private var error: String?
+
+    /// Reads the cached event list first, so returning to this tab paints content on the first
+    /// frame instead of a skeleton while the query runs again.
+    private var events: [CalendarEvent] { model.services?.cachedCalendarEvents ?? [] }
+    private var isLoading: Bool { !didLoad && events.isEmpty }
 
     private enum Mode: String, CaseIterable { case month = "Month", week = "Week", agenda = "Agenda" }
 
@@ -192,10 +196,11 @@ struct CalendarScreen: View {
     }
 
     private func load() async {
-        isLoading = true
-        defer { isLoading = false }
-        do { events = try await model.services?.calendarEvents() ?? [] }
+        let start = ContinuousClock.now
+        defer { didLoad = true }
+        do { _ = try await model.services?.calendarEvents() ?? [] }
         catch is CancellationError { }
         catch { self.error = error.localizedDescription }
+        PerfLog.record("CalendarScreen.load", seconds: PerfLog.seconds(since: start))
     }
 }

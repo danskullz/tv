@@ -11,8 +11,11 @@ struct RootView: View {
         @Bindable var model = model
         NavigationSplitView(columnVisibility: $model.columnVisibility) {
             SidebarView(
-                selection: $model.selection, activeCount: model.activeDownloads,
-                onSelect: { model.go(to: $0) }
+                selection: Binding(get: { model.selection }, set: {
+                    guard let next = $0 else { return }
+                    model.go(to: next)
+                }),
+                activeCount: model.activeDownloads
             )
         } detail: {
             NavigationStack(path: $model.path) {
@@ -35,7 +38,10 @@ struct RootView: View {
                         }
                     }
             }
-            .id(model.selection)
+            // No `.id(model.selection)` here on purpose. It used to force the whole stack and the
+            // screen to be torn down and rebuilt on every sidebar click. The detail stack is reset
+            // by `AppModel.go(to:)` clearing `path`, and the screen aggregates live on `AppModel`
+            // rather than in each screen's `@State`, so a switch no longer re-fetches anything.
         }
         .overlay { CommandPalette() }
         .overlay(alignment: .bottom) { ToastView(toast: model.toast) }
@@ -56,14 +62,20 @@ struct RootView: View {
         switch model.selection ?? .home {
         case .home: HomeScreen()
         case .discover: DiscoverScreen()
-        case .movies: LibraryScreen(kind: .movie)
-        case .tv: LibraryScreen(kind: .series)
+        // Movies and TV are the same view type, so they need distinct identities or the second
+        // one would inherit the first one's filters, sort and scroll position. Every other case is
+        // its own type and is kept alive across tab switches.
+        case .movies: LibraryScreen(kind: .movie).id(LibraryTab.movie)
+        case .tv: LibraryScreen(kind: .series).id(LibraryTab.series)
         case .calendar: CalendarScreen()
         case .activity: ActivityScreen()
         case .search: SearchScreen()
         }
     }
 }
+
+/// Identity for the two screens that share `LibraryScreen`.
+private enum LibraryTab: Hashable { case movie, series }
 
 extension Notification.Name {
     static let showWelcome = Notification.Name("marquee.showWelcome")
@@ -91,14 +103,9 @@ enum AppearanceChoice: String, CaseIterable, Identifiable {
 struct SidebarView: View {
     @Binding var selection: SidebarItem?
     let activeCount: Int
-    /// Rows are explicit buttons with a Finder-style manual highlight. The outline's own
-    /// tap-to-select does not fire on this OS version, and `.badge()` breaks its row
-    /// highlighting, so the gray pill + accent label are drawn here instead.
-    var onSelect: (SidebarItem) -> Void = { _ in }
-    @Environment(\.controlActiveState) private var controlActiveState
 
     var body: some View {
-        List {
+        List(selection: $selection) {
             row(.home)
             row(.discover)
             Section("Library") {
@@ -107,7 +114,7 @@ struct SidebarView: View {
             }
             Section {
                 row(.calendar)
-                row(.activity)
+                row(.activity).badge(activeCount)
                 row(.search)
             }
         }
@@ -119,43 +126,8 @@ struct SidebarView: View {
     }
 
     private func row(_ item: SidebarItem) -> some View {
-        let isSelected = selection == item
-        return Button { onSelect(item) } label: {
-            HStack(spacing: 6) {
-                Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
-                if item == .activity, activeCount > 0 {
-                    Spacer(minLength: 4)
-                    Text("\(activeCount)")
-                        .font(.caption.weight(.medium))
-                        .monospacedDigit()
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 1)
-                        .background(Capsule().fill(Color.primary.opacity(isSelected ? 0.18 : 0.12)))
-                        .foregroundStyle(isSelected ? .primary : .secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(rowForeground(selected: isSelected))
-        .listRowBackground(
-            Group {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color(nsColor: .unemphasizedSelectedContentBackgroundColor))
-                        .padding(.vertical, 2)
-                } else {
-                    Color.clear
-                }
-            }
-        )
-    }
-
-    /// Finder dims the selected label to primary when the window is inactive.
-    private func rowForeground(selected: Bool) -> Color {
-        guard selected else { return .primary }
-        return controlActiveState == .inactive ? .primary : .accentColor
+        Label { Text(item.title) } icon: { Image(systemName: item.systemImage) }
+            .tag(item)
     }
 }
 

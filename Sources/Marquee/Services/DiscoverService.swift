@@ -83,6 +83,22 @@ extension AppServices {
     }
 
     func discoverSnapshot() async throws -> DiscoverSnapshot {
+        // The catalogue changes on the order of days, but the old code rebuilt all eight shelves on
+        // every visit to the Discover tab — a second of network work each time. Hold the result for
+        // `AppServices.catalogueTTL`; the tab can always be pulled back to fresh with `invalidateCatalogue()`.
+        if let cached = catalogueCache, Date().timeIntervalSince(cached.at) < AppServices.catalogueTTL {
+            PerfLog.mark("discoverSnapshot cached")
+            return cached.value
+        }
+        let value = try await PerfLog.measure("discoverSnapshot") { try await buildDiscoverSnapshot() }
+        catalogueCache = (value, Date())
+        return value
+    }
+
+    /// Drops the cached catalogue shelves (Settings changes, or the user asks for a reload).
+    func invalidateCatalogue() { catalogueCache = nil }
+
+    private func buildDiscoverSnapshot() async throws -> DiscoverSnapshot {
         guard let client = tmdb() else { throw MetadataError.invalidAPIKey }
         async let trending = client.trending(.all, window: .week)
         async let movies = client.popularMovies()
@@ -220,23 +236,62 @@ extension AppServices {
     }
 
     func calendarEvents(from now: Date = Date(), days: Int = 120) async throws -> [CalendarEvent] {
+        // Coming back to the Calendar tab used to rebuild the whole event list every time. The data
+        // only moves when the library or the schedule does, so hold it briefly and let the screen
+        // read `cachedCalendarEvents()` synchronously so the tab paints with content immediately.
+        if let cached = calendarCache, Date().timeIntervalSince(cached.at) < AppServices.calendarTTL {
+            PerfLog.mark("calendarEvents cached")
+            return cached.value
+        }
+        let value = try await PerfLog.measure("calendarEvents") { try await buildCalendarEvents(from: now, days: days) }
+        calendarCache = (value, Date())
+        return value
+    }
+
+    /// The last calendar result, or nil before the first load. Read synchronously by the screen so
+    /// returning to the tab shows content instead of a skeleton.
+    var cachedCalendarEvents: [CalendarEvent]? { calendarCache?.value }
+
+    private func buildCalendarEvents(from now: Date, days: Int) async throws -> [CalendarEvent] {
         let monitored = try await library.titles(matching: MarqueeCore.LibraryFilter(monitored: true))
         let calendar = Calendar.current
         let end = calendar.date(byAdding: .day, value: days, to: now) ?? now
         var events: [CalendarEvent] = []
-        for title in monitored {
+
+        // One query for every airing episode instead of one per series.
+        let episodes = try await library.monitoredEpisodes(from: now, to: end)
+        let titlesByID = Dictionary(monitored.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for episode in episodes {
+            guard let title = titlesByID[episode.titleId] else { continue }
             let key = title.id.uuidString
-            if title.kind == .series {
-                for episode in try await library.episodes(titleId: title.id)
-                where episode.monitored && episode.airDate.map({ $0 >= now && $0 <= end }) == true {
-                    guard let date = episode.airDate else { continue }
-                    events.append(CalendarEvent(
-                        id: episode.id.uuidString, titleID: key, title: title.title,
-                        subtitle: "S\(episode.seasonNumber) · E\(episode.episodeNumber) · \(episode.title ?? "New episode")",
-                        date: date, kind: .episode))
+            guard let date = episode.airDate else { continue }
+            events.append(CalendarEvent(
+                id: episode.id.uuidString, titleID: key, title: title.title,
+                subtitle: "S\(episode.seasonNumber) · E\(episode.episodeNumber) · \(episode.title ?? "New episode")",
+                date: date, kind: .episode))
+        }
+
+        // Movie release dates are not in the database, so they still cost a metadata lookup each.
+        let movies = monitored.filter { $0.kind == .movie }
+        if !movies.isEmpty {
+            let details = await withTaskGroup(of: (UUID, Date?).self) { group in
+                for title in movies {
+                    guard let tmdbID = title.tmdbId, let client = tmdb() else { continue }
+                    group.addTask {
+                        let date = try? await client.movieDetails(id: tmdbID).releaseDate
+                        return (title.id, date)
+                    }
                 }
-            } else if let tmdbID = title.tmdbId, let client = tmdb(),
-                      let d = try? await client.movieDetails(id: tmdbID), let date = d.releaseDate, date >= now, date <= end {
+                var found: [(UUID, Date?)] = []
+                for await entry in group { found.append(entry) }
+                return found
+            }
+            let dates = Dictionary(
+                details.compactMap { entry in entry.1.map { (entry.0, $0) } },
+                uniquingKeysWith: { a, _ in a })
+            for title in movies {
+                guard let date = dates[title.id], date >= now, date <= end else { continue }
+                let key = title.id.uuidString
                 events.append(CalendarEvent(id: key, titleID: key, title: title.title, subtitle: "Movie release", date: date, kind: .movie))
             }
         }

@@ -155,6 +155,17 @@ public struct GRDBLibraryRepository: LibraryRepository {
         }
     }
 
+    /// Every monitored episode of every series airing inside `range`, in one query.
+    /// The calendar used to walk the monitored titles and call `episodes(titleId:)` per show, so a
+    /// library of N series cost N round trips every time the Calendar tab was opened. The partial
+    /// index `episode_airDate` covers exactly this predicate.
+    public func monitoredEpisodes(from start: Date, to end: Date) async throws -> [Episode] {
+        try await database.writer.read {
+            try Episode.filter(Column("airDate") >= start && Column("airDate") <= end)
+                .order(Column("airDate")).fetchAll($0)
+        }
+    }
+
     public func save(_ title: Title) async throws {
         var title = title
         title.updatedAt = Date()

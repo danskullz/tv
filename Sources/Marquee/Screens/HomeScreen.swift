@@ -1,11 +1,16 @@
 import SwiftUI
+import MarqueeCore
 import MarqueeUI
 
 struct HomeScreen: View {
     @Environment(AppModel.self) private var model
-    @State private var shelves: [ShelfModel] = []
-    @State private var featured: PosterItem?
-    @State private var isLoading = true
+
+    /// True only before the first successful load, so a background refresh never flashes skeletons
+    /// over content that is already on screen.
+    private var isFirstLoad: Bool { !model.didLoadHomeShelves }
+
+    private var shelves: [ShelfModel] { model.homeShelves }
+    private var featured: PosterItem? { shelves.first { $0.id == "continue" }?.items.first }
 
     var body: some View {
         ScrollView {
@@ -28,7 +33,7 @@ struct HomeScreen: View {
                         .buttonStyle(.marqueeSecondary)
                     }
                 }
-                if isLoading {
+                if isFirstLoad {
                     ShelfSkeleton(style: .wide, count: 5)
                     ShelfSkeleton(count: 8)
                 } else if shelves.allSatisfy(\.items.isEmpty) {
@@ -61,10 +66,9 @@ struct HomeScreen: View {
         .toolbar(removing: .title)
         .followsLiveProgress()
         .task(id: model.titlesRevision) {
-            let loaded = (try? await model.source.homeShelves()) ?? []
-            shelves = loaded
-            featured = loaded.first { $0.id == "continue" }?.items.first
-            isLoading = false
+            let start = ContinuousClock.now
+            await model.refreshHomeShelves()
+            PerfLog.record("HomeScreen.load", seconds: PerfLog.seconds(since: start))
         }
     }
 }

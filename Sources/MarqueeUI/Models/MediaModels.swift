@@ -115,6 +115,10 @@ public struct PosterItem: Identifiable, Hashable, Sendable {
     public var genres: [String]
     /// True when this catalogue result is already in the local library.
     public var isInLibrary: Bool
+    /// VoiceOver summary, built once at init. It used to be computed inside `PosterCard.body`, which
+    /// meant several `String(localized:)` lookups per card on every render of every grid; a tab
+    /// switch showed up as main-thread time in exactly that path.
+    public let spokenState: String
 
     public init(
         id: ID, kind: MediaKind, title: String, subtitle: String = "", year: Int = 0,
@@ -136,6 +140,31 @@ public struct PosterItem: Identifiable, Hashable, Sendable {
         self.quality = quality
         self.genres = genres
         self.isInLibrary = isInLibrary
+        self.spokenState = Self.spokenState(
+            subtitle: subtitle, availability: availability, downloadFraction: downloadFraction, watch: watch)
+    }
+
+    static func spokenState(
+        subtitle: String, availability: Availability, downloadFraction: Double?, watch: WatchState
+    ) -> String {
+        var parts: [String] = []
+        if !subtitle.isEmpty { parts.append(subtitle) }
+        switch availability {
+        case .downloading:
+            if let f = downloadFraction { parts.append(String(localized: "Downloading, \(Formatters.percent(f))")) }
+            else { parts.append(String(localized: "Downloading")) }
+        case .queued: parts.append(String(localized: "Queued"))
+        case .importing: parts.append(String(localized: "Importing"))
+        case .missing: parts.append(String(localized: "Not downloaded"))
+        case .unaired: parts.append(String(localized: "Not released yet"))
+        case .local: break
+        }
+        switch watch {
+        case .watched: parts.append(String(localized: "Watched"))
+        case .inProgress(let f): parts.append(String(localized: "\(Formatters.percent(f)) watched"))
+        case .unwatched: break
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

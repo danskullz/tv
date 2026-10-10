@@ -29,31 +29,33 @@ struct RealLibrary: LibraryDataSource {
     }
 
     private func snapshot() async throws -> Snapshot {
-        let active = Set((await monitor.active).map(\.titleID))
-        var snap = try await database.writer.read { db -> Snapshot in
-            var s = Snapshot()
-            for row in try Row.fetchAll(
-                db, sql: "SELECT titleId, COUNT(DISTINCT seasonNumber) AS seasons, COUNT(*) AS episodes FROM episode WHERE seasonNumber > 0 GROUP BY titleId")
-            {
-                let id: UUID = row["titleId"]
-                s.seasonCount[id] = row["seasons"]
-                s.episodeCount[id] = row["episodes"]
-            }
-            for state in try MarqueeCore.WatchState.fetchAll(db) {
-                if state.watched { s.watchedCount[state.titleId, default: 0] += 1 }
-                if !state.watched, state.positionSeconds > 0, let d = state.durationSeconds, d > 0 {
-                    s.progress[state.titleId] = max(s.progress[state.titleId] ?? 0, min(0.98, state.positionSeconds / d))
+        try await PerfLog.measure("RealLibrary.snapshot") {
+            let active = Set((await monitor.active).map(\.titleID))
+            var snap = try await database.writer.read { db -> Snapshot in
+                var s = Snapshot()
+                for row in try Row.fetchAll(
+                    db, sql: "SELECT titleId, COUNT(DISTINCT seasonNumber) AS seasons, COUNT(*) AS episodes FROM episode WHERE seasonNumber > 0 GROUP BY titleId")
+                {
+                    let id: UUID = row["titleId"]
+                    s.seasonCount[id] = row["seasons"]
+                    s.episodeCount[id] = row["episodes"]
                 }
-                s.movieWatch[state.id] = state
+                for state in try MarqueeCore.WatchState.fetchAll(db) {
+                    if state.watched { s.watchedCount[state.titleId, default: 0] += 1 }
+                    if !state.watched, state.positionSeconds > 0, let d = state.durationSeconds, d > 0 {
+                        s.progress[state.titleId] = max(s.progress[state.titleId] ?? 0, min(0.98, state.positionSeconds / d))
+                    }
+                    s.movieWatch[state.id] = state
+                }
+                for row in try Row.fetchAll(db, sql: "SELECT titleId, MAX(resolution) AS res FROM mediaFile GROUP BY titleId") {
+                    let id: UUID = row["titleId"]
+                    if let res: Int = row["res"] { s.fileResolution[id] = res }
+                }
+                return s
             }
-            for row in try Row.fetchAll(db, sql: "SELECT titleId, MAX(resolution) AS res FROM mediaFile GROUP BY titleId") {
-                let id: UUID = row["titleId"]
-                if let res: Int = row["res"] { s.fileResolution[id] = res }
-            }
-            return s
+            snap.downloading = active
+            return snap
         }
-        snap.downloading = active
-        return snap
     }
 
     private func item(_ t: Title, _ s: Snapshot, now: Date = Date()) -> PosterItem {
@@ -117,12 +119,18 @@ struct RealLibrary: LibraryDataSource {
     // MARK: LibraryDataSource
 
     func library() async throws -> [PosterItem] {
-        let titles = try await repo.titles(matching: MarqueeCore.LibraryFilter())
-        let snap = try await snapshot()
-        return titles.map { item($0, snap) }
+        try await PerfLog.measure("RealLibrary.library") {
+            let titles = try await repo.titles(matching: MarqueeCore.LibraryFilter())
+            let snap = try await snapshot()
+            return titles.map { item($0, snap) }
+        }
     }
 
     func homeShelves() async throws -> [ShelfModel] {
+        try await PerfLog.measure("RealLibrary.homeShelves") { try await buildHomeShelves() }
+    }
+
+    private func buildHomeShelves() async throws -> [ShelfModel] {
         let snap = try await snapshot()
         let all = try await repo.titles(matching: MarqueeCore.LibraryFilter(sort: .recentlyAdded))
         let byID = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
@@ -264,6 +272,10 @@ struct RealLibrary: LibraryDataSource {
     }
 
     func activity() async throws -> [ActivityItem] {
+        try await PerfLog.measure("RealLibrary.activity") { try await buildActivity() }
+    }
+
+    private func buildActivity() async throws -> [ActivityItem] {
         let titles = Dictionary(uniqueKeysWithValues: try await repo.titles(matching: MarqueeCore.LibraryFilter()).map { ($0.id, $0) })
         var items: [ActivityItem] = []
         var covered = Set<String>()
