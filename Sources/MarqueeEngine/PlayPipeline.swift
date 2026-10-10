@@ -167,12 +167,20 @@ public actor PlayPipeline {
                 t.name, season: ref.season, episodes: [ref.episode], absolute: absoluteNumbers(request, ref),
                 runtimeMinutes: runtime,
                 seasonEpisodeCount: seasonCount(request, ref.season), aliases: t.aliases)
-            return [
+            var out = [
                 Stage(query: episodeQuery(t, ref, ids: true), wanted: wanted, label: "episode by id"),
                 Stage(query: episodeQuery(t, ref, ids: false), wanted: wanted, label: "episode by title"),
                 Stage(query: seasonQuery(t, ref.season, ids: true), wanted: seasonWanted, label: "season packs by id"),
                 Stage(query: seasonQuery(t, ref.season, ids: false), wanted: seasonWanted, label: "season packs by title"),
             ]
+            if ref.season == 0 {
+                // Specials ship inside complete/multi-season packs, which a
+                // season-0 query rarely returns: fall back to a title-wide
+                // search so those packs surface.
+                out.append(Stage(query: titleQuery(t, ids: true), wanted: wanted, label: "complete packs by id"))
+                out.append(Stage(query: titleQuery(t, ids: false), wanted: wanted, label: "complete packs by title"))
+            }
+            return out
         case .season(let season, let start):
             let pack = WantedItem.season(
                 t.name, season: season, episodeCount: seasonCount(request, season), runtimeMinutes: runtime, aliases: t.aliases)
@@ -212,6 +220,14 @@ public actor PlayPipeline {
     private func seasonQuery(_ t: PlayTitle, _ season: Int, ids: Bool) -> TorznabQuery {
         .tv(
             title: t.name, season: season, imdbID: ids ? t.imdbID : nil, tvdbID: ids ? t.tvdbID : nil,
+            tmdbID: ids ? t.tmdbID : nil)
+    }
+
+    /// Title-wide query (no season/episode): surfaces complete and multi-season
+    /// packs that a season-0 query would miss.
+    private func titleQuery(_ t: PlayTitle, ids: Bool) -> TorznabQuery {
+        .tv(
+            title: t.name, imdbID: ids ? t.imdbID : nil, tvdbID: ids ? t.tvdbID : nil,
             tmdbID: ids ? t.tmdbID : nil)
     }
 
@@ -627,7 +643,7 @@ public actor PlayPipeline {
             "qualityNotAllowed": "quality not allowed", "tooFewSeeders": "too few seeders", "sizeTooSmall": "too small",
             "sizeTooLarge": "too large", "blocklisted": "blocklisted", "sample": "samples", "packNotWanted": "season packs",
         ]
-        return counts.sorted { $0.value > $1.value }.prefix(3)
+        return counts.sorted { $0.value > $1.value || ($0.value == $1.value && $0.key < $1.key) }
             .map { "\($0.value) \(readable[$0.key] ?? $0.key)" }.joined(separator: ", ")
     }
 

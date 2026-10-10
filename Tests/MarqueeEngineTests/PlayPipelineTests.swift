@@ -344,6 +344,22 @@ struct PlayPipelineTests {
         #expect(rig.transport.searches.count == 4)
     }
 
+    @Test("specials fall back to a title-wide search so complete packs surface")
+    func specialsSearchCompletePacks() async throws {
+        let rig = try await pipelineRig(scripts: [.ready]) { _ in [] }
+        let ref = EpisodeRef(season: 0, episode: 2)
+        let request = PlayRequest(
+            title: PlayTitle(id: rig.title.id, kind: .series, name: rig.title.title, year: 2026, tvdbID: 99_000_001),
+            scope: .episode(ref), profile: .balanced,
+            episodes: [PackEpisode(ref: ref)])
+        let op = rig.pipeline.begin(request)
+        await #expect(throws: PlayPipelineError.noResults(indexersSearched: 1, indexersFailed: 0)) { _ = try await op.stream() }
+        // Episode scope: id query, title query, both season-pack queries, then both title-wide queries.
+        #expect(rig.transport.searches.count == 6, "\(rig.transport.searches)")
+        #expect(rig.transport.searches[4]["season"] == nil && rig.transport.searches[4]["ep"] == nil)
+        #expect(rig.transport.searches[5]["q"] == "Marquee Test Pattern")
+    }
+
     @Test("ids are tried first and the title text is the fallback")
     func queryStages() async throws {
         let rig = try await pipelineRig(scripts: [.ready]) { query in

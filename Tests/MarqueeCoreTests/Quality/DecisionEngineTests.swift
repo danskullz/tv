@@ -224,6 +224,22 @@ import Testing
         #expect(plain[0].rejections.map(\.code) == ["sizeTooLarge"])
     }
 
+    @Test func specialsMatchMultiSeasonPacks() {
+        // Specials ship inside complete/multi-season packs, which rarely name
+        // season 0: a S01-S03 pack is the expected source for S00E02, while a
+        // single S01 pack almost certainly is not.
+        let wanted = WantedItem.episode("Black Lagoon", season: 0, episodes: [2], runtimeMinutes: 24, seasonEpisodeCount: 7)
+        let complete = qualityMakeCandidate("Black.Lagoon.S01-S03.COMPLETE.1080p.BluRay.x264-GRP", sizeGB: 16)
+        let single = qualityMakeCandidate("Black.Lagoon.S01.1080p.BluRay.x264-GRP", sizeGB: 8)
+        let results = ReleaseDecisionEngine.decide([complete, single], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))
+        #expect(results[0].candidate.release.title == complete.release.title && results[0].isAccepted)
+        #expect(results[0].isPack)
+        #expect(results[1].rejections.map(\.code) == ["wrongEpisode"])
+        // The specials season itself still matches its own pack.
+        let s00Pack = qualityMakeCandidate("Black.Lagoon.S00.Specials.1080p.BluRay.x264-GRP", sizeGB: 3)
+        #expect(ReleaseDecisionEngine.decide([s00Pack], in: DecisionContext(wanted: wanted, profile: profile, now: qualityNow))[0].isAccepted)
+    }
+
     @Test func absoluteNumberedReleaseMatchesEpisodePlay() {
         // Anime absolute numbering ("Show - 01") matches S01E01 once the Play request threads it through.
         let wanted = WantedItem.episode(

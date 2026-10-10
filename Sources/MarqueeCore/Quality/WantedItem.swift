@@ -115,7 +115,12 @@ public struct WantedItem: Sendable, Hashable {
             }
         case .season(let n):
             switch parsed.kind {
-            case .seasonPack, .multiSeason: return parsed.seasons.contains(n) ? .pack : mismatch
+            case .seasonPack, .multiSeason:
+                if parsed.seasons.contains(n) { return .pack }
+                // Specials ship inside complete/multi-season packs, which rarely
+                // name season 0: a multi-season pack is the expected source for them.
+                if n == 0, parsed.kind == .multiSeason { return .pack }
+                return mismatch
             case .completeSeries: return .pack
             case .animeAbsolute: return parsed.isPack ? .pack : mismatch
             default: return mismatch
@@ -134,8 +139,13 @@ public struct WantedItem: Sendable, Hashable {
                 }
                 return mismatch
             case .seasonPack, .multiSeason:
-                guard let season, parsed.seasons.contains(season) else { return mismatch }
-                return .pack
+                guard let season else { return mismatch }
+                if parsed.seasons.contains(season) { return .pack }
+                // Specials ship inside complete/multi-season packs, which rarely
+                // name season 0: a multi-season pack is the expected source for them,
+                // while a single-season pack almost certainly is not.
+                if season == 0, parsed.kind == .multiSeason { return .pack }
+                return mismatch
             case .completeSeries:
                 return .pack
             default:
