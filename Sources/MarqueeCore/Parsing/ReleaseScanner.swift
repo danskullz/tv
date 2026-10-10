@@ -900,7 +900,23 @@ struct Scanner {
             completeWord = true; mark(i, 1, quality: false); return 1
         case "omake", "omakes":
             // Bonus shorts are always season-0 content; never part of the title.
-            special = true; mark(i, 1, quality: false); return 1
+            special = true
+            mark(i, 1, quality: false)
+            // The batch's own index follows the marker: "Some Show - Omake 02". It is neither a
+            // season nor a number in the show's own numbering, but it is the only thing that says
+            // which bonus short this file is. `parseFileName` only reaches the lenient pass when a
+            // folder supplied TV context, so a top-level omake file would otherwise lose its
+            // number entirely and never resolve to season 0. Carry it as an absolute number, which
+            // is what `ReleaseParser` rewrites into season 0 for bonus content.
+            if !haveSE, airDate == nil, absolute.isEmpty, i + 1 < n,
+                toks[i + 1].n >= 1, toks[i + 1].len <= 3, !toks[i + 1].bracketed,
+                toks[i + 1].run & Run.bracket == 0
+            {
+                absolute = [toks[i + 1].n]
+                mark(i + 1, 1, quality: false)
+                return 2
+            }
+            return 1
         case "vostfr", "subfrench", "truefrench":
             addLang(.french)
             if t.l != "truefrench" { flags.insert(.subbed) }

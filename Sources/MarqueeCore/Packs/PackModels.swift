@@ -100,7 +100,14 @@ public struct PackSeriesContext: Sendable {
         var dupTitles: Set<String> = []
         for e in episodes {
             byRef[e.ref] = e
-            if let a = e.absolute, e.ref.season != 0 { byAbsolute[a] = e.ref }
+            if let a = e.absolute {
+                // Absolute numbering normally excludes specials, but plenty of packs interleave a
+                // bonus short into the same running sequence ("Series - 010 - OVA", "Series - 011 -
+                // Episode 10"). Indexing only regular episodes left that file with no episode to
+                // match and it drifted onto the regular episode whose number it happened to share.
+                // Regular episodes claim a number first, so the usual convention still wins a tie.
+                if e.ref.season != 0 || byAbsolute[a] == nil { byAbsolute[a] = e.ref }
+            }
             if let d = e.airDate { byDate[d] = e.ref }
             if let t = e.title {
                 let n = ReleaseParser.normalizeTitle(t)
