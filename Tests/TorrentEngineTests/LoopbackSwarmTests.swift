@@ -259,4 +259,68 @@ struct LoopbackSwarmTests {
         await session.shutdown()
         await #expect(throws: TorrentError.sessionClosed) { try await session.status(bogus) }
     }
+
+    @Test("remove returns only once the torrent is really gone, and re-adding the same download survives")
+    func removeIsSynchronousWithTheEngine() async throws {
+        let scratch = try Scratch()
+        let directory = try scratch.directory("download")
+        let file = directory.appendingPathComponent("clip.bin")
+        try Self.payload(count: 8 * Self.pieceLength, seed: 11).write(to: file)
+        let torrent = try TorrentCreator.createTorrent(at: file, pieceLength: Self.pieceLength)
+
+        let session = try TorrentSession(configuration: .loopbackOnly())
+        // The Play pipeline's shape: tear one attempt down, then immediately start the next one on
+        // the same download. libtorrent keys torrents by info-hash and, while a removal is still
+        // queued, hands back the *old* torrent for a new add -- which then vanishes underneath the
+        // new attempt as "the download was removed".
+        for round in 1...15 {
+            let id = try await session.addTorrent(data: torrent, savePath: directory.path)
+            try await session.remove(id, deleteFiles: true)
+
+            // The torrent really is gone: `remove` did not return early.
+            await #expect(throws: TorrentError.notFound) { try await session.status(id) }
+
+            let events = session.events()  // subscribed after the removal we just caused
+            let again = try await session.addTorrent(data: torrent, savePath: directory.path)
+            #expect(again == id)
+            let removals = await Self.collectRemovals(events, for: id, window: .milliseconds(300))
+            #expect(removals.isEmpty, "round \(round): the replacement was handed the dying torrent")
+            try await session.remove(again)
+        }
+        await session.shutdown()
+    }
+
+    @Test("a removal Marquee requested is reported as such, not as the engine dropping it")
+    func removalEventNamesItsCause() async throws {
+        let scratch = try Scratch()
+        let directory = try scratch.directory("download")
+        let file = directory.appendingPathComponent("clip.bin")
+        try Self.payload(count: 4 * Self.pieceLength, seed: 13).write(to: file)
+        let torrent = try TorrentCreator.createTorrent(at: file, pieceLength: Self.pieceLength)
+
+        let session = try TorrentSession(configuration: .loopbackOnly())
+        let events = session.events()
+        let id = try await session.addTorrent(data: torrent, savePath: directory.path)
+        try await session.remove(id)
+
+        let seen = await Self.collectRemovals(events, for: id, window: .seconds(5))
+        #expect(seen == [.requestedByApp])
+        await session.shutdown()
+    }
+
+    /// Reasons reported for `id` during the next `window`. Empty means the torrent was left alone.
+    private static func collectRemovals(
+        _ stream: AsyncStream<TorrentEvent>, for id: TorrentID, window: Duration
+    ) async -> [TorrentRemovalReason] {
+        let collector = Task { () -> [TorrentRemovalReason] in
+            var reasons: [TorrentRemovalReason] = []
+            for await event in stream {
+                if case let .removed(t, reason) = event, t == id { reasons.append(reason) }
+            }
+            return reasons
+        }
+        try? await Task.sleep(for: window)
+        collector.cancel()  // ends the stream iteration
+        return await collector.value
+    }
 }

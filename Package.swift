@@ -67,7 +67,7 @@ let package = Package(
             ]
         ),
         .target(name: "TorrentEngine", dependencies: ["CTorrentShim"]),
-        .testTarget(name: "TorrentEngineTests", dependencies: ["TorrentEngine"]),
+        .testTarget(name: "TorrentEngineTests", dependencies: ["TorrentEngine", "CTorrentShim"]),
 
         // Streaming critical path: joins the torrent engine to the stream server and the pack planner.
         .target(name: "MarqueeEngine", dependencies: ["MarqueeCore", "TorrentEngine"]),

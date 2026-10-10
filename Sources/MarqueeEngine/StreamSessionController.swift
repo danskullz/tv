@@ -426,8 +426,13 @@ public actor StreamSessionController {
         case .metadataFailed(let t, let message) where t == id:
             diagnostics.append(message)
             publish(.failed(StreamControllerError.metadataTimeout.plainLanguage))
-        case .removed(let t) where t == id:
-            publish(.failed("This download was removed."))
+        case .removed(let t, let reason) where t == id:
+            // Every removal this app performs also raises this event, so say which one it was:
+            // "Marquee's own cleanup" and "the engine dropped it" are very different bugs, and a
+            // removal we did not cause used to be indistinguishable from one that we did.
+            diagnostics.append("torrent removed: \(reason.diagnosticsText)")
+            guard !stopped else { return }  // our own teardown, arriving after the fact
+            publish(.failed(Self.removalMessage(reason)))
         default:
             break
         }
@@ -595,6 +600,18 @@ public actor StreamSessionController {
         case let e as StreamControllerError: e
         case TorrentError.timedOut: .metadataTimeout
         default: .engine(String(describing: error))
+        }
+    }
+
+    /// Plain language for a torrent that vanished mid-playback. The raw reason goes to
+    /// ``diagnostics``; the enum never reaches the UI.
+    private static func removalMessage(_ reason: TorrentRemovalReason) -> String {
+        switch reason {
+        case .byEngine:
+            "The torrent engine dropped this download before it could start. Try another version."
+        case .requestedByApp, .requestedByAppDeletingFiles:
+            // Only reachable when the teardown was not ours, i.e. a bug worth naming plainly.
+            "Marquee's own cleanup removed this download before it could start."
         }
     }
 

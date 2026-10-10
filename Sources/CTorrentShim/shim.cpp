@@ -70,6 +70,12 @@ struct mq_session {
   std::mutex ids_mutex;
   std::unordered_map<std::uint32_t, std::string> ids;
 
+  // Info-hash -> mq_remove_reason for removals this shim asked for and libtorrent has not
+  // confirmed yet. libtorrent 2.0 dropped torrent_removed_alert's reason enum, so this is the only
+  // way to tell our own teardown apart from a torrent the engine dropped by itself.
+  std::mutex removals_mutex;
+  std::unordered_map<std::string, int32_t> removals;
+
   explicit mq_session(lt::session_params&& params) : ses(std::move(params)) {}
 };
 
@@ -226,8 +232,18 @@ void dispatch(mq_session* s, lt::alert* a) {
           it = (it->second == id) ? s->ids.erase(it) : std::next(it);
         }
       }
+      int32_t reason = MQ_REMOVED_BY_ENGINE;
+      {
+        std::lock_guard<std::mutex> lock(s->removals_mutex);
+        auto it = s->removals.find(id);
+        if (it != s->removals.end()) {
+          reason = it->second;
+          s->removals.erase(it);
+        }
+      }
       ev.type = MQ_EVENT_TORRENT_REMOVED;
       ev.torrent_id = id.c_str();
+      ev.value = reason;
       break;
     }
     case metadata_received_alert::alert_type:
@@ -377,6 +393,19 @@ lt::torrent_flags_t add_flags(lt::torrent_flags_t base, int32_t flags) {
 }
 
 int do_add(mq_session* s, lt::add_torrent_params& params, char id_out[41], char** error) {
+  // A torrent is keyed by its info-hash, and add_flags leaves duplicate_is_error clear, so
+  // re-adding a hash that is still in the session returns the *existing* torrent rather than a new
+  // one. That is the right answer for a torrent that is running -- re-adding is then idempotent --
+  // but the wrong one while that torrent is being removed: remove_torrent only posts a job, so the
+  // old torrent is still findable, and the new caller would silently adopt a torrent that is about
+  // to vanish (and then see it disappear as "the download was removed"). Refuse instead.
+  if (params.info_hashes.has_v1() || params.info_hashes.has_v2()) {
+    std::lock_guard<std::mutex> lock(s->removals_mutex);
+    if (s->removals.count(id_of(params.info_hashes))) {
+      set_error(error, "this torrent is already being removed");
+      return MQ_ERR_DUPLICATE;
+    }
+  }
   lt::error_code ec;
   lt::torrent_handle h = s->ses.add_torrent(std::move(params), ec);
   if (ec || !h.is_valid()) {
@@ -588,6 +617,12 @@ int mq_torrent_start_download(mq_session* s, char const* id) {
 int mq_torrent_remove(mq_session* s, char const* id, int32_t delete_files) {
   return guarded(nullptr, [&]() -> int {
     MQ_REQUIRE_TORRENT(h, s, id);
+    // Record the intent before calling: remove_torrent only posts a job, so the alert can be
+    // posted the moment it returns.
+    {
+      std::lock_guard<std::mutex> lock(s->removals_mutex);
+      s->removals[id_of(h)] = delete_files ? MQ_REMOVED_BY_SHIM_DELETING : MQ_REMOVED_BY_SHIM;
+    }
     s->ses.remove_torrent(h, delete_files ? lt::session::delete_files : lt::remove_flags_t{});
     return static_cast<int>(MQ_OK);
   });

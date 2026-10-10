@@ -111,8 +111,19 @@ public actor TorrentSession {
     public func resume(_ id: TorrentID) throws { try check(mq_torrent_resume(pointer(), id.hex)) }
     /// Leaves `AddOptions.holdDownload`.
     public func startDownload(_ id: TorrentID) throws { try check(mq_torrent_start_download(pointer(), id.hex)) }
-    public func remove(_ id: TorrentID, deleteFiles: Bool = false) throws {
+
+    /// Removes the torrent and does not return until the engine has confirmed it is gone.
+    ///
+    /// `remove_torrent` only posts a job: the torrent stays in the session until libtorrent's own
+    /// thread runs it. Because a torrent is keyed by its info-hash, adding the same download inside
+    /// that window does not create a torrent — libtorrent hands back the existing one. A caller that
+    /// tore one attempt down and immediately started the next on the same download would silently
+    /// adopt the dying torrent and watch it disappear a moment later. Waiting closes that window, so
+    /// "removed" means removed by the time this returns.
+    public func remove(_ id: TorrentID, deleteFiles: Bool = false) async throws {
+        let stream = hub.subscribe()  // subscribe first, so the alert cannot land between call and wait
         try check(mq_torrent_remove(pointer(), id.hex, deleteFiles ? 1 : 0))
+        await Self.awaitRemoval(of: id, on: stream, timeout: .seconds(2))
     }
 
     /// Per-torrent rate limits in bytes per second (0 = unlimited). These also apply to loopback and
@@ -305,6 +316,7 @@ public actor TorrentSession {
         case MQ_ERR_NOT_FOUND: throw TorrentError.notFound
         case MQ_ERR_NO_METADATA: throw TorrentError.noMetadata
         case MQ_ERR_INVALID: throw message.map { TorrentError.libtorrent($0) } ?? TorrentError.invalidArgument
+        case MQ_ERR_DUPLICATE: throw TorrentError.duplicateTorrent
         default: throw TorrentError.libtorrent(message ?? "libtorrent error \(code)")
         }
     }
@@ -347,6 +359,17 @@ public actor TorrentSession {
             }
             defer { group.cancelAll() }
             return try await group.next()!
+        }
+    }
+
+    /// Like `wait`, but a timeout or a closed session is not an error: the removal was requested
+    /// either way, and the caller is on its way out.
+    private static func awaitRemoval(
+        of id: TorrentID, on stream: AsyncStream<TorrentEvent>, timeout: Duration
+    ) async {
+        _ = try? await wait(on: stream, timeout: timeout) { event -> Bool? in
+            if case .removed(id, _) = event { return true }
+            return nil
         }
     }
 }

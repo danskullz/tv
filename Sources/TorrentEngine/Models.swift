@@ -180,10 +180,34 @@ public enum ListenKind: Int32, Sendable {
     case other = 3
 }
 
+/// Why a torrent left the engine.
+///
+/// libtorrent 2.0 does not say: `torrent_removed_alert` carried a reason enum (`explicit_remove`,
+/// `duplicate_torrent`, `ratio_limit_reached`, ...) up to 1.2, but 2.0 replaced it with the info
+/// hashes and the client data set at add time. The distinction that still matters is available to
+/// us instead, because every removal Marquee performs goes through the shim: did we ask for it?
+public enum TorrentRemovalReason: Int32, Sendable {
+    /// Nothing asked for it: libtorrent dropped the torrent on its own.
+    case byEngine = 0
+    /// `TorrentSession.remove(_:deleteFiles:)` asked for this removal.
+    case requestedByApp = 1
+    /// As above, and the download's files were deleted with it.
+    case requestedByAppDeletingFiles = 2
+
+    /// Raw engine wording for the diagnostics bundle. Never shown to the user.
+    public var diagnosticsText: String {
+        switch self {
+        case .byEngine: "the torrent engine removed the download on its own"
+        case .requestedByApp: "Marquee removed the download"
+        case .requestedByAppDeletingFiles: "Marquee removed the download and deleted its files"
+        }
+    }
+}
+
 public enum TorrentEvent: Sendable {
     case listening(port: Int, address: String, kind: ListenKind)
     case listenFailed(port: Int, message: String, kind: ListenKind)
-    case removed(TorrentID)
+    case removed(TorrentID, reason: TorrentRemovalReason)
     case metadataReceived(TorrentID)
     case metadataFailed(TorrentID, message: String)
     /// The initial file check finished.
@@ -213,4 +237,7 @@ public enum TorrentError: Error, Sendable, Equatable {
     case libtorrent(String)
     case timedOut
     case sessionClosed
+    /// The info-hash is already in the session. Only raised when that torrent is being removed, so
+    /// it means "this download is on its way out; wait for it to go before adding it again".
+    case duplicateTorrent
 }

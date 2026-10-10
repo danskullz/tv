@@ -143,6 +143,7 @@ public actor PlayPipeline {
                 } catch let failure as AttemptFailure {
                     failureReasons.append(failure.reason)
                     if let hash = Self.effectiveInfoHash(of: release) { failedHashes.insert(hash) }
+                    if let hash = failure.infoHash { failedHashes.insert(hash) }
                     if attempts < config.maxAttempts {
                         emit(PlayStatus(
                             .retrying, "That one isn't working. Trying the next best release…", attempt: attempts + 1))
@@ -259,10 +260,15 @@ public actor PlayPipeline {
     private struct AttemptFailure: Error {
         var reason: String
         var underlying: (any Error)?
+        /// The hash the engine gave the torrent, which is not always the hash the indexer
+        /// published: a magnet may carry the v2 hash while libtorrent identifies the torrent by its
+        /// v1 one. Dedup has to know both or it will happily retry the same download.
+        var infoHash: String?
 
-        init(reason: String, underlying: (any Error)? = nil) {
+        init(reason: String, underlying: (any Error)? = nil, infoHash: String? = nil) {
             self.reason = reason
             self.underlying = underlying
+            self.infoHash = infoHash
         }
     }
 
@@ -350,7 +356,7 @@ public actor PlayPipeline {
             case .ready:
                 break
             case .failed(let reason, let underlying):
-                throw AttemptFailure(reason: reason, underlying: underlying)
+                throw AttemptFailure(reason: reason, underlying: underlying, infoHash: infoHash)
             }
 
             let explanation = score.explanation.text
@@ -377,7 +383,7 @@ public actor PlayPipeline {
                 id: grabID, request: request, score: score, decisions: decisions, found: found, stage: stage,
                 attempt: number, outcome: .failed, failure: reason, failureDetail: detail)
             await blocklistRelease(release, infoHash: infoHash, request: request, reason: reason)
-            throw AttemptFailure(reason: reason, underlying: cause ?? error)
+            throw AttemptFailure(reason: reason, underlying: cause ?? error, infoHash: infoHash)
         }
     }
 
@@ -802,6 +808,8 @@ public actor PlayPipeline {
             return "The download disappeared before it could start. Try another release."
         case .noMetadata:
             return "Couldn't fetch the release details from the swarm. Try another release."
+        case .duplicateTorrent:
+            return "This download is still being tidied up from the last attempt. Try again."
         }
     }
 
