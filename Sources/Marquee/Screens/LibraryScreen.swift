@@ -80,9 +80,13 @@ struct LibraryScreen: View {
                 .help(Text("Sort"))
                 HStack(spacing: 6) {
                     Image(systemName: "square.grid.3x3.fill").imageScale(.small).foregroundStyle(.secondary)
-                    Slider(value: $posterWidth, in: Tokens.PosterSize.minimum...Tokens.PosterSize.maximum)
-                        .frame(width: 100)
-                        .accessibilityLabel(Text("Poster size"))
+                    MarqueeSlider(
+                        value: $posterWidth,
+                        in: Tokens.PosterSize.minimum...Tokens.PosterSize.maximum,
+                        width: 116,
+                        scale: .compact
+                    )
+                    .accessibilityLabel(Text("Poster size"))
                     Image(systemName: "square.grid.2x2.fill").imageScale(.small).foregroundStyle(.secondary)
                 }
             }

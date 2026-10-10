@@ -48,8 +48,23 @@ struct GalleryView: View {
                         ProgressRing(fraction: nil).frame(width: 40, height: 40)
                     }
                 }
+                section("Sliders") {
+                    VStack(alignment: .leading, spacing: Tokens.Spacing.m) {
+                        HStack(spacing: Tokens.Spacing.m) {
+                            Text("compact").font(Tokens.Typography.cardSubtitle).frame(width: 70, alignment: .trailing)
+                            MarqueeSlider(value: $width, in: Tokens.PosterSize.minimum...Tokens.PosterSize.maximum, width: 116, scale: .compact)
+                                .accessibilityLabel(Text("Compact poster size"))
+                        }
+                        HStack(spacing: Tokens.Spacing.m) {
+                            Text("regular").font(Tokens.Typography.cardSubtitle).frame(width: 70, alignment: .trailing)
+                            MarqueeSlider(value: $width, in: Tokens.PosterSize.minimum...Tokens.PosterSize.maximum, width: 220, scale: .regular)
+                                .accessibilityLabel(Text("Regular poster size"))
+                        }
+                    }
+                }
                 section("Poster cards (size slider, arrows, Return, Space)") {
-                    Slider(value: $width, in: Tokens.PosterSize.minimum...Tokens.PosterSize.maximum).frame(width: 220)
+                    MarqueeSlider(value: $width, in: Tokens.PosterSize.minimum...Tokens.PosterSize.maximum, width: 220)
+                        .accessibilityLabel(Text("Poster size"))
                     HStack(alignment: .top, spacing: Tokens.Spacing.cardGap) {
                         ForEach(Self.items) { item in
                             PosterCard(item, width: width, selection: item.id == selection ? .focused : .none)
