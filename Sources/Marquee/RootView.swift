@@ -114,7 +114,7 @@ struct SidebarView: View {
             }
             Section {
                 row(.calendar)
-                row(.activity).badge(activeCount)
+                activityRow
                 row(.search)
             }
         }
@@ -123,6 +123,25 @@ struct SidebarView: View {
         .softScrollEdge()
         .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 300)
         .accessibilityLabel(Text("Sidebar"))
+    }
+
+    /// Activity carries the active-download count as row content rather than via `.badge()`.
+    /// `.badge()` on a row inside a selection `List` collapses that row's hit area on this OS:
+    /// Calendar's row went to zero height and swallowed Activity's, so clicking Activity opened
+    /// Calendar instead. Never put `.badge()` on a selectable sidebar row here.
+    private var activityRow: some View {
+        HStack(spacing: Tokens.Spacing.s) {
+            Label { Text(SidebarItem.activity.title) } icon: { Image(systemName: SidebarItem.activity.systemImage) }
+            Spacer(minLength: 4)
+            if activeCount > 0 {
+                Text("\(activeCount)")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("\(activeCount) active downloads"))
+            }
+        }
+        .tag(SidebarItem.activity)
     }
 
     private func row(_ item: SidebarItem) -> some View {
