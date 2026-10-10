@@ -125,6 +125,14 @@ extension AppServices {
     }
 
     private func startPlayback(_ context: PlayContext) async throws {
+        // A Play is already getting this episode: bring its window forward instead of
+        // searching for a new source (a duplicate run would fight it for the player).
+        let candidates = activePlaybacks.filter { $0.canServe(context) }
+        if let existing = candidates.first(where: \.hasReadyStream) ?? candidates.first,
+            await existing.takeOver(with: context, startAt: context.startAt)
+        {
+            return
+        }
         let pipeline = try await playPipeline()
         let request = await playRequest(for: context)
         let session = ActivePlayback(services: self, context: context, pipeline: pipeline, request: request)
@@ -232,6 +240,9 @@ final class ActivePlayback {
     private var pipelineRequest: PlayRequest
     private var operation: PlayOperation?
     private var stream: PlayStream?
+    /// Set when the pipeline search/stream for this session failed: a re-press must run a
+    /// fresh search instead of reusing the dead operation.
+    private var pipelineFailed = false
     private var importForwarder: Task<Void, Never>?
     private var feed: AsyncStream<PlayerBufferingStatus>.Continuation?
     private var forwarder: Task<Void, Never>?
@@ -325,29 +336,119 @@ final class ActivePlayback {
 
     private func forwardPipeline() {
         forwarder?.cancel()
-        guard let operation, let feed else { return }
+        guard let operation else { return }
+        pipelineFailed = false
         forwarder = Task { [weak self] in
             for await status in operation.statuses {
-                feed.yield(status.playerStatus)
+                guard let self, !Task.isCancelled else { return }
+                self.feed?.yield(status.playerStatus)
                 // Let the pick ("Found 14 releases · picked 1080p WEB-DL") be readable before connecting lines replace it.
                 if status.phase == .choosing { try? await Task.sleep(for: .milliseconds(900)) }
             }
-            guard let stream = try? await operation.stream() else { return }
-            await self?.streamStarted(stream, forward: feed)
+            guard let self, !Task.isCancelled else { return }
+            guard let stream = try? await operation.stream() else {
+                await self.markPipelineFailed()
+                return
+            }
+            await self.streamStarted(stream)
         }
     }
 
-    private func streamStarted(_ stream: PlayStream, forward feed: AsyncStream<PlayerBufferingStatus>.Continuation) async {
+    private func markPipelineFailed() {
+        pipelineFailed = true
+    }
+
+    private func streamStarted(_ stream: PlayStream) async {
         self.stream = stream
         await registerDownload(stream)
         observeCompletedFiles(from: stream)
-        let status = stream.control.statusUpdates()
-        forwarder = Task {
-            for await s in status { if let mapped = s.playerStatus { feed.yield(mapped) } }
+        watchStream(stream)
+    }
+
+    /// Forwards a ready stream's buffering states into whatever feed is current (takeover
+    /// swaps the feed under it, so this never needs restarting).
+    private func watchStream(_ stream: PlayStream) {
+        forwarder = Task { [weak self] in
+            for await s in stream.control.statusUpdates() {
+                guard let self, !Task.isCancelled else { return }
+                if let mapped = s.playerStatus { self.feed?.yield(mapped) }
+            }
         }
     }
 
-    private func registerDownload(_ stream: PlayStream) async {
+    // MARK: Reuse
+
+    /// True while this session is getting (or already serves) something to watch.
+    var isLive: Bool { stream != nil || operation != nil }
+
+    /// True when a stream URL is ready to show immediately.
+    var hasReadyStream: Bool { stream != nil }
+
+    /// Whether a new Play for `context` should reuse this session instead of searching again:
+    /// the same movie, the same episode (even while still connecting), or a pack-mate of a
+    /// ready season-pack stream (served via `advance(to:)` with no new search). A session whose
+    /// search already failed is not reusable — the next Play must try again.
+    func canServe(_ context: AppServices.PlayContext) -> Bool {
+        guard isLive, !pipelineFailed || stream != nil, context.title.id == self.context.title.id else { return false }
+        switch (self.context.current, context.current) {
+        case (nil, nil):
+            return true
+        case let (have?, want?):
+            if have.seasonNumber == want.seasonNumber, have.episodeNumber == want.episodeNumber { return true }
+            if let stream, stream.release.isPack { return true }
+            return false
+        default:
+            return false
+        }
+    }
+
+    /// Takes over for a new Play of (usually) the same episode: brings the player window
+    /// forward on the existing torrent. The pipeline/status loops always yield into the current
+    /// feed, so swapping it via `present` is enough — no loop is restarted and no new search
+    /// runs. Returns false when this session can't serve it, so the caller runs a fresh
+    /// pipeline instead.
+    func takeOver(with newContext: AppServices.PlayContext, startAt: Double?) async -> Bool {
+        guard canServe(newContext) else { return false }
+        let wantRef = newContext.current.map { EpisodeRef(season: $0.seasonNumber, episode: $0.episodeNumber) }
+        if let stream {
+            if let want = wantRef {
+                if stream.episodes.contains(want) {
+                    adopt(newContext)
+                    present(source: .url(stream.url), startAt: startAt ?? 0, statuses: makeFeed())
+                    await registerDownload(stream, recordHistory: false)
+                    return true
+                }
+                if let handle = try? await stream.control.advance(to: want) {
+                    let next = PlayStream(url: handle.url, episodes: handle.episodes, release: stream.release, control: stream.control)
+                    self.stream = next
+                    adopt(newContext)
+                    present(source: .url(handle.url), startAt: startAt ?? 0, statuses: makeFeed())
+                    await registerDownload(next, recordHistory: false)
+                    return true
+                }
+                return false
+            }
+            adopt(newContext)
+            present(source: .url(stream.url), startAt: startAt ?? 0, statuses: makeFeed())
+            await registerDownload(stream, recordHistory: false)
+            return true
+        }
+        // Still connecting: same episode only (canServe), so just adopt the resume point
+        // and bring the in-flight operation's window forward. No new search.
+        adopt(newContext)
+        present(source: pipelineSource(), startAt: startAt ?? 0, statuses: makeFeed())
+        return true
+    }
+
+    /// Adopts the library context of a reusing Play (title metadata, episode list, position).
+    private func adopt(_ newContext: AppServices.PlayContext) {
+        context.title = newContext.title
+        context.episodes = newContext.episodes
+        context.current = newContext.current
+        context.startAt = newContext.startAt
+    }
+
+    private func registerDownload(_ stream: PlayStream, recordHistory: Bool = true) async {
         let title = context.title
         var progressIDs: [String] = []
         if let e = context.current {
@@ -359,9 +460,11 @@ final class ActivePlayback {
                 id: stream.control.torrent, titleID: title.id, label: label, releaseName: stream.release.title,
                 progressIDs: progressIDs, startedAt: Date(), isStreamOnly: false),
             savePath: services.downloadFolder.path)
-        try? await services.history.append(HistoryEvent(
-            type: .streamStarted, entityType: .torrent, entityId: stream.control.torrent.hex, titleId: title.id,
-            payload: ["release": .string(stream.release.title), "grab": .string(stream.release.grabID.uuidString)]))
+        if recordHistory {
+            try? await services.history.append(HistoryEvent(
+                type: .streamStarted, entityType: .torrent, entityId: stream.control.torrent.hex, titleId: title.id,
+                payload: ["release": .string(stream.release.title), "grab": .string(stream.release.grabID.uuidString)]))
+        }
         services.libraryChanged()
     }
 
