@@ -47,8 +47,7 @@ struct DiscoverScreen: View {
         }
         .navigationTitle(Text("Discover"))
         .heroScrollEdge()
-        .toolbarBackground(.visible, for: .windowToolbar)
-        .toolbarColorScheme(.dark, for: .windowToolbar)
+        .toolbar(removing: .title)
         .onAppear { startLoad() }
         .onDisappear { loadTask?.cancel(); loadTask = nil }
     }
