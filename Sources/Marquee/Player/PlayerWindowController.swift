@@ -11,6 +11,13 @@ final class PlayerWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
+    /// The green light toggles full screen rather than zooming to the desktop size. The player opens
+    /// in full screen (its own Space, no menu bar), so the same button has to be the way back out —
+    /// `zoom` would drop it to a window floating on the desktop instead of leaving full screen.
+    override func zoom(_ sender: Any?) {
+        toggleFullScreen(nil)
+    }
+
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
         case .keyDown:
@@ -101,7 +108,17 @@ final class PlayerWindowController: NSObject, NSWindowDelegate {
     func show() {
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
+        // The player is the whole screen: opening it already full-screen puts the window in its own
+        // Space with the menu bar and the rest of the desktop out of the way, which is what a video
+        // window is for. The green light (and Esc, and F) bring it back out again.
+        guard shouldOpenFullScreen, !window.styleMask.contains(.fullScreen) else { return }
+        shouldOpenFullScreen = false
+        window.toggleFullScreen(nil)
     }
+
+    /// Full-screen-on-open applies to the window a session starts in, not to Up Next swaps or to a
+    /// user who has just left full screen themselves.
+    private var shouldOpenFullScreen = true
 
     /// Swaps playback in place (Up Next), keeping the window and its full-screen state.
     func replace(session newSession: PlayerSession) {

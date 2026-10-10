@@ -72,9 +72,11 @@ public struct PlayerPrerollView: View {
                 statusArea.padding(.top, 22)
             }
             .foregroundStyle(.white)
-            // Cap the text column, then breathe outside it: the 48pt padding must not eat into the
-            // 640pt measure, and the padded block can never grow wider than the window.
-            .frame(maxWidth: 640)
+            // Fill the window and centre inside it. Capping the block at a fixed 640pt measure left
+            // each child centring on its own ideal width rather than the window's, which put the
+            // title, the ring and the status line noticeably right of the window's centre.
+            .frame(maxWidth: .infinity)
+            .multilineTextAlignment(.center)
             .padding(.horizontal, 48)
             .shadow(color: .black.opacity(0.35), radius: 12, y: 2)
         }
