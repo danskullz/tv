@@ -6,7 +6,7 @@ import Testing
 @testable import TorrentEngine
 
 /// Collects `MQ_EVENT_TORRENT_REMOVED` payloads. Runs on the shim's alert thread.
-private final class RemovalCollector: @unchecked Sendable {
+fileprivate final class RemovalCollector: @unchecked Sendable {
     private let state = Mutex<[(id: String, reason: Int32)]>([])
     func record(_ id: String, _ reason: Int32) { state.withLock { $0.append((id, reason)) } }
     var removals: [(id: String, reason: Int32)] { state.withLock { $0 } }
@@ -32,10 +32,10 @@ struct RemovalReasonTests {
         init(_ description: String) { self.description = description }
     }
 
-    final class Harness {
+    fileprivate final class Harness {
         let session: OpaquePointer
         let directory: URL
-        private let collector: RemovalCollector
+        let collector: RemovalCollector
         private let context: UnsafeMutableRawPointer
 
         init() throws {
@@ -102,7 +102,8 @@ struct RemovalReasonTests {
             return String(decoding: id.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
         }
 
-        /// Raw `mq_session_add_torrent_data`, so the caller can assert on a refusal.
+        /// Raw `mq_session_add_torrent_data`, so the caller can assert on a refusal. Records the id a
+        /// successful add reported.
         func addExpectingFailure(_ torrent: Data) -> Int32 {
             var id = [CChar](repeating: 0, count: 41)
             var error: UnsafeMutablePointer<CChar>?
@@ -112,8 +113,13 @@ struct RemovalReasonTests {
                     &id, &error)
             }
             mq_free(error)
+            if code == MQ_OK {
+                addedID.withLock { $0 = String(cString: id) }
+            }
             return code
         }
+
+        let addedID = Mutex<String?>(nil)
 
         func remove(_ id: String) -> Int32 { mq_torrent_remove(session, id, 1) }
 
@@ -138,16 +144,36 @@ struct RemovalReasonTests {
         #expect(mq_remove_reason(rawValue: UInt32(removal.reason)) == MQ_REMOVED_BY_SHIM_DELETING)
     }
 
-    @Test("re-adding the same download while its removal is in flight is refused, not silently adopted")
-    func reAddDuringPendingRemovalIsRefused() async throws {
-        let harness = try Harness()
-        let torrent = try harness.torrentData()
-        let id = try harness.add(torrent)
-        #expect(harness.remove(id) == MQ_OK)
+    @Test("re-adding the same download never leaves a torrent that then vanishes")
+    func reAddAroundRemovalNeverYieldsADyingTorrent() async throws {
+        // `remove_torrent` only posts a job, so whether the removal has landed by the time the next
+        // add happens is a genuine race and cannot be forced from outside without parking the
+        // shim's alert thread — which deadlocks `mq_session_destroy`. So assert the guarantee
+        // instead of the mechanism: refused while the removal is in flight, or a fresh live torrent
+        // once it is gone. Being handed the dying torrent, and watching it disappear, is the bug.
+        for _ in 1...12 {
+            let harness = try Harness()
+            let torrent = try harness.torrentData()
+            let id = try harness.add(torrent)
+            #expect(harness.remove(id) == MQ_OK)
 
-        // The removal is a job on libtorrent's thread, so the torrent is still findable right now.
-        let code = harness.addExpectingFailure(torrent)
-        #expect(code == MQ_ERR_DUPLICATE, "handing back the dying torrent would surface as 'download was removed'")
+            let code = harness.addExpectingFailure(torrent)
+            if code == MQ_ERR_DUPLICATE { continue }
+            #expect(code == MQ_OK, "the add failed for an unexpected reason (\(code))")
+
+            let added = try #require(harness.addedID.withLock { $0 }, "an accepted add reports its torrent")
+            try await Task.sleep(for: .milliseconds(300))
+
+            var status = mq_torrent_status()
+            #expect(
+                mq_torrent_get_status(harness.session, added, &status) == MQ_OK,
+                "the replacement is not in the session: it was the dying torrent"
+            )
+            #expect(
+                harness.collector.removals.count <= 1,
+                "the replacement was removed too: \(harness.collector.removals)"
+            )
+        }
     }
 
     @Test("the Swift event decodes every reason the shim can report")
