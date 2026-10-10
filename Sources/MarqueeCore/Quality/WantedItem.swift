@@ -153,8 +153,6 @@ public struct WantedItem: Sendable, Hashable {
                 return mismatch
             case .completeSeries:
                 return .pack
-            default:
-                return mismatch
             }
         }
     }
