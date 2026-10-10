@@ -19,6 +19,11 @@ private struct PlayButtonBody: View {
             .font(.headline)
             .foregroundStyle(.white)
             .labelStyle(.titleAndIcon)
+            // One line, always. "Resume S0 · E1" was wrapping to two lines and making this button
+            // taller than its neighbours. `fixedSize(horizontal:)` stops the row squeezing the label
+            // into a wrap; the hero row is allowed to lay out wide rather than fold the text.
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 26)
             .frame(minHeight: 44)
             .contentShape(Capsule())
@@ -54,6 +59,8 @@ private struct SecondaryButtonBody: View {
         configuration.label
             .font(.headline.weight(.medium))
             .labelStyle(.titleAndIcon)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 18)
             .frame(minHeight: 44)
             .contentShape(Capsule())
@@ -79,6 +86,39 @@ extension ButtonStyle where Self == PlayButtonStyle {
 
 extension ButtonStyle where Self == SecondaryButtonStyle {
     public static var marqueeSecondary: SecondaryButtonStyle { SecondaryButtonStyle() }
+}
+
+private struct AccentIconButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        configuration.label
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
+            .background(Color.accentColor.gradient, in: Circle())
+            .shadow(color: Color.accentColor.opacity(0.35), radius: 8, y: 3)
+            .modifier(FocusRing())
+            .opacity(isEnabled ? 1 : 0.5)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .motion(Tokens.Motion.snappy, value: configuration.isPressed)
+    }
+}
+
+/// Accent-coloured circular control that carries an icon only. Used where an action is important
+/// but must not compete with the hero Play button for a row's width (add to library, quick toggles).
+/// The caller is responsible for an accessibility label — there is no visible text to speak.
+public struct AccentIconButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        AccentIconButtonBody(configuration: configuration)
+    }
+}
+
+extension ButtonStyle where Self == AccentIconButtonStyle {
+    public static var marqueeAccentIcon: AccentIconButtonStyle { AccentIconButtonStyle() }
 }
 
 /// Ready-made Play / Resume button. `context` is read by VoiceOver ("Play, Harbor Lights season 2").

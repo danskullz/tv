@@ -14,6 +14,9 @@ struct TitleDetailScreen: View {
     @State private var browseError: String?
     @State private var selectedPerson: PersonSummary?
     @State private var showWhyRelease = false
+    /// A hero action that adds the title is in flight; the controls wait so a double click cannot
+    /// start two adds for the same title.
+    @State private var isAdding = false
 
     var body: some View {
         Group {
@@ -90,16 +93,7 @@ struct TitleDetailScreen: View {
                     metadata: catalogueMetadata(d), overview: d.tagline ?? d.overview,
                     backdrop: d.item.backdrop, height: 480
                 ) {
-                    if d.item.isInLibrary {
-                        Button {} label: { Label("In Your Library", systemImage: "checkmark.circle.fill") }
-                            .disabled(true).buttonStyle(.marqueePlay)
-                    } else {
-                        Button { want(d.item) } label: { Label("Want It", systemImage: "plus") }.buttonStyle(.marqueePlay)
-                    }
-                    if !d.trailers.isEmpty {
-                        Button { open(d.trailers.first?.externalURL) } label: { Label("Watch Trailer", systemImage: "play.rectangle") }
-                            .buttonStyle(.marqueeSecondary)
-                    }
+                    catalogueActions(d)
                 }
                 VStack(alignment: .leading, spacing: Tokens.Spacing.xl) {
                     if !d.overview.isEmpty { Text(verbatim: d.overview).font(.body).textSelection(.enabled).frame(maxWidth: 780, alignment: .leading) }
@@ -132,6 +126,80 @@ struct TitleDetailScreen: View {
                      d.genres.first, d.score.map { "★ " + $0.formatted(.number.precision(.fractionLength(1))) }].compactMap { $0 }
         if let imdb = d.imdbID { parts.append("IMDb \(imdb)") }
         return parts
+    }
+
+    // MARK: Catalogue actions
+
+    /// Hero row on a TMDB title page, in order of how often it is wanted:
+    /// **Play** (the primary control — it adds the title and starts it), the blue **`+`** that becomes
+    /// the "In Your Library" tick, then the secondary actions on the right.
+    @ViewBuilder
+    private func catalogueActions(_ d: BrowseDetails) -> some View {
+        if d.item.availability == .unaired {
+            // Nothing to play yet. Adding is the only action that does anything here: it monitors the
+            // title, and Marquee says so when it lands. A lone icon-only `+` would say nothing.
+            addToLibrary(d, asPrimary: true)
+        } else if d.item.isInLibrary {
+            PlayButton("Play", context: d.item.title) { Task { await model.playCatalogueResuming(d.item) } }
+            addToLibrary(d, asPrimary: false)
+            if d.item.kind == .series {
+                Button { Task { await playFromTheTop(d) } } label: { Label("Play from Episode 1", systemImage: "backward.end.fill") }
+                    .buttonStyle(.marqueeSecondary)
+                    .disabled(isAdding)
+            }
+        } else {
+            PlayButton("Play", context: playHint(d)) { Task { await playFromTheTop(d) } }
+                .disabled(isAdding)
+                .help(playHint(d))
+            addToLibrary(d, asPrimary: false)
+        }
+        if !d.trailers.isEmpty {
+            Button { open(d.trailers.first?.externalURL) } label: { Label("Watch Trailer", systemImage: "play.rectangle") }
+                .buttonStyle(.marqueeSecondary)
+        }
+    }
+
+    /// Blue `+`, turning into the "In Your Library" tick once the title is added. `asPrimary` gives it
+    /// a label, for the not-released-yet page where it is the only action.
+    @ViewBuilder
+    private func addToLibrary(_ d: BrowseDetails, asPrimary: Bool) -> some View {
+        let symbol = d.item.isInLibrary ? "checkmark.circle.fill" : "plus"
+        let label = d.item.isInLibrary ? "In Your Library" : "Add to Library"
+        if asPrimary {
+            Button { want(d.item) } label: { Label(label, systemImage: symbol) }
+                .buttonStyle(.marqueePlay)
+                .disabled(d.item.isInLibrary || isAdding)
+        } else {
+            Button { want(d.item) } label: { Image(systemName: symbol) }
+                .buttonStyle(.marqueeAccentIcon)
+                .disabled(d.item.isInLibrary || isAdding)
+                .help(label)
+                .accessibilityLabel(Text(label))
+                .accessibilityValue(Text(d.item.isInLibrary ? "Added" : "Not in your library"))
+        }
+    }
+
+    /// Adds the title if it isn't in the library yet, then starts it: season `firstSeason` episode 1
+    /// for a series, the beginning for a movie.
+    private func playFromTheTop(_ d: BrowseDetails) async {
+        guard !isAdding else { return }
+        isAdding = true
+        defer { isAdding = false }
+        if await model.playCatalogueFromTheTop(d.item, firstSeason: firstSeason(of: d)) {
+            browseDetail?.item.isInLibrary = true
+        }
+    }
+
+    /// Season 1, or the first season that actually has episodes (a few shows only list specials).
+    private func firstSeason(of d: BrowseDetails) -> Int {
+        d.seasons.first { $0.seasonNumber > 0 && !$0.episodes.isEmpty }?.seasonNumber ?? 1
+    }
+
+    private func playHint(_ d: BrowseDetails) -> String {
+        let start = d.item.kind == .series
+            ? String(localized: "Season 1, Episode 1")
+            : String(localized: "the beginning")
+        return String(localized: "Adds it to your library, then starts from \(start).")
     }
 
     @ViewBuilder
@@ -216,12 +284,16 @@ struct TitleDetailScreen: View {
     }
 
     private func want(_ item: PosterItem) {
-        guard let services = model.services else { return }
+        guard let services = model.services, !isAdding else { return }
+        isAdding = true
         Task {
+            defer { isAdding = false }
             do {
                 let title = try await services.want(item)
+                browseDetail?.item.isInLibrary = true
                 model.show(Toast(title: String(localized: "Added \(title.title)"), detail: "Now monitored in your library.", systemImage: "checkmark.circle.fill"))
             } catch LibraryError.alreadyInLibrary(let existing) {
+                browseDetail?.item.isInLibrary = true
                 model.show(Toast(title: "Already in your library", systemImage: "checkmark.circle.fill", actionTitle: "Show", action: {
                     model.go(to: item.kind == .movie ? .movies : .tv); model.open(existing.uuidString)
                 }))

@@ -264,6 +264,58 @@ final class AppModel {
         Task { await services.play(.season(id, season: season, startingAt: fromStart ? 1 : nil)) }
     }
 
+    /// Plays a TMDB catalogue title, which is usually not in the library yet and so has no library
+    /// id to play. It is added first — the same action the hero's `+` performs — and playback then
+    /// starts at the top: season `firstSeason`, episode 1 for a series (binging on from there), the
+    /// beginning for a movie. Returns false when the title could not be added; either way the user
+    /// has been told why.
+    @discardableResult
+    func playCatalogueFromTheTop(_ item: PosterItem, firstSeason: Int = 1) async -> Bool {
+        guard let services else { return false }
+        guard item.availability != .unaired else {
+            show(Toast(title: String(localized: "Not released yet"),
+                       detail: String(localized: "Add it to your library and we'll let you know when \(item.title) is out."),
+                       systemImage: "calendar"))
+            return false
+        }
+        let titleID: UUID
+        var added = false
+        do {
+            titleID = try await services.want(item).id
+            added = true
+        } catch LibraryError.alreadyInLibrary(let existing) {
+            // Added from another window between the load and this click: play the existing row.
+            titleID = existing
+        } catch {
+            show(Toast(title: String(localized: "Couldn't add \(item.title)"),
+                       detail: error.localizedDescription, systemImage: "exclamationmark.triangle"))
+            return false
+        }
+        if added {
+            show(Toast(title: String(localized: "Added \(item.title)"),
+                       detail: item.kind == .series
+                           ? String(localized: "Starting from Season \(firstSeason), Episode 1.")
+                           : String(localized: "Starting from the beginning."),
+                       systemImage: "play.fill"))
+        }
+        await services.play(item.kind == .series
+            ? .season(titleID, season: firstSeason, startingAt: 1)
+            : .title(titleID))
+        return true
+    }
+
+    /// Plays a catalogue title that is already in the library, the way the library page does: resume
+    /// what is in progress, else the next unwatched episode.
+    func playCatalogueResuming(_ item: PosterItem) async {
+        guard let services else { return }
+        guard let title = await services.libraryTitle(catalogueID: item.id) else {
+            // The tick was stale — the title was removed elsewhere. Add it back and start at the top.
+            _ = await playCatalogueFromTheTop(item)
+            return
+        }
+        await services.play(.title(title.id))
+    }
+
     private func playMock(_ item: PosterItem) {
         let detail: String
         let icon: String

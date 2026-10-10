@@ -67,12 +67,15 @@ public struct PlayerPrerollView: View {
                     Text(verbatim: subtitle)
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(.white.opacity(0.72))
+                        .multilineTextAlignment(.center)
                 }
                 statusArea.padding(.top, 22)
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, 48)
+            // Cap the text column, then breathe outside it: the 48pt padding must not eat into the
+            // 640pt measure, and the padded block can never grow wider than the window.
             .frame(maxWidth: 640)
+            .padding(.horizontal, 48)
             .shadow(color: .black.opacity(0.35), radius: 12, y: 2)
         }
         .ignoresSafeArea()
@@ -90,6 +93,8 @@ public struct PlayerPrerollView: View {
                 Text(verbatim: status)
                     .font(.system(size: 15, weight: .medium).monospacedDigit())
                     .foregroundStyle(.white.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .contentTransition(.numericText())
                     .motion(Tokens.Motion.fade, value: status)
                     .accessibilityLabel(Text(verbatim: status))

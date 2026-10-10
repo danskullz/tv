@@ -210,6 +210,16 @@ extension AppServices {
         })
     }
 
+    /// The library row behind a catalogue id like `"movie-12345"` / `"tv-67890"`, or nil when the
+    /// title is not in the library. Lets a "Play" control on a catalogue page start the same way
+    /// the library page does, instead of only working once the title has been added.
+    func libraryTitle(catalogueID: String) async -> Title? {
+        guard let (kind, tmdbID) = Self.parseCatalogueID(catalogueID),
+              let titles = try? await library.titles(matching: MarqueeCore.LibraryFilter())
+        else { return nil }
+        return titles.first { $0.kind == kind && $0.tmdbId == tmdbID }
+    }
+
     private static func mark(_ items: [PosterItem], existing: Set<String>) -> [PosterItem] {
         BrowseDataShaping.unique(items, limit: 200, id: \.id).map { item in
             var item = item

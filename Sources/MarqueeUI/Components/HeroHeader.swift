@@ -77,36 +77,43 @@ public struct HeroHeader<Actions: View>: View {
 
     private var panel: some View {
         VStack(alignment: .leading, spacing: Tokens.Spacing.s) {
-            if let eyebrow {
-                Text(verbatim: eyebrow)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.75))
-            }
-            Text(verbatim: title)
-                .font(.system(size: titleSize, weight: .bold))
-                .foregroundStyle(.white)
-                .lineLimit(2)
-                .shadow(color: .black.opacity(0.35), radius: 12, y: 2)
-                .accessibilityAddTraits(.isHeader)
-            if !metadata.isEmpty || quality != nil {
-                HStack(spacing: Tokens.Spacing.s) {
-                    Text(verbatim: metadata.joined(separator: "  ·  "))
-                        .font(Tokens.Typography.metadata)
-                        .foregroundStyle(.white.opacity(0.8))
-                    if let quality { QualityBadge(quality) }
+            // The 620pt measure applies to the text only. Capping the whole panel squeezed the action
+            // row, and with five buttons "Play from Episode 1" and "Why This Release?" wrapped onto
+            // two lines and broke the row's baseline. (`lineLimit`/`fixedSize` on the row cannot help:
+            // an ancestor's maxWidth still proposes the narrower width to the labels.)
+            VStack(alignment: .leading, spacing: Tokens.Spacing.s) {
+                if let eyebrow {
+                    Text(verbatim: eyebrow)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                Text(verbatim: title)
+                    .font(.system(size: titleSize, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .shadow(color: .black.opacity(0.35), radius: 12, y: 2)
+                    .accessibilityAddTraits(.isHeader)
+                if !metadata.isEmpty || quality != nil {
+                    HStack(spacing: Tokens.Spacing.s) {
+                        Text(verbatim: metadata.joined(separator: "  ·  "))
+                            .font(Tokens.Typography.metadata)
+                            .foregroundStyle(.white.opacity(0.8))
+                        if let quality { QualityBadge(quality) }
+                    }
+                }
+                if let overview, !overview.isEmpty {
+                    Text(verbatim: overview)
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineLimit(3)
+                        .frame(maxWidth: 560, alignment: .leading)
                 }
             }
-            if let overview, !overview.isEmpty {
-                Text(verbatim: overview)
-                    .font(.callout)
-                    .foregroundStyle(.white.opacity(0.88))
-                    .lineLimit(3)
-                    .frame(maxWidth: 560, alignment: .leading)
-            }
+            .frame(maxWidth: 620, alignment: .leading)
             HStack(spacing: Tokens.Spacing.s + 2) { actions }
                 .padding(.top, Tokens.Spacing.s)
+                .fixedSize(horizontal: true, vertical: false)
         }
-        .frame(maxWidth: 620, alignment: .leading)
         .environment(\.colorScheme, .dark)
     }
 }

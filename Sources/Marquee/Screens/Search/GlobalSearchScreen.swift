@@ -52,18 +52,26 @@ struct SearchScreen: View {
     @ViewBuilder
     private var content: some View {
         if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            VStack(alignment: .leading, spacing: 20) {
-                EmptyStateView(title: "Find your next favorite", message: "Search your library instantly, then look across movies, series and people in TMDB.", systemImage: "sparkle.magnifyingglass")
-                if !recent.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Recent Searches").font(Tokens.Typography.sectionTitle)
-                        FlowLayout(spacing: 8) {
-                            ForEach(recent, id: \.self) { term in
-                                Button(term) { query = term }.buttonStyle(.bordered).controlSize(.small)
+            // A ScrollView proposes an unbounded height, so `EmptyStateView`'s
+            // `.frame(maxHeight: .infinity)` resolves to its natural height instead of claiming all
+            // the space and shoving "Recent Searches" off the bottom of the window. Fixing it here
+            // rather than in the shared component leaves the screens that rely on that expansion to
+            // centre their empty state untouched.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    EmptyStateView(title: "Find your next favorite", message: "Search your library instantly, then look across movies, series and people in TMDB.", systemImage: "sparkle.magnifyingglass")
+                    if !recent.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Recent Searches").font(Tokens.Typography.sectionTitle)
+                            FlowLayout(spacing: 8) {
+                                ForEach(recent, id: \.self) { term in
+                                    Button(term) { query = term }.buttonStyle(.bordered).controlSize(.small)
+                                }
                             }
-                        }
-                    }.padding(.horizontal, Tokens.Spacing.gutter)
+                        }.padding(.horizontal, Tokens.Spacing.gutter)
+                    }
                 }
+                .padding(.bottom, Tokens.Spacing.xl)
             }
         } else if let error, catalogue.isEmpty, localResults.isEmpty, !isSearching {
             VStack(spacing: 16) {
