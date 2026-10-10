@@ -137,7 +137,23 @@ extension AppServices {
         let request = await playRequest(for: context)
         let session = ActivePlayback(services: self, context: context, pipeline: pipeline, request: request)
         activePlaybacks.append(session)
-        session.start(startAt: context.startAt)
+        if let saved = await orphanedDownload(for: context) {
+            // Its player closed but the torrent is still downloading: serve from it instead
+            // of searching for a new source. Falls back to a search when it doesn't work out.
+            session.startAttaching(to: saved.id, release: saved.release, startAt: context.startAt)
+        } else {
+            session.start(startAt: context.startAt)
+        }
+    }
+
+    /// A still-downloading torrent for this episode whose player closed (no live session).
+    private func orphanedDownload(for context: PlayContext) async -> DownloadMonitor.Entry? {
+        let entries = await monitor.active
+        if let e = context.current {
+            let key = Self.episodeKey(context.title.id, season: e.seasonNumber, episode: e.episodeNumber)
+            return entries.first { $0.titleID == context.title.id && $0.progressIDs.contains(key) }
+        }
+        return entries.first { $0.titleID == context.title.id }
     }
 
     private func presentLocalPlayback(_ context: PlayContext, url: URL) {
@@ -264,6 +280,14 @@ final class ActivePlayback {
         forwardPipeline()
     }
 
+    /// Serves a still-downloading torrent after its player closed: no search. When the torrent
+    /// is gone or holds different content, the player falls back to a fresh search on its own.
+    func startAttaching(to torrent: TorrentID, release: ChosenRelease, startAt: Double?) {
+        operation = pipeline.attach(pipelineRequest, to: torrent, release: release)
+        present(source: pipelineSource(), startAt: startAt ?? 0, statuses: makeFeed())
+        forwardAttach()
+    }
+
     // MARK: Request building
 
     private var playableID: UUID { context.current?.id ?? context.title.id }
@@ -354,13 +378,34 @@ final class ActivePlayback {
         }
     }
 
+    /// Attach-mode forwarding: like `forwardPipeline`, but a dead end (torrent gone, different
+    /// content) falls back to a fresh search in the same window instead of failing.
+    private func forwardAttach() {
+        forwarder?.cancel()
+        guard let operation else { return }
+        pipelineFailed = false
+        forwarder = Task { [weak self] in
+            for await status in operation.statuses {
+                guard let self, !Task.isCancelled else { return }
+                self.feed?.yield(status.playerStatus)
+            }
+            guard let self, !Task.isCancelled else { return }
+            if let stream = try? await operation.stream() {
+                await self.streamStarted(stream, recordHistory: false)
+            } else {
+                self.beginPipeline()
+                self.forwardPipeline()
+            }
+        }
+    }
+
     private func markPipelineFailed() {
         pipelineFailed = true
     }
 
-    private func streamStarted(_ stream: PlayStream) async {
+    private func streamStarted(_ stream: PlayStream, recordHistory: Bool = true) async {
         self.stream = stream
-        await registerDownload(stream)
+        await registerDownload(stream, recordHistory: recordHistory)
         observeCompletedFiles(from: stream)
         watchStream(stream)
     }
@@ -458,6 +503,7 @@ final class ActivePlayback {
         await services.monitor.register(
             DownloadMonitor.Entry(
                 id: stream.control.torrent, titleID: title.id, label: label, releaseName: stream.release.title,
+                release: stream.release,
                 progressIDs: progressIDs, startedAt: Date(), isStreamOnly: false),
             savePath: services.downloadFolder.path)
         if recordHistory {

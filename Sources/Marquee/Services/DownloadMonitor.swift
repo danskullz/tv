@@ -1,5 +1,6 @@
 import Foundation
 import MarqueeCore
+import MarqueeEngine
 import MarqueeUI
 import TorrentEngine
 
@@ -12,6 +13,9 @@ actor DownloadMonitor {
         var titleID: UUID
         var label: String
         var releaseName: String
+        /// The picked release, so a later Play can reattach to this torrent (same choice,
+        /// no new search) after its player closed.
+        var release: ChosenRelease
         /// Progress-ring ids of the episodes this torrent is being played for (the title id for movies).
         var progressIDs: [String]
         var startedAt: Date

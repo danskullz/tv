@@ -48,6 +48,18 @@ public actor PlayPipeline {
         return PlayOperation(statuses: statuses, task: task)
     }
 
+    /// Reconnects playback to a torrent the engine already has (still downloading after its
+    /// player closed): no search, no blocklist writes. Throws when the torrent is gone or
+    /// doesn't contain the episode — the caller falls back to ``begin(_:)``.
+    public nonisolated func attach(_ request: PlayRequest, to torrent: TorrentID, release: ChosenRelease) -> PlayOperation {
+        let (statuses, continuation) = AsyncStream<PlayStatus>.makeStream(bufferingPolicy: .bufferingNewest(16))
+        let task = Task<PlayStream, any Error> { [self] in
+            defer { continuation.finish() }
+            return try await runAttach(request, to: torrent, release: release) { continuation.yield($0) }
+        }
+        return PlayOperation(statuses: statuses, task: task)
+    }
+
     // MARK: Run
 
     private struct Stage {
@@ -242,6 +254,48 @@ public actor PlayPipeline {
 
     private struct AttemptFailure: Error {
         var reason: String
+    }
+
+    private struct AttachFailure: Error {
+        var reason: String
+    }
+
+    /// Serves `request` from an existing engine torrent. Never blocklists: a failure means the
+    /// torrent is gone or holds different content, so the caller searches fresh instead.
+    private func runAttach(
+        _ request: PlayRequest, to torrent: TorrentID, release: ChosenRelease,
+        emit: @escaping @Sendable (PlayStatus) -> Void
+    ) async throws -> PlayStream {
+        let config = configuration()
+        emit(PlayStatus(.connecting, "Reconnecting to your download…", attempt: 1))
+        let controller = controllers.makeController()
+        await controller.setMetadataTimeout(config.metadataTimeoutFirstAttempt)
+        do {
+            let (content, start) = Self.content(for: request)
+            let handle = try await Self.withTimeout(config.metadataTimeoutFirstAttempt) {
+                try await controller.attach(
+                    to: torrent, content: content, startEpisode: start, mode: config.streamMode,
+                    peers: config.extraPeers, corrections: [:], episodeOrder: nil)
+            }
+            try Task.checkCancellation()
+            switch await awaitReady(handle, controller: controller, timeout: config.readyTimeout, attempt: 1, emit: emit) {
+            case .ready:
+                break
+            case .failed(let reason):
+                throw AttachFailure(reason: reason)
+            }
+            emit(PlayStatus(.ready, "Ready to play", attempt: 1))
+            return PlayStream(
+                url: handle.url, episodes: handle.episodes, release: release,
+                control: PlayStreamControl(controller: controller, torrent: handle.torrent))
+        } catch is CancellationError {
+            // The download itself is never touched: it keeps going for the next Play.
+            await controller.stop(removeTorrent: false, deleteFiles: false)
+            throw CancellationError()
+        } catch {
+            await controller.stop(removeTorrent: false, deleteFiles: false)
+            throw error
+        }
     }
 
     private func attempt(
@@ -550,6 +604,12 @@ public actor PlayPipeline {
     // MARK: Content
 
     private static func content(for request: PlayRequest, decision: ReleaseDecision) -> (StreamContent, EpisodeRef?) {
+        content(for: request)
+    }
+
+    /// What to serve and where to start, from the Play scope alone (the release pick only
+    /// matters for a fresh search, not for reattaching to an existing torrent).
+    static func content(for request: PlayRequest) -> (StreamContent, EpisodeRef?) {
         switch request.scope {
         case .movie:
             return (.movie(title: request.title.name), nil)

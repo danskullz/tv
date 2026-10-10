@@ -152,6 +152,13 @@ public protocol StreamControlling: Sendable {
         source: TorrentSource, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
         peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
     ) async throws -> StreamHandle
+    /// Serves `content` from a torrent the engine already has (still downloading after its
+    /// player closed): no add, just metadata (usually instant), planning and registration.
+    /// Throws when the torrent is gone or doesn't contain the episode.
+    func attach(
+        to torrent: TorrentID, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
+        peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
+    ) async throws -> StreamHandle
     func advance(to episode: EpisodeRef) async throws -> StreamHandle
     func setMediaDuration(_ seconds: Double) async
     func playheadMoved(to offset: Int64) async
@@ -165,6 +172,13 @@ public protocol StreamControlling: Sendable {
 
 extension StreamControlling {
     public func setMetadataTimeout(_ timeout: Duration) async {}
+
+    public func attach(
+        to torrent: TorrentID, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
+        peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
+    ) async throws -> StreamHandle {
+        throw StreamControllerError.notStarted
+    }
 }
 
 extension StreamSessionController: StreamControlling {}

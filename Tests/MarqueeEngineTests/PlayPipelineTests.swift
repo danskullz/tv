@@ -89,6 +89,21 @@ private final class PipelineFakeController: StreamControlling, Sendable {
         peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
     ) async throws -> StreamHandle {
         onStart(PipelineStart(source: source, content: content, episode: startEpisode, peers: peers))
+        return try await handle(for: startEpisode, torrent: TorrentID(hex: String(repeating: "ab", count: 20)))
+    }
+
+    /// Reattach records the torrent (the production controller skips the add and plans on it).
+    let attaches = Mutex<[TorrentID]>([])
+
+    func attach(
+        to torrent: TorrentID, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
+        peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
+    ) async throws -> StreamHandle {
+        attaches.withLock { $0.append(torrent) }
+        return try await handle(for: startEpisode, torrent: torrent)
+    }
+
+    private func handle(for startEpisode: EpisodeRef?, torrent: TorrentID) async throws -> StreamHandle {
         switch script {
         case .failStart(let error):
             throw error
@@ -113,7 +128,7 @@ private final class PipelineFakeController: StreamControlling, Sendable {
             Task { try? await Task.sleep(for: .milliseconds(100)); hub.send(.ready) }
         }
         return StreamHandle(
-            torrent: TorrentID(hex: String(repeating: "ab", count: 20)), episodes: startEpisode.map { [$0] } ?? [],
+            torrent: torrent, episodes: startEpisode.map { [$0] } ?? [],
             fileIndex: 0, url: URL(string: "http://127.0.0.1:1/token/file.mkv")!, status: statuses.subscribe(), mapping: nil)
     }
 
@@ -715,5 +730,49 @@ struct PlayPipelineFastFallbackTests {
             magnetURL: URL(string: "magnet:?xt=urn:btih:\(String(repeating: "ab", count: 20))"))
         #expect(PlayPipeline.effectiveInfoHash(of: magnetOnly) == String(repeating: "ab", count: 20))
         #expect(PlayPipeline.effectiveInfoHash(of: IndexerRelease(indexerID: UUID(), title: "x", guid: "g")) == nil)
+    }
+}
+
+@Suite("PlayPipeline attach")
+struct PlayPipelineAttachTests {
+    private func attachRelease(grabID: UUID = UUID()) -> ChosenRelease {
+        ChosenRelease(
+            title: pipelineTop, indexerName: "Indexer 0", tier: .webDL1080p, seeders: 312,
+            size: 1_500_000_000, infoHash: String(repeating: "ab", count: 20), isPack: false,
+            explanation: "Best to stream", grabID: grabID)
+    }
+
+    @Test("reattaching serves the existing torrent with no search")
+    func attachServesExistingTorrent() async throws {
+        let rig = try await pipelineRig(scripts: [.ready], releases: pipelineCatalogue)
+        let id = TorrentID(hex: String(repeating: "ab", count: 20))
+        let release = attachRelease()
+        let op = rig.pipeline.attach(pipelineRequest(rig.title), to: id, release: release)
+        let statuses = pipelineCollect(op)
+        let stream = try await op.stream()
+        #expect(stream.control.torrent == id)
+        #expect(stream.release.grabID == release.grabID)
+        #expect(stream.episodes == [EpisodeRef(season: 1, episode: 1)])
+        let lines = await statuses.value.map(\.message)
+        #expect(lines.first == "Reconnecting to your download…", "attach skips straight to connecting: \(lines)")
+        #expect(lines.last == "Ready to play")
+        let controller = try #require(rig.factory.created.withLock { $0.first })
+        #expect(controller.attaches.withLock { $0 } == [id])
+        #expect(rig.factory.starts.withLock { $0.isEmpty }, "no search-driven start ran")
+        #expect(controller.removedOnStop == false)
+    }
+
+    @Test("a failed attach leaves the download alone and writes no blocklist entry")
+    func attachFailureIsSideEffectFree() async throws {
+        let rig = try await pipelineRig(scripts: [.failStart(.metadataTimeout)], releases: pipelineCatalogue)
+        let id = TorrentID(hex: String(repeating: "cd", count: 20))
+        let op = rig.pipeline.attach(pipelineRequest(rig.title), to: id, release: attachRelease())
+        let statuses = pipelineCollect(op)
+        await #expect(throws: Error.self) { try await op.stream() }
+        _ = await statuses.value
+        let controller = try #require(rig.factory.created.withLock { $0.first })
+        #expect(controller.removedOnStop == false, "the user's download must survive a failed attach")
+        let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
+        #expect(blocked.isEmpty, "attach failures never blocklist: \(blocked)")
     }
 }

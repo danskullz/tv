@@ -170,7 +170,6 @@ public actor StreamSessionController {
         source: TorrentSource, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
         peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
     ) async throws -> StreamHandle {
-        let events = session.events()  // before the add, so no event can slip past the loop
         await applyTuning()
         let id: TorrentID
         switch source {
@@ -182,6 +181,56 @@ public actor StreamSessionController {
             id = try await session.addTorrent(data: data, savePath: config.savePath.path, options: [.holdDownload, .sequential])
         }
         torrent = id
+        return try await open(
+            torrent: id, content: content, startEpisode: startEpisode, mode: mode, peers: peers,
+            corrections: corrections, episodeOrder: episodeOrder)
+    }
+
+    /// Serves `content` from a torrent the engine already has (see `StreamControlling.attach`).
+    /// Throws `TorrentError.notFound` (wrapped as a controller error) when the engine dropped it.
+    public func attach(
+        to torrent: TorrentID,
+        content: StreamContent,
+        startEpisode: EpisodeRef? = nil,
+        mode: StreamMode = .streamFromStart,
+        peers: [PeerEndpoint] = [],
+        corrections: [Int: [EpisodeRef]] = [:],
+        episodeOrder: [EpisodeRef]? = nil
+    ) async throws -> StreamHandle {
+        guard !started, !stopped else { throw StreamControllerError.alreadyStarted }
+        started = true
+        do {
+            return try await performAttach(
+                to: torrent, content: content, startEpisode: startEpisode, mode: mode, peers: peers,
+                corrections: corrections, episodeOrder: episodeOrder)
+        } catch {
+            let wrapped = Self.wrap(error)
+            if case .engine(let raw) = wrapped { diagnostics.append(raw) }
+            publish(.failed(wrapped.plainLanguage))
+            throw wrapped
+        }
+    }
+
+    private func performAttach(
+        to id: TorrentID, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
+        peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
+    ) async throws -> StreamHandle {
+        await applyTuning()
+        let known = try await session.status(id)  // throws .notFound when the engine dropped it
+        torrent = id
+        publish(known.hasMetadata ? .findingPeers : .fetchingMetadata)
+        return try await open(
+            torrent: id, content: content, startEpisode: startEpisode, mode: mode, peers: peers,
+            corrections: corrections, episodeOrder: episodeOrder)
+    }
+
+    /// Metadata, file mapping, plan, priorities, registration and loops: shared by a fresh
+    /// `start` and an `attach` to an existing torrent.
+    private func open(
+        torrent id: TorrentID, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
+        peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
+    ) async throws -> StreamHandle {
+        let events = session.events()  // before any download starts, so no event can slip past the loop
         for peer in peers { try? await session.connectPeer(id, host: peer.host, port: peer.port) }
 
         let metadata: TorrentMetadata

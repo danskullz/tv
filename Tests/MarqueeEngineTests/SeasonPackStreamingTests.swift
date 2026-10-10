@@ -211,3 +211,54 @@ struct SeasonPackStreamingTests {
         await leecher.shutdown()
     }
 }
+
+@Suite("Stream attach (loopback swarm)", .serialized)
+struct StreamAttachTests {
+    @Test("attach serves a still-downloading torrent after its controller stopped")
+    func attachServesOrphanedTorrent() async throws {
+        let scratch = try EngineScratch()
+        let seedDir = try scratch.directory("seed")
+        let downloadDir = try scratch.directory("download")
+        let pack = try EnginePack.make(in: seedDir)
+        let seeder = try await engineMakeSeeder(torrent: pack.torrent, saveDirectory: seedDir)
+
+        let leecher = try await engineMakeLeecher()
+        let server = StreamServer()
+        let configuration = StreamControllerConfiguration(savePath: downloadDir)
+        let first = StreamSessionController(session: leecher, server: server, configuration: configuration)
+        let handle = try await first.start(
+            source: .torrentFile(pack.torrent), content: .series(EnginePack.series()),
+            startEpisode: EpisodeRef(season: 1, episode: 1),
+            peers: [PeerEndpoint(host: "127.0.0.1", port: seeder.port)])
+        let id = handle.torrent
+        // The player closed: serving stops, the download continues.
+        await first.stop(removeTorrent: false)
+
+        // A later Play attaches instead of searching for a new source.
+        let second = StreamSessionController(session: leecher, server: server, configuration: configuration)
+        let attached = try await second.attach(
+            to: id, content: .series(EnginePack.series()),
+            startEpisode: EpisodeRef(season: 1, episode: 1),
+            peers: [PeerEndpoint(host: "127.0.0.1", port: seeder.port)])
+        #expect(attached.torrent == id)
+        #expect(attached.episodes == [EpisodeRef(season: 1, episode: 1)])
+
+        // Same bytes as the episode file.
+        let http = engineSession()
+        let firstMB = try await engineFetch(attached.url, range: 0..<(1 << 20), session: http)
+        #expect(firstMB.status == 206)
+        #expect(firstMB.data == pack.episodes[0].prefix(1 << 20))
+
+        // Gone torrents still fail (the app falls back to a fresh search).
+        await second.stop(removeTorrent: true, deleteFiles: true)
+        let third = StreamSessionController(session: leecher, server: server, configuration: configuration)
+        await #expect(throws: Error.self) {
+            _ = try await third.attach(
+                to: id, content: .series(EnginePack.series()),
+                startEpisode: EpisodeRef(season: 1, episode: 1))
+        }
+        await third.stop()
+        await server.stop()
+        await leecher.shutdown()
+    }
+}
