@@ -111,6 +111,14 @@ struct TorrentSourceValidationTests {
         #expect(PlayPipeline.reason(for: TorrentSourceError.tooLarge(limit: 8)).contains("too large"))
         #expect(PlayPipeline.reason(for: TorrentSourceError.unsupportedScheme).contains("supported"))
         #expect(PlayPipeline.reason(for: TorrentSourceError.network(URLError(.timedOut))).contains("too long"))
+        // ATS refuses a plain-http link before any bytes move; that must not read as a generic
+        // "unexpected answer" (it hid the real cause of every LimeTorrents failure).
+        #expect(
+            PlayPipeline.reason(for: TorrentSourceError.network(URLError(.appTransportSecurityRequiresSecureConnection)))
+                .contains("http"))
+        // Anything still unclassified names its code rather than swallowing it.
+        #expect(PlayPipeline.reason(for: TorrentSourceError.network(URLError(.badServerResponse)))
+            .contains("\(URLError.Code.badServerResponse.rawValue)"))
         for error in [
             TorrentSourceError.httpStatus(404), .notATorrent, .unsupportedScheme,
             .tooLarge(limit: 8), .network(URLError(.timedOut)),
@@ -196,6 +204,24 @@ struct TorrentDownloadTests {
         await #expect(throws: TorrentSourceError.notATorrent) {
             try await PlayPipeline.downloadTorrentFile(base.appendingPathComponent("file.torrent"))
         }
+    }
+
+    /// The ATS retry is driven by a real transport refusal, which a loopback server cannot
+    /// reproduce; what this pins down is that a plain-http URL is still fetched directly rather
+    /// than being rewritten, so http-only indexers keep working.
+    @Test("a plain-http torrent link is fetched over http, not rewritten")
+    func httpLinkIsNotRewritten() async throws {
+        let (server, base) = try await torrentSourceServer { _ in
+            LoopbackHTTPServer.Response(
+                status: 200, contentType: "application/x-bittorrent", body: torrentSourceGoodBytes)
+        }
+        defer { server.stop() }
+        var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+        #expect(components != nil)
+        components?.scheme = "http"
+        let httpBase = components?.url ?? base
+        let data = try await PlayPipeline.downloadTorrentFile(httpBase.appendingPathComponent("file.torrent"))
+        #expect(data == torrentSourceGoodBytes)
     }
 
     @Test("error statuses are typed")

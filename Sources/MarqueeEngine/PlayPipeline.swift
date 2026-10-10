@@ -252,8 +252,18 @@ public actor PlayPipeline {
 
     // MARK: One attempt
 
+    /// Wraps one failed attempt so the caller can move on to the next candidate. It keeps the
+    /// underlying error: the retry that gives up used to record `AttemptFailure` as the detail,
+    /// which is just the message text, so the real cause (e.g. the underlying `URLError` code)
+    /// was lost from the decision log for every attempt after the first.
     private struct AttemptFailure: Error {
         var reason: String
+        var underlying: (any Error)?
+
+        init(reason: String, underlying: (any Error)? = nil) {
+            self.reason = reason
+            self.underlying = underlying
+        }
     }
 
     private struct AttachFailure: Error {
@@ -281,7 +291,7 @@ public actor PlayPipeline {
             switch await awaitReady(handle, controller: controller, timeout: config.readyTimeout, attempt: 1, emit: emit) {
             case .ready:
                 break
-            case .failed(let reason):
+            case .failed(let reason, _):
                 throw AttachFailure(reason: reason)
             }
             emit(PlayStatus(.ready, "Ready to play", attempt: 1))
@@ -319,8 +329,8 @@ public actor PlayPipeline {
             switch warmed {
             case .resolved(let s, let p):
                 (source, magnetPeers) = (s, p)
-            case .failed(let reason):
-                throw AttemptFailure(reason: reason)
+            case .failed(let reason, let underlying):
+                throw AttemptFailure(reason: reason, underlying: underlying)
             case nil:
                 (source, magnetPeers) = try await resolveSource(for: release, timeout: config.linkFetchTimeout)
             }
@@ -339,8 +349,8 @@ public actor PlayPipeline {
             switch outcome {
             case .ready:
                 break
-            case .failed(let reason):
-                throw AttemptFailure(reason: reason)
+            case .failed(let reason, let underlying):
+                throw AttemptFailure(reason: reason, underlying: underlying)
             }
 
             let explanation = score.explanation.text
@@ -359,20 +369,28 @@ public actor PlayPipeline {
             await controller.stop(removeTorrent: true, deleteFiles: true)
             throw CancellationError()
         } catch {
-            let reason = Self.reason(for: error)
-            let detail = Self.failureDetail(for: error, release: release)
+            let cause = Self.underlyingCause(of: error)
+            let reason = Self.reason(for: cause ?? error)
+            let detail = Self.failureDetail(for: cause ?? error, release: release)
             await controller.stop(removeTorrent: true, deleteFiles: true)
             await saveGrab(
                 id: grabID, request: request, score: score, decisions: decisions, found: found, stage: stage,
                 attempt: number, outcome: .failed, failure: reason, failureDetail: detail)
             await blocklistRelease(release, infoHash: infoHash, request: request, reason: reason)
-            throw AttemptFailure(reason: reason)
+            throw AttemptFailure(reason: reason, underlying: cause ?? error)
         }
+    }
+
+    /// Unwraps the error an `AttemptFailure` was carrying, so the attempt that finally gives up
+    /// reports and records the real cause rather than the previous attempt's message text.
+    private static func underlyingCause(of error: any Error) -> (any Error)? {
+        guard let failure = error as? AttemptFailure else { return nil }
+        return failure.underlying
     }
 
     private enum ReadyOutcome: Sendable {
         case ready
-        case failed(String)
+        case failed(String, underlying: (any Error)? = nil)
     }
 
     private func awaitReady(
@@ -425,7 +443,7 @@ public actor PlayPipeline {
     /// dead, so the attempt fails over without spending another timeout on it.
     private enum WarmSource: Sendable {
         case resolved(TorrentSource, [PeerEndpoint])
-        case failed(String)
+        case failed(String, underlying: (any Error)? = nil)
     }
 
     /// Top-ranked candidates whose links are resolved concurrently per search stage.
@@ -555,6 +573,25 @@ public actor PlayPipeline {
     /// Torznab proxy that redirects to a `magnet:` link surfaces as
     /// ``TorrentSourceError/redirectToMagnet(_:)`` instead of an opaque failure.
     public static func fetchTorrentData(from url: URL, maxRedirects: Int = 5) async throws -> Data {
+        do {
+            return try await fetchTorrentDataOnce(from: url, maxRedirects: maxRedirects)
+        } catch let error as TorrentSourceError {
+            // App Transport Security refuses a plain-http link before a byte is sent, which used
+            // to fail these releases with a bare "unexpected answer" even though the file was
+            // reachable. Some built-in providers still publish http links, and they serve the same
+            // path over https — retry there rather than adding a blanket ATS exception. Only this
+            // one error triggers the retry, so http-only hosts still work normally.
+            guard case .network(let urlError) = error,
+                  urlError.code == .appTransportSecurityRequiresSecureConnection,
+                  var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            else { throw error }
+            components.scheme = "https"
+            guard let secure = components.url, secure != url else { throw error }
+            return try await fetchTorrentDataOnce(from: secure, maxRedirects: maxRedirects)
+        }
+    }
+
+    private static func fetchTorrentDataOnce(from url: URL, maxRedirects: Int) async throws -> Data {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
             throw TorrentSourceError.unsupportedScheme
         }
@@ -788,8 +825,17 @@ public actor PlayPipeline {
         case .cannotFindHost, .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet,
             .dnsLookupFailed:
             return "Couldn't connect to the indexer's download link. Check your connection and try another release."
+        case .appTransportSecurityRequiresSecureConnection:
+            // The indexer handed back a plain-http link and macOS refused it before a byte was
+            // sent. Saying "unexpected answer" here hid a plain, fixable cause.
+            return "The indexer only offers an unencrypted (http) download link, which macOS blocks. Try another release."
+        case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+            .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid:
+            return "The indexer's secure download link had a certificate problem. Try another release."
+        case .cancelled:
+            return "The download was cancelled."
         default:
-            return "The indexer's download link gave an unexpected answer. Try another release."
+            return "The indexer's download link gave an unexpected answer (error \(error.code.rawValue)). Try another release."
         }
     }
 
