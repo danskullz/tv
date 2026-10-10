@@ -105,6 +105,26 @@ public actor TorrentSession {
         }
     }
 
+    /// The info-hash a `.torrent` file resolves to, without adding anything to the session.
+    ///
+    /// Indexers frequently publish no hash for a `.torrent` link, so two releases can only be
+    /// recognised as the same download once their bytes have been read.
+    public nonisolated static func infoHash(ofTorrentData data: Data) throws -> TorrentID {
+        var buffer = [CChar](repeating: 0, count: 41)
+        var error: UnsafeMutablePointer<CChar>?
+        let code = data.withUnsafeBytes { raw in
+            mq_torrent_info_hash(raw.bindMemory(to: UInt8.self).baseAddress, raw.count, &buffer, &error)
+        }
+        var message: String?
+        if let e = error {
+            message = String(cString: e)
+            mq_free(e)
+        }
+        try check(code, message: message)
+        let hex = buffer.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }
+        return TorrentID(hex: String(decoding: hex, as: UTF8.self))
+    }
+
     // MARK: Control
 
     public func pause(_ id: TorrentID) throws { try check(mq_torrent_pause(pointer(), id.hex)) }

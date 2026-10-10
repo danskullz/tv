@@ -84,12 +84,25 @@ private final class PipelineFakeController: StreamControlling, Sendable {
 
     func setMetadataTimeout(_ timeout: Duration) async { metadataTimeouts.withLock { $0.append(timeout) } }
 
+    /// The torrent the fake "added". Recorded before `start` can throw, as the real controller does.
+    let addedTorrent = Mutex<TorrentID?>(nil)
+    var torrentID: TorrentID? { get async { addedTorrent.withLock { $0 } } }
+
     func start(
         source: TorrentSource, content: StreamContent, startEpisode: EpisodeRef?, mode: StreamMode,
         peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
     ) async throws -> StreamHandle {
         onStart(PipelineStart(source: source, content: content, episode: startEpisode, peers: peers))
-        return try await handle(for: startEpisode, torrent: TorrentID(hex: String(repeating: "ab", count: 20)))
+        // The real controller reports whatever the engine named the torrent, which for a
+        // `.torrent` link is the hash of the bytes and not anything the release published.
+        let torrent: TorrentID
+        if case .torrentFile(let data) = source, let hash = try? TorrentSession.infoHash(ofTorrentData: data) {
+            torrent = hash
+        } else {
+            torrent = TorrentID(hex: String(repeating: "ab", count: 20))
+        }
+        addedTorrent.withLock { $0 = torrent }
+        return try await handle(for: startEpisode, torrent: torrent)
     }
 
     /// Reattach records the torrent (the production controller skips the add and plans on it).
@@ -166,6 +179,15 @@ private struct PipelineRig {
 }
 
 private let pipelineDeadFetch: @Sendable (URL) async throws -> Data = { _ in throw URLError(.badURL) }
+
+/// A real `.torrent`, for the paths that have to read one to learn what a download is.
+private func pipelineTorrentBytes(named name: String = "clip.bin") throws -> Data {
+    let scratch = try EngineScratch()
+    let dir = try scratch.directory("seed")
+    let file = dir.appendingPathComponent(name)
+    try Data(repeating: 0x5A, count: 32 * 1024).write(to: file)
+    return try TorrentCreator.createTorrent(at: file, pieceLength: 16 * 1024)
+}
 
 /// A searcher returning a fixed catalogue for every query: bypasses feed parsing and the
 /// coordinator's cross-release dedup so pipeline-level behaviour can be tested in isolation.
@@ -355,8 +377,9 @@ struct PlayPipelineTests {
         let rig = try await pipelineRig(scripts: [.ready]) { _ in [] }
         let op = rig.pipeline.begin(pipelineRequest(rig.title))
         await #expect(throws: PlayPipelineError.noResults(indexersSearched: 1, indexersFailed: 0)) { _ = try await op.stream() }
-        // Episode scope: id query, title query, then both season-pack queries.
-        #expect(rig.transport.searches.count == 4)
+        // Episode scope: id query, title query, both season-pack queries, then both title-wide
+        // queries so complete-series packs surface for episodes a season pack does not hold.
+        #expect(rig.transport.searches.count == 6)
     }
 
     @Test("specials fall back to a title-wide search so complete packs surface")
@@ -707,6 +730,54 @@ struct PlayPipelineFastFallbackTests {
         let attemptedTitle = skipped.releaseTitle == first ? repeatTitle : first
         let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
         #expect(blocked.map(\.releaseTitle) == [attemptedTitle], "only the attempted failure is blocklisted: \(blocked)")
+    }
+
+    @Test("two releases with no published hash are still recognised as the same download")
+    func duplicateWithNoPublishedHashSkipped() async throws {
+        // The LimeTorrents shape: a `.torrent` link, no magnet and no info-hash in the feed, so
+        // there is nothing to dedup on until the engine has actually told us what it added. That
+        // is what happened to Black Lagoon S01E16, where the same pack was attempted twice.
+        func linkOnlyRelease(_ title: String, guid: String, seeders: Int) -> IndexerRelease {
+            IndexerRelease(
+                indexerID: UUID(), indexerName: "Static", title: title, guid: guid,
+                downloadURL: URL(string: "https://a.invalid/dl/\(guid).torrent"),
+                size: 1_500_000_000, seeders: seeders, peers: seeders + 2)
+        }
+        let searcher = StaticSearcher(releases: [
+            linkOnlyRelease("Marquee.Test.Pattern.S01.1080p.BluRay.x265-ALPHA", guid: "g1", seeders: 300),
+            linkOnlyRelease("Marquee.Test.Pattern.S01.1080p.BluRay.x265-BETA", guid: "g2", seeders: 290),
+            linkOnlyRelease(pipelineSecond, guid: "g3", seeders: 40),
+        ])
+        // The first two serve the same bytes, so they are the same download; the third is its own.
+        let torrent = try pipelineTorrentBytes()
+        let other = try pipelineTorrentBytes(named: "other.bin")
+        let served: @Sendable (URL) async throws -> Data = { url in
+            url.lastPathComponent == "g3.torrent" ? other : torrent
+        }
+        let rig = try await pipelineRig(
+            // Ranked order is ALPHA, BETA, then the distinct release, and each gets the next
+            // script. BETA's is irrelevant: it must be skipped before it ever starts.
+            scripts: [.failStart(.episodeNotInPack(EpisodeRef(season: 1, episode: 16))), .ready, .ready],
+            releases: { _ in [] }, fetchTorrentFile: served, searcher: searcher)
+        let stream = try await rig.pipeline.begin(pipelineRequest(rig.title)).stream()
+
+        #expect(stream.release.title == pipelineSecond, "it falls through to the distinct release")
+        #expect(
+            rig.factory.starts.withLock(\.count) == 2,
+            "only one of the two copies ever reached the engine"
+        )
+        let grabs = try await GRDBGrabRepository(rig.database).grabs(titleId: rig.title.id, limit: 10)
+        #expect(
+            grabs.filter { ($0.reason["failure"]?.stringValue ?? "").contains("already failed") }.count == 1,
+            "the duplicate is recorded as skipped, not as a failure"
+        )
+        let blocked = try await GRDBBlocklistRepository(rig.database).entries(titleId: rig.title.id)
+        let bytesHash = try TorrentSession.infoHash(ofTorrentData: torrent).hex
+        #expect(blocked.count == 1, "only the release that actually failed is blocklisted")
+        #expect(
+            blocked.first?.infoHash == bytesHash,
+            "the hash read from the bytes is recorded, even though the release published none"
+        )
     }
 
     @Test("withTimeout bounds a hung step and passes a fast one through")

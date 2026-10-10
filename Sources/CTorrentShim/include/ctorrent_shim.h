@@ -251,6 +251,11 @@ int mq_torrent_read_piece(mq_session *s, const char *id, int32_t piece);
 int mq_create_torrent(const char *path, int32_t piece_size, uint8_t **data_out,
                       size_t *len_out, char **error);
 
+/* The info-hash a `.torrent` file's metadata resolves to, written as 40 hex chars into `out`.
+   Lets a caller recognise a download before adding it -- indexers often publish no hash at all
+   for a `.torrent` link, and two releases are only the same download once the bytes are read. */
+int mq_torrent_info_hash(const uint8_t *data, size_t len, char out[41], char **error);
+
 const char *mq_libtorrent_version(void); /* static string */
 void mq_free(void *pointer);
 

@@ -913,6 +913,21 @@ int mq_create_torrent(char const* path, int32_t piece_size, uint8_t** data_out, 
   });
 }
 
+int mq_torrent_info_hash(uint8_t const* data, size_t len, char out[41], char** error) {
+  return guarded(error, [&]() -> int {
+    if (!data || !out) return static_cast<int>(MQ_ERR_INVALID);
+    lt::add_torrent_params params = lt::load_torrent_buffer(
+        lt::span<char const>(reinterpret_cast<char const*>(data), static_cast<long>(len)));
+    if (!params.info_hashes.has_v1() && !params.info_hashes.has_v2()) {
+      set_error(error, "not a torrent file");
+      return static_cast<int>(MQ_ERR_INVALID);
+    }
+    std::string id = id_of(params.info_hashes);
+    std::memcpy(out, id.c_str(), 41);
+    return static_cast<int>(MQ_OK);
+  });
+}
+
 char const* mq_libtorrent_version(void) { return LIBTORRENT_VERSION; }
 
 void mq_free(void* pointer) { std::free(pointer); }

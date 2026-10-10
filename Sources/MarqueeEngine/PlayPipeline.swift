@@ -137,7 +137,7 @@ public actor PlayPipeline {
                 do {
                     return try await attempt(
                         score, stage: stage, found: found, decisions: decisions, request: request, config: config,
-                        attempt: attempts, warmed: warmed[score.decision.id], emit: emit)
+                        attempt: attempts, warmed: warmed[score.decision.id], failedHashes: failedHashes, emit: emit)
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch let failure as AttemptFailure {
@@ -187,19 +187,20 @@ public actor PlayPipeline {
                 t.name, season: ref.season, episodes: [ref.episode], absolute: absoluteNumbers(request, ref),
                 runtimeMinutes: runtime,
                 seasonEpisodeCount: seasonCount(request, ref.season), aliases: t.aliases)
-            var out = [
+            let out = [
                 Stage(query: episodeQuery(t, ref, ids: true), wanted: wanted, label: "episode by id"),
                 Stage(query: episodeQuery(t, ref, ids: false), wanted: wanted, label: "episode by title"),
                 Stage(query: seasonQuery(t, ref.season, ids: true), wanted: seasonWanted, label: "season packs by id"),
                 Stage(query: seasonQuery(t, ref.season, ids: false), wanted: seasonWanted, label: "season packs by title"),
+                // A season pack only holds that season, so any episode the library files under a
+                // season it does not actually ship -- specials, and later seasons folded into
+                // season 1 -- is unreachable from the two stages above. Complete and multi-season
+                // packs do hold it, and a season-scoped query rarely returns them, so search the
+                // whole title as well. Black Lagoon S01E16 is exactly this: twelve files in the
+                // season 1 packs, the episode itself in the complete-series pack.
+                Stage(query: titleQuery(t, ids: true), wanted: wanted, label: "complete packs by id"),
+                Stage(query: titleQuery(t, ids: false), wanted: wanted, label: "complete packs by title"),
             ]
-            if ref.season == 0 {
-                // Specials ship inside complete/multi-season packs, which a
-                // season-0 query rarely returns: fall back to a title-wide
-                // search so those packs surface.
-                out.append(Stage(query: titleQuery(t, ids: true), wanted: wanted, label: "complete packs by id"))
-                out.append(Stage(query: titleQuery(t, ids: false), wanted: wanted, label: "complete packs by title"))
-            }
             return out
         case .season(let season, let start):
             let pack = WantedItem.season(
@@ -276,6 +277,13 @@ public actor PlayPipeline {
         var reason: String
     }
 
+    /// Thrown when a release turns out to be a download an earlier attempt already failed on.
+    /// It has its own escape hatch so it never reaches the blocklist: nothing went wrong with the
+    /// release, we simply already know the answer.
+    private struct DuplicateDownload: Error {
+        var infoHash: String
+    }
+
     /// Serves `request` from an existing engine torrent. Never blocklists: a failure means the
     /// torrent is gone or holds different content, so the caller searches fresh instead.
     private func runAttach(
@@ -317,6 +325,7 @@ public actor PlayPipeline {
     private func attempt(
         _ score: StreamabilityScore, stage: Stage, found: CoordinatedSearchResult, decisions: [ReleaseDecision],
         request: PlayRequest, config: PlayPipelineConfiguration, attempt number: Int, warmed: WarmSource?,
+        failedHashes: Set<String>,
         emit: @escaping @Sendable (PlayStatus) -> Void
     ) async throws -> PlayStream {
         let decision = score.decision
@@ -341,16 +350,29 @@ public actor PlayPipeline {
                 (source, magnetPeers) = try await resolveSource(for: release, timeout: config.linkFetchTimeout)
             }
             let (content, start) = Self.content(for: request, decision: decision)
+
+            // A `.torrent` link often carries no hash at all, so this is the first moment the
+            // download has an identity. If it is one a previous attempt already failed on, stop
+            // before touching the engine: adding it again would burn an attempt and fetch the
+            // metadata of a torrent whose answer we already have.
+            if case .torrentFile(let data) = source,
+                let hash = try? TorrentSession.infoHash(ofTorrentData: data),
+                failedHashes.contains(hash.hex)
+            {
+                throw DuplicateDownload(infoHash: hash.hex)
+            }
+
+            let made = controller
             emit(PlayStatus(.connecting, "Connecting to peers…", attempt: number))
             let handle = try await Self.withTimeout(metadataTimeout) {
-                try await controller.start(
+                try await made.start(
                     source: source, content: content, startEpisode: start, mode: config.streamMode,
                     peers: magnetPeers + config.extraPeers, corrections: [:], episodeOrder: nil)
             }
             infoHash = infoHash ?? handle.torrent.hex
 
             let outcome = await awaitReady(
-                handle, controller: controller, timeout: config.readyTimeout, attempt: number, emit: emit)
+                handle, controller: made, timeout: config.readyTimeout, attempt: number, emit: emit)
             try Task.checkCancellation()
             switch outcome {
             case .ready:
@@ -370,20 +392,38 @@ public actor PlayPipeline {
                     title: release.title, indexerName: release.indexerName, tier: decision.tier,
                     seeders: release.seeders, size: release.size, infoHash: infoHash, isPack: decision.isPack,
                     explanation: explanation, grabID: grabID),
-                control: PlayStreamControl(controller: controller, torrent: handle.torrent))
+                control: PlayStreamControl(controller: made, torrent: handle.torrent))
         } catch is CancellationError {
             await controller.stop(removeTorrent: true, deleteFiles: true)
             throw CancellationError()
+        } catch let duplicate as DuplicateDownload {
+            await controller.stop(removeTorrent: false, deleteFiles: false)
+            let skipped = "Skipped: the same download already failed on a higher-ranked release."
+            await saveGrab(
+                id: grabID, request: request, score: score, decisions: decisions, found: found, stage: stage,
+                attempt: number, outcome: .failed, failure: skipped)
+            throw AttemptFailure(reason: skipped, infoHash: duplicate.infoHash)
         } catch {
             let cause = Self.underlyingCause(of: error)
             let reason = Self.reason(for: cause ?? error)
             let detail = Self.failureDetail(for: cause ?? error, release: release)
+            // `start` sets the controller's torrent before it can fail on the metadata or the
+            // episode mapping, so read the id libtorrent actually gave it. The release's own hash
+            // is not enough: a magnet carries the v2 hash, a `.torrent` link carries none, and
+            // either way dedup has to recognise what the engine is holding to avoid retrying the
+            // same download under a second name.
+            let engineHash: String?
+            if let infoHash {
+                engineHash = infoHash
+            } else {
+                engineHash = await controller.torrentID?.hex
+            }
             await controller.stop(removeTorrent: true, deleteFiles: true)
             await saveGrab(
                 id: grabID, request: request, score: score, decisions: decisions, found: found, stage: stage,
                 attempt: number, outcome: .failed, failure: reason, failureDetail: detail)
-            await blocklistRelease(release, infoHash: infoHash, request: request, reason: reason)
-            throw AttemptFailure(reason: reason, underlying: cause ?? error, infoHash: infoHash)
+            await blocklistRelease(release, infoHash: engineHash, request: request, reason: reason)
+            throw AttemptFailure(reason: reason, underlying: cause ?? error, infoHash: engineHash)
         }
     }
 

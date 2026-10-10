@@ -168,6 +168,9 @@ public protocol StreamControlling: Sendable {
     func setMetadataTimeout(_ timeout: Duration) async
     nonisolated func statusUpdates() -> AsyncStream<StreamStatus>
     nonisolated func events() -> AsyncStream<StreamControllerEvent>
+    /// The torrent this controller added, available even when `start` failed after adding it.
+    /// The pipeline reads it to record which download an attempt actually used.
+    var torrentID: TorrentID? { get async }
 }
 
 extension StreamControlling {
@@ -178,6 +181,10 @@ extension StreamControlling {
         peers: [PeerEndpoint], corrections: [Int: [EpisodeRef]], episodeOrder: [EpisodeRef]?
     ) async throws -> StreamHandle {
         throw StreamControllerError.notStarted
+    }
+
+    public var torrentID: TorrentID? {
+        get async { nil }
     }
 }
 
