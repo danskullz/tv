@@ -137,7 +137,7 @@ extension Indexer {
             credentialRef: IndexerDefinition(id: id, name: name, baseURL: torznabURL).apiKeyAccount)
     }
 
-    /// Stores a Prowlarr server URL. Its API key uses the same Keychain-only credential handling.
+    /// Stores a Prowlarr server URL. Its API key uses the same `SecretStore`-only credential handling.
     public init(name: String, prowlarrURL: URL, priority: Int = 25, id: UUID = UUID()) {
         self.init(
             id: id, name: name, implementation: "prowlarr", baseURL: prowlarrURL.absoluteString,

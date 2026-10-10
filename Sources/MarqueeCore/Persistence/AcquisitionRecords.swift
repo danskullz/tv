@@ -224,7 +224,7 @@ public struct StreamSession: Codable, FetchableRecord, PersistableRecord, Identi
     }
 }
 
-/// An indexer definition. Secrets are never stored here; `credentialRef` names a Keychain item.
+/// An indexer definition. Secrets are never stored here; `credentialRef` names a `SecretStore` account.
 public struct Indexer: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable, Sendable {
     public var id: UUID
     public var name: String

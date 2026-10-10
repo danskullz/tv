@@ -47,6 +47,9 @@ final class AppServices {
     nonisolated let usesTMDBFixtures: Bool
     nonisolated let database: AppDatabase
     nonisolated let secrets: any SecretStore
+    /// The file store, but only when this instance built it. Injected stores (demo, fixtures,
+    /// tests) are owned by the caller and must not have Keychain credentials imported into them.
+    @ObservationIgnored nonisolated private let ownedSecrets: FileSecretStore?
     nonisolated let library: GRDBLibraryRepository
     nonisolated let watchStates: GRDBWatchStateRepository
     nonisolated let history: GRDBHistoryRepository
@@ -92,7 +95,7 @@ final class AppServices {
         if let database {
             db = database
         } else if demo {
-            // Demo mode never touches the user's real library or Keychain.
+            // Demo mode never touches the user's real library or stored credentials.
             let url = Self.demoDirectory.appendingPathComponent("marquee-demo.sqlite")
             // Fresh library and downloads every launch; the generated clips are kept.
             let fm = FileManager.default
@@ -104,7 +107,26 @@ final class AppServices {
             db = try AppDatabase.openDefault()
         }
         self.database = db
-        self.secrets = secrets ?? (demo ? InMemorySecretStore() : KeychainSecretStore())
+        // Secrets live in an owner-only file, not the Keychain: Keychain items are ACL-bound to the
+        // signing identity, so every ad-hoc-signed rebuild prompted for access at launch. The
+        // one-shot `KeychainSecretMigration` keeps credentials saved by older builds; past that the
+        // Keychain is never opened again.
+        let resolved: any SecretStore
+        let owned: FileSecretStore?
+        if let secrets {
+            resolved = secrets
+            owned = nil
+        } else if demo {
+            // Demo mode never touches the user's real library or stored credentials.
+            resolved = InMemorySecretStore()
+            owned = nil
+        } else {
+            let file = FileSecretStore()
+            resolved = file
+            owned = file
+        }
+        ownedSecrets = owned
+        self.secrets = resolved
         library = GRDBLibraryRepository(db)
         watchStates = GRDBWatchStateRepository(db)
         history = GRDBHistoryRepository(db)
@@ -167,11 +189,32 @@ final class AppServices {
             }
         }
         await reloadIndexers()
+        await migrateKeychainSecretsOnce()
         if let managed = try? await torrents.managedDownloads(), !managed.isEmpty {
             _ = try? await downloadManager()
         }
         await refreshStatus()
         try? await startAutomaticReleaseAutomation()
+    }
+
+    /// The one and only Keychain read the app ever makes. See `KeychainSecretMigration`: it runs
+    /// once per machine, imports whatever an older build saved, and is skipped entirely afterwards.
+    /// A failure is announced rather than swallowed — otherwise a user whose Keychain wouldn't
+    /// answer would just find their indexers and TMDB key gone.
+    private func migrateKeychainSecretsOnce() async {
+        guard let store = ownedSecrets else { return }
+        let records = (try? await indexerRecords.all()) ?? []
+        let defaults = UserDefaults.standard
+        let outcome = KeychainSecretMigration.migrateIfNeeded(
+            accounts: [Self.tmdbAccount] + records.compactMap(\.credentialRef),
+            into: store,
+            isComplete: { defaults.bool(forKey: KeychainSecretMigration.defaultsKey) },
+            markComplete: { defaults.set(true, forKey: KeychainSecretMigration.defaultsKey) })
+        if case .unreadable(let message) = outcome {
+            announce(
+                "Couldn't import your old keys",
+                "\(message) Re-enter them in Settings.", "key.slash")
+        }
     }
 
     /// `-demoEpisodeSeconds 150` makes the clips long enough for the player's Up Next card (it needs > 2 min).
@@ -226,7 +269,7 @@ final class AppServices {
 
     // MARK: Metadata (TMDB)
 
-    /// The credential saved in the Keychain. A long JWT-looking value is a v4 read token; anything else is a v3 key.
+    /// The saved metadata credential. A long JWT-looking value is a v4 read token; anything else is a v3 key.
     nonisolated func tmdbCredential() -> TMDBCredential? {
         if usesTMDBFixtures { return .apiKey("fixture-mode") }
         guard let raw = try? secrets.get(account: Self.tmdbAccount), !raw.isEmpty else { return nil }
@@ -373,7 +416,7 @@ final class AppServices {
         updated.baseURL = url.absoluteString
         updated.enabled = true
         guard let account = updated.credentialRef, !account.isEmpty else {
-            throw IndexerError.invalidConfiguration("This source has no Keychain credential account.")
+            throw IndexerError.invalidConfiguration("This source has no credential account.")
         }
         try secrets.set(apiKey, account: account)
         try await indexerRecords.upsert(updated)

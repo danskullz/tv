@@ -47,7 +47,7 @@ struct MetadataPane: View {
         Pane {
             if let services = model.services {
                 Section {
-                    SecureField("API key or read access token", text: $key, prompt: Text(services.hasMetadataKey ? "Saved in your Keychain" : "Paste your TMDB key"))
+                    SecureField("API key or read access token", text: $key, prompt: Text(services.hasMetadataKey ? "Key saved" : "Paste your TMDB key"))
                     HStack {
                         Button("Test") { test(services) }.disabled(isTesting || (key.isEmpty && !services.hasMetadataKey))
                         Button("Save") { save(services) }.disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -62,7 +62,7 @@ struct MetadataPane: View {
                 } header: {
                     Text("TMDB")
                 } footer: {
-                    Text("Marquee uses TMDB for posters, synopses and episode lists. Your key is stored in the macOS Keychain and only ever sent to TMDB.")
+                    Text("Marquee uses TMDB for posters, synopses and episode lists. Your key is stored on this Mac, readable only by you, and only ever sent to TMDB.")
                 }
             } else {
                 NoServicesNote()
@@ -86,7 +86,7 @@ struct MetadataPane: View {
             try services.saveTMDBKey(key)
             key = ""
             saveError = nil
-            result = AppServices.ConnectionResult(ok: true, message: "Saved to your Keychain.")
+            result = AppServices.ConnectionResult(ok: true, message: "Key saved.")
         } catch {
             saveError = error.localizedDescription
         }
@@ -297,7 +297,7 @@ private struct AddIndexerSheet: View {
                 TextField("FlareSolverr URL (optional)", text: $flareSolverrAddress, prompt: Text("http://localhost:8191"))
             }
             .formStyle(.columns)
-            Text("Paste the Torznab feed URL and API key your indexer manager shows. The key is stored in your Keychain.")
+            Text("Paste the Torznab feed URL and API key your indexer manager shows. The key is stored on this Mac, readable only by you.")
                 .font(.caption).foregroundStyle(.secondary)
             Text("Use FlareSolverr only for indexers that need browser-challenge solving. Its server receives the full Torznab URL, including the API key.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -374,7 +374,7 @@ private struct AddProwlarrSheet: View {
                 SecureField("API key", text: $apiKey)
             }
             .formStyle(.columns)
-            Text("Marquee searches enabled torrent indexers through Prowlarr. The API key is stored in your Keychain.")
+            Text("Marquee searches enabled torrent indexers through Prowlarr. The API key is stored on this Mac, readable only by you.")
                 .font(.caption).foregroundStyle(.secondary)
             ResultLine(result: result, isTesting: isTesting)
             if let error { Text(verbatim: error).foregroundStyle(.red).font(.callout) }
@@ -507,8 +507,8 @@ private struct EditRemoteIndexerSheet: View {
             }
             .formStyle(.columns)
             Text(isProwlarr
-                ? "Use your Prowlarr server address. The API key stays in your Keychain."
-                : "Use Jackett's all-indexers Torznab URL. The API key stays in your Keychain.")
+                ? "Use your Prowlarr server address. The API key stays on this Mac, readable only by you."
+                : "Use Jackett's all-indexers Torznab URL. The API key stays on this Mac, readable only by you.")
                 .font(.caption).foregroundStyle(.secondary)
             ResultLine(result: result, isTesting: isTesting)
             if let error { Text(verbatim: error).foregroundStyle(.red).font(.callout) }
