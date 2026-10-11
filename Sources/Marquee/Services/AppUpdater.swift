@@ -13,9 +13,19 @@ import MarqueeCore
 /// Keep the outgoing key alongside a new one for one release. Every install that has not updated
 /// yet still verifies against the old key, and dropping it locks them out.
 enum AppcastKeyringMarquee {
-    // Paste the output of `scripts/make-appcast.sh --print-keyring` here, e.g.
-//     "marquee-2026": Data(base64Encoded: "…")!,
-static let keys: [String: Data] = [:]
+    // The live update channel's public key. Paste the output of
+// `scripts/make-appcast.sh --print-keyring` after generating or rotating a key.
+//
+// Keep every key you have ever shipped, one release longer than you think you need to. An install
+// that has not updated yet still verifies against the old key, and dropping it locks those users
+// out permanently — they have no way to get a build containing the new one.
+//
+// The private half is the MARQUEE_APPCAST_KEY_PEM secret and exists nowhere in this repo. To
+// rotate, see docs/updates.md: generate a new key, ship a build holding both, publish one release
+// signed with the old one, then ship a build holding only the new.
+static let keys: [String: Data] = [
+    "marquee-2026": Data(base64Encoded: "N/IC69/HFc3axY+ki9WIpWI9tkbo2NVp/2UCIkane64=")!,
+]
 
     static var keyring: AppcastKeyring {
         AppcastKeyring(keys.filter { !$0.value.isEmpty })

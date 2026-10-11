@@ -179,6 +179,14 @@ struct UpdateInstallerTests {
             == "anchor apple generic and identifier \"x\"")
     }
 
+    /// Regression: `anchor apple generic` needs a real Developer ID, so pinning it while the
+    /// project is ad-hoc signed rejects every build the updater can actually download — the feature
+    /// would look wired up and silently never install anything.
+    @Test func withoutADeveloperIDThereIsNoPinnedRequirement() {
+        #expect(UpdateInstaller.requirementForRunningApp() == nil,
+                "the running build is ad-hoc signed, so pinning a Developer ID requirement would reject every real build")
+    }
+
     // MARK: Free space
 
     @Test func freeSpaceResolvesToTheNearestExistingAncestor() throws {

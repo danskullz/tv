@@ -31,11 +31,23 @@ content, not location.
 
 ## Layout on the update host
 
+VPS `85.155.188.130` (the `saturn` ssh host). Three moving parts:
+
+| What | Where |
+|---|---|
+| Web root (served) | `/home/dan/www/tv.guihot.net/` |
+| Signing key (private) | `/home/dan/.marquee/appcast-key.pem`, mode 600, never inside the web root |
+| Site container | `/home/dan/docker/marquee-updates/` (`docker compose up -d`) |
+| CI deploy key (private) | `/home/dan/.marquee/deploy_key`, mode 600 |
+| NPM config for this domain | `/data/nginx/custom/http_top.conf` inside the `npm` container |
+| Certificate | `/home/dan/docker/npm/letsencrypt/live/tv.guihot.net/` |
+
 ```
-/srv/tv.guihot.net/            bind-mounted into the nginx container as the document root
+/home/dan/www/tv.guihot.net/   bind-mounted as the container's document root
   appcast.json                 symlink -> appcast-<version>.json
   appcast-<version>.json       immutable, signed
   appcast-<version>.sig        immutable detached signature
+  .well-known/acme-challenge/  ACME HTTP-01 webroot, shared with certbot
   downloads/
     Marquee-<version>-macos-arm64.zip
     Marquee-<version>-macos-x86_64.zip
@@ -47,9 +59,28 @@ uploaded *before* the flip, so no client can fetch a manifest and a signature fr
 releases. This is why the signature is a separate file rather than a field inside the JSON: it
 removes the window entirely instead of making it small.
 
-`scripts/site/nginx/marquee-updates.conf` owns only these paths. It must not declare `server`,
-`root` or `index` — it is included by whatever owns the vhost. The caching rules are not
-negotiable:
+## TLS: how this host is actually wired
+
+This is deliberately **not** an Nginx Proxy Manager Proxy Host. Creating one needs NPM admin
+credentials, and this was deployed without them. Instead a single `server` block pair lives in
+`/data/nginx/custom/http_top.conf` — NPM's documented include point, inside `http {}` — which claims
+exactly one hostname and changes nothing else on the box. The live copy is version-controlled at
+[`scripts/site/nginx/tv-guihot-net.conf`](../scripts/site/nginx/tv-guihot-net.conf) and deployed with:
+
+```bash
+docker cp tv-guihot-net.conf npm:/data/nginx/custom/http_top.conf
+docker exec npm nginx -t && docker exec npm nginx -s reload
+```
+
+Always `nginx -t` first. A malformed file in that include takes down every other domain this box
+serves — mail, git, Matrix and more.
+
+The `marquee-updates` container serves the files over the shared `edge` network. NPM terminates TLS
+and proxies to it, so publishing a release never needs a container or image restart.
+
+### Caching
+
+Not negotiable:
 
 | Path | `Cache-Control` | Why |
 |---|---|---|
@@ -57,63 +88,82 @@ negotiable:
 | `appcast-<version>.*` | `public, max-age=31536000, immutable` | Content never changes once published |
 | `downloads/` | `public, max-age=31536000, immutable` | Named by release, pinned by hash |
 
-ETags are disabled on the manifest on purpose: a `304` with no body is easy to mistake for an
-empty feed, and the file is about 5 KB. Saving nothing is not worth a silent failure mode.
+ETags are disabled on the manifest on purpose: a `304` with no body is easy to mistake for an empty
+feed and silently stops updates. The file is about 1 KB; saving nothing is not worth that failure
+mode.
 
-## Prerequisites
+### Certificate renewal
 
-- DNS: an `A` record `tv` → the VPS, proxied through Cloudflare, SSL mode **Full (strict)**.
-- Nginx Proxy Manager reverse-proxies `tv.guihot.net` to the container's published port.
-- A `deploy` user whose `authorized_keys` entry is forced to rsync into that one directory. The
-  public key goes in the `MARQUEE_DEPLOY_KEY` secret.
-- `MARQUEE_KNOWN_HOSTS` secret, or a committed `scripts/site/known_hosts`. **Never**
-  `StrictHostKeyChecking=no`: a silent MITM on the box that serves every update is the whole
-  attack surface. `scripts/site/known_hosts.example` documents populating it.
-- `MARQUEE_APPCAST_KEY_PEM` secret: the private key.
-- `MARQUEE_DEPLOY_HOST` repository variable, defaulting to `85.155.188.130`.
+Certbot runs in a container because it needs the shared ACME webroot that NPM proxies. Cron runs
+`/home/dan/.marquee/renew-cert.sh` twice daily at 03:17 and 15:17; certbot only acts inside the last
+30 days of validity. Two of that script's flags are load-bearing, and both were bugs:
 
-## First-time key setup
+- **`--cert-name tv.guihot.net`** — NPM keeps its own certificates in the same directory. Without
+  this, certbot also tries to renew `npm-*.conf`, which hangs indefinitely and would fight NPM for
+  those certificates.
+- **`--no-random-sleep-on-renew`** — certbot otherwise sleeps a random ~7 minutes before renewing,
+  which is indistinguishable from a hung job.
+
+Check changes with a dry run before trusting the cron:
 
 ```bash
-openssl genpkey -algorithm ed25519 -out marquee-appcast.pem          # -> MARQUEE_APPCAST_KEY_PEM
-openssl pkey -in marquee-appcast.pem -pubout -out marquee-appcast.pub.pem
-scripts/make-appcast.sh --print-keyring --key marquee-appcast.pem --key-id marquee-2026
+docker run --rm -v /home/dan/www/tv.guihot.net:/var/www/certbot \
+  -v /home/dan/docker/npm/letsencrypt:/etc/letsencrypt \
+  certbot/certbot renew --cert-name tv.guihot.net --no-random-sleep-on-renew --dry-run --no-eff-email
 ```
 
-Paste the output into `AppcastKeyringMarquee.keys` in
-`Sources/Marquee/Services/AppUpdater.swift`. An empty keyring switches the updater **off** rather
-than letting it fail at runtime — there is no version of this that works without a real key in it.
+### Deploy key
 
-The private key never goes in the repo. If it is ever exposed, generate a new one and follow
-[Rotating the key](#rotating-the-key).
+The CI key is `dan`'s own SSH key with a forced command, so it can only rsync:
 
-### Rotating the key
+```
+command="rsync --server -logDtpre.iLsfxCvu . /home/dan/www/tv.guihot.net/",\
+ no-agent-forwarding,no-port-forwarding,no-pty,no-X11-forwarding ssh-ed25519 AAAA… marquee-ci-deploy
+```
 
-1. Generate the new key and sign manifests with it under a new `keyID`.
-2. Ship a build whose keyring holds **both** keys. Every install that has not updated yet still
-   verifies against the old one; dropping it locks them out permanently.
-3. Publish one release signed with the old key.
-4. Ship a build whose keyring holds only the new key.
+Verified: it can rsync into the site, and both an interactive shell and a write outside the site
+directory are refused — sshd runs the forced `rsync` instead, which fails against a non-rsync
+session. To rotate, generate a new key, replace that line, then update `MARQUEE_DEPLOY_KEY`.
 
-## Cutting a release by hand
+`StrictHostKeyChecking` is never disabled. `scripts/site/known_hosts` is committed for exactly this
+reason: a silent MITM on the box that serves every update is the whole attack surface.
 
-The release workflow does all of this. To do it manually:
+## Publishing
+
+- **Automatic**: `release.yml` generates and deploys after the GitHub Release. Secrets are
+  `MARQUEE_APPCAST_KEY_PEM`, `MARQUEE_DEPLOY_KEY`, `MARQUEE_KNOWN_HOSTS`; `MARQUEE_DEPLOY_HOST`
+  is a repository variable. Deploy failures are `continue-on-error` so a red X never buries a real
+  break, and the generated manifest is left as a workflow artifact.
+- **By hand**:
 
 ```bash
-scripts/bundle.sh .build/release/Marquee dist/Marquee.app 0.1.31
-ditto -c -k --keepParent dist/Marquee.app dist/Marquee-0.1.31-macos-arm64.zip
-
-# Pull the live manifest first: the feed lives only on the VPS, never in git.
-scp deploy@tv.guihot.net:/srv/tv.guihot.net/appcast.json /tmp/live-appcast.json
-
+scp saturn:/home/dan/www/tv.guihot.net/appcast.json /tmp/live-appcast.json   # the feed is not in git
 scripts/make-appcast.sh --version 0.1.31 --dir dist --base https://tv.guihot.net \
     --out site --key marquee-appcast.pem --previous /tmp/live-appcast.json
 scripts/publish-updates.sh --host 85.155.188.130 --local site
 ```
 
 Release notes come from the `CHANGELOG.md` section for that version, so "What's new" in the update
-sheet is whatever was written there. Without one, the app shows a generic line — which is what
-`--generate-notes` was producing, and it is why the notes were empty until now.
+sheet is whatever was written there.
+
+## Rotating the signing key
+
+1. Generate the new key and sign manifests with it under a new `keyID`:
+
+   ```bash
+   openssl genpkey -algorithm ed25519 -out new.pem
+   scripts/make-appcast.sh --print-keyring --key new.pem --key-id marquee-2027
+   ```
+
+2. Ship a build whose keyring holds **both** keys. Every install that has not updated yet still
+   verifies against the old one; dropping it locks them out permanently — they have no way to get a
+   build containing the new one.
+3. Publish one release signed with the old key.
+4. Ship a build whose keyring holds only the new key.
+
+The private key never goes in the repo. It is the `MARQUEE_APPCAST_KEY_PEM` secret; a working copy
+lives at `/home/dan/.marquee/appcast-key.pem`.
+
 
 ## Withdrawing a bad build
 
@@ -153,10 +203,11 @@ state is roughly 285 MB.
 
 - **Developer ID signing.** Every build is ad-hoc signed, so `AppInfo.developerTeamIdentifier` —
   read from the reserved `MarqueeDeveloperTeamIdentifier` Info.plist key that `bundle.sh` will start
-  writing once signing is configured — is empty. The app is therefore held only to
-  `anchor apple generic and identifier "com.danskullz.marquee"`. That still rejects an app signed
-  by someone else, which is the important part, but it cannot pin *who*. Setting the team turns the
-  check on with no code change.
+  writing once signing is configured — is empty. The installer therefore passes **no** pinned
+  requirement, and only checks that the signature is structurally valid. It deliberately does *not*
+  use `anchor apple generic`, which needs a real Developer ID and would reject every build we
+  actually ship, leaving the updater permanently inert; integrity comes from the signed manifest's
+  SHA-256 instead. Setting the team switches the strict rule on with no code change.
 - **Notarization.** Until builds are notarized, a downloaded Marquee will show a Gatekeeper
   prompt. That needs Developer ID first, and it should be fixed before public release.
 - **Stable channel.** CI publishes every release as a prerelease and the appcast defaults to

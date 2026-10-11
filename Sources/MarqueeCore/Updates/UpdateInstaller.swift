@@ -49,12 +49,19 @@ public struct UpdateInstaller: Sendable {
 
     /// The rule the running copy should be held to. Reads the signing team the bundle was built with,
 /// so this stays correct the day `bundle.sh` starts writing a Developer ID team into Info.plist.
+    /// The signing rule a downloaded build must satisfy, derived from how this one is signed.
+    ///
+    /// `nil` means "a structurally valid signature, signed by anyone" and is the honest answer
+    /// while every build is ad-hoc signed: `anchor apple generic` requires a real Developer ID and
+    /// would reject every build we actually ship, leaving the updater permanently inert. Integrity
+    /// is carried by the signed manifest's SHA-256 in that case, and the bundle's identity is
+    /// checked from its Info.plist; the signature check is defence in depth. Once a team is
+    /// configured the rule pins the signing identity, with no code change.
     public static func requirementForRunningApp(
         bundleIdentifier: String = Appcast.bundleIdentifier
-    ) -> String {
-        BundleValidation.requirement(
-            bundleIdentifier: bundleIdentifier,
-            teamIdentifier: AppInfo.developerTeamIdentifier)
+    ) -> String? {
+        guard let team = AppInfo.developerTeamIdentifier, !team.isEmpty else { return nil }
+        return BundleValidation.requirement(bundleIdentifier: bundleIdentifier, teamIdentifier: team)
     }
 
     /// Downloads, verifies and unpacks one build into `scratchRoot`.
