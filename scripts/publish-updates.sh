@@ -375,6 +375,25 @@ mv -T '$REMOTE_ROOT/appcast.json.sig.incoming' '$REMOTE_ROOT/appcast.json.sig'" 
   || die "failed to flip the appcast.json pointer"
 echo "  appcast.json -> $POINTER_TARGET"
 
+# --- Stable "latest" download URLs, so the homepage never needs editing per release. --------------
+# The site links /downloads/latest/macos-<arch>.zip directly. These are relative symlinks, so they
+# keep resolving after a release is pruned, and they are flipped in the same breath as the pointer
+# so the two can never disagree about which version is newest.
+LATEST_TARGETS=""
+for arch in arm64 x86_64 universal; do
+  archive="Marquee-$VERSION-macos-$arch.zip"
+  [ -f "$DIST/$archive" ] || continue
+  LATEST_TARGETS="$LATEST_TARGETS
+ln -sfn '../$archive' '$REMOTE_ROOT/downloads/latest/macos-$arch.zip.incoming'
+mv -T '$REMOTE_ROOT/downloads/latest/macos-$arch.zip.incoming' '$REMOTE_ROOT/downloads/latest/macos-$arch.zip'"
+done
+if [ -n "$LATEST_TARGETS" ]; then
+  remote_run "set -e
+mkdir -p '$REMOTE_ROOT/downloads/latest'$LATEST_TARGETS" \
+    || die "failed to point the /downloads/latest aliases at $VERSION"
+  echo "  downloads/latest/* -> $VERSION"
+fi
+
 # --- Prune, one explicit path at a time, re-checked against the allow-list. -------------------
 if [ -s "$PRUNE" ]; then
   echo "pruning:"
