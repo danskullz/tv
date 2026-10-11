@@ -105,14 +105,45 @@ public actor TorrentSession {
         }
     }
 
+    /// The info-hash a `.torrent` file resolves to, without adding anything to the session.
+    ///
+    /// Indexers frequently publish no hash for a `.torrent` link, so two releases can only be
+    /// recognised as the same download once their bytes have been read.
+    public nonisolated static func infoHash(ofTorrentData data: Data) throws -> TorrentID {
+        var buffer = [CChar](repeating: 0, count: 41)
+        var error: UnsafeMutablePointer<CChar>?
+        let code = data.withUnsafeBytes { raw in
+            mq_torrent_info_hash(raw.bindMemory(to: UInt8.self).baseAddress, raw.count, &buffer, &error)
+        }
+        var message: String?
+        if let e = error {
+            message = String(cString: e)
+            mq_free(e)
+        }
+        try check(code, message: message)
+        let hex = buffer.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }
+        return TorrentID(hex: String(decoding: hex, as: UTF8.self))
+    }
+
     // MARK: Control
 
     public func pause(_ id: TorrentID) throws { try check(mq_torrent_pause(pointer(), id.hex)) }
     public func resume(_ id: TorrentID) throws { try check(mq_torrent_resume(pointer(), id.hex)) }
     /// Leaves `AddOptions.holdDownload`.
     public func startDownload(_ id: TorrentID) throws { try check(mq_torrent_start_download(pointer(), id.hex)) }
-    public func remove(_ id: TorrentID, deleteFiles: Bool = false) throws {
+
+    /// Removes the torrent and does not return until the engine has confirmed it is gone.
+    ///
+    /// `remove_torrent` only posts a job: the torrent stays in the session until libtorrent's own
+    /// thread runs it. Because a torrent is keyed by its info-hash, adding the same download inside
+    /// that window does not create a torrent — libtorrent hands back the existing one. A caller that
+    /// tore one attempt down and immediately started the next on the same download would silently
+    /// adopt the dying torrent and watch it disappear a moment later. Waiting closes that window, so
+    /// "removed" means removed by the time this returns.
+    public func remove(_ id: TorrentID, deleteFiles: Bool = false) async throws {
+        let stream = hub.subscribe()  // subscribe first, so the alert cannot land between call and wait
         try check(mq_torrent_remove(pointer(), id.hex, deleteFiles ? 1 : 0))
+        await Self.awaitRemoval(of: id, on: stream, timeout: .seconds(2))
     }
 
     /// Per-torrent rate limits in bytes per second (0 = unlimited). These also apply to loopback and
@@ -305,6 +336,7 @@ public actor TorrentSession {
         case MQ_ERR_NOT_FOUND: throw TorrentError.notFound
         case MQ_ERR_NO_METADATA: throw TorrentError.noMetadata
         case MQ_ERR_INVALID: throw message.map { TorrentError.libtorrent($0) } ?? TorrentError.invalidArgument
+        case MQ_ERR_DUPLICATE: throw TorrentError.duplicateTorrent
         default: throw TorrentError.libtorrent(message ?? "libtorrent error \(code)")
         }
     }
@@ -347,6 +379,17 @@ public actor TorrentSession {
             }
             defer { group.cancelAll() }
             return try await group.next()!
+        }
+    }
+
+    /// Like `wait`, but a timeout or a closed session is not an error: the removal was requested
+    /// either way, and the caller is on its way out.
+    private static func awaitRemoval(
+        of id: TorrentID, on stream: AsyncStream<TorrentEvent>, timeout: Duration
+    ) async {
+        _ = try? await wait(on: stream, timeout: timeout) { event -> Bool? in
+            if case .removed(id, _) = event { return true }
+            return nil
         }
     }
 }

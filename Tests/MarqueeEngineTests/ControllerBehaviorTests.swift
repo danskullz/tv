@@ -112,6 +112,51 @@ struct ControllerBehaviorTests {
         await leecher.shutdown()
     }
 
+    @Test("a torrent removed under a live controller says who removed it, and never goes silent")
+    func removalIsReportedNotSwallowed() async throws {
+        let scratch = try EngineScratch()
+        let seedDir = try scratch.directory("seed")
+        let downloadDir = try scratch.directory("download")
+        let movie = try Self.makeMovie(in: seedDir)
+        let seeder = try await engineMakeSeeder(torrent: movie.torrent, saveDirectory: seedDir)
+        let leecher = try await engineMakeLeecher()
+        let server = StreamServer()
+        let controller = StreamSessionController(
+            session: leecher, server: server,
+            configuration: StreamControllerConfiguration(
+                savePath: downloadDir, stallTimeout: .milliseconds(700)))
+        let statuses = EngineCollector<StreamStatus>()
+        let statusTask = Task { for await s in controller.statusUpdates() { statuses.add(s) } }
+        let handle = try await controller.start(
+            source: .torrentFile(movie.torrent), content: .movie(title: "Movie Name"),
+            peers: [PeerEndpoint(host: "127.0.0.1", port: seeder.port)])
+
+        // Pull the torrent out from under the running controller. This is the shape of the bug
+        // that made a failed attempt report "This download was removed." with nothing to go on:
+        // the removal was never ours, but it read exactly like every other teardown.
+        try await leecher.remove(handle.torrent, deleteFiles: true)
+
+        try await engineEventually(.seconds(5), "a failed status naming the cause") {
+            statuses.all.contains { if case .failed = $0 { return true } else { return false } }
+        }
+        guard case let .failed(message)? = await controller.currentStatus else {
+            Issue.record("expected failed status")
+            return
+        }
+        #expect(message.contains("Marquee's own cleanup"), "got: \(message)")
+        #expect(!message.contains("requestedByApp"), "the raw enum must not reach the UI")
+
+        // The reason is in the diagnostics bundle even though it is not on screen.
+        let diagnostics = await controller.diagnostics
+        #expect(diagnostics.contains("torrent removed: Marquee removed the download and deleted its files"))
+
+        statusTask.cancel()
+        await controller.stop()
+        await server.stop()
+        await leecher.shutdown()
+        await seeder.session.shutdown()
+    }
+
     @Test("availability provider: snapshot, piece events, byte-source reads and playhead hints")
     func availabilityAndByteSource() async throws {
         let scratch = try EngineScratch()

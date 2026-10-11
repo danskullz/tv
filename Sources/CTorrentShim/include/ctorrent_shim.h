@@ -35,15 +35,28 @@ enum {
   MQ_ERR_NOT_FOUND = -1,    /* unknown torrent id */
   MQ_ERR_INVALID = -2,      /* bad argument */
   MQ_ERR_NO_METADATA = -3,  /* torrent metadata (info dictionary) not available yet */
-  MQ_ERR_LIBTORRENT = -4    /* libtorrent reported an error; see the error message */
+  MQ_ERR_LIBTORRENT = -4,   /* libtorrent reported an error; see the error message */
+  MQ_ERR_DUPLICATE = -5     /* the info-hash is already in the session and is being removed */
 };
+
+/* Why a torrent left the engine.
+ *
+ * libtorrent 2.0 no longer tells us: torrent_removed_alert carried a reason enum (explicit_remove,
+ * duplicate_torrent, ratio_limit_reached, ...) up to 1.2, but 2.0 replaced it with just the info
+ * hashes and the client data set at add time. The one distinction that matters is still available
+ * to us, because every removal Marquee performs goes through this shim: did we ask for it? */
+typedef enum {
+  MQ_REMOVED_BY_ENGINE = 0,       /* nothing asked for it: libtorrent dropped it on its own */
+  MQ_REMOVED_BY_SHIM,             /* mq_torrent_remove was called */
+  MQ_REMOVED_BY_SHIM_DELETING     /* ... with delete_files */
+} mq_remove_reason;
 
 /* ---- events ---------------------------------------------------------------------------- */
 
 typedef enum {
   MQ_EVENT_LISTEN_SUCCEEDED = 1, /* value = port, message = local address */
   MQ_EVENT_LISTEN_FAILED,        /* value = port, message = error text */
-  MQ_EVENT_TORRENT_REMOVED,
+  MQ_EVENT_TORRENT_REMOVED,      /* value = mq_remove_reason */
   MQ_EVENT_METADATA_RECEIVED,
   MQ_EVENT_METADATA_FAILED,      /* message = error text */
   MQ_EVENT_TORRENT_CHECKED,      /* initial file check finished */
@@ -139,6 +152,9 @@ int mq_session_add_resume_data(mq_session *s, const uint8_t *data, size_t len,
 int mq_torrent_pause(mq_session *s, const char *id);
 int mq_torrent_resume(mq_session *s, const char *id);
 int mq_torrent_start_download(mq_session *s, const char *id); /* leaves MQ_ADD_HOLD_DOWNLOAD */
+/* Asynchronous: the torrent stays findable until libtorrent's own thread runs the removal, and
+   MQ_EVENT_TORRENT_REMOVED (with mq_remove_reason) arrives afterwards. Re-adding the same
+   info-hash in that window returns MQ_ERR_DUPLICATE rather than the dying torrent. */
 int mq_torrent_remove(mq_session *s, const char *id, int32_t delete_files);
 /* Direct peer connection ("host" is an IP literal), used for tests and manual peers. */
 int mq_torrent_connect_peer(mq_session *s, const char *id, const char *host, uint16_t port);
@@ -234,6 +250,11 @@ int mq_torrent_read_piece(mq_session *s, const char *id, int32_t piece);
 /* Builds a .torrent for a file or directory (used by tests and future "create torrent"). */
 int mq_create_torrent(const char *path, int32_t piece_size, uint8_t **data_out,
                       size_t *len_out, char **error);
+
+/* The info-hash a `.torrent` file's metadata resolves to, written as 40 hex chars into `out`.
+   Lets a caller recognise a download before adding it -- indexers often publish no hash at all
+   for a `.torrent` link, and two releases are only the same download once the bytes are read. */
+int mq_torrent_info_hash(const uint8_t *data, size_t len, char out[41], char **error);
 
 const char *mq_libtorrent_version(void); /* static string */
 void mq_free(void *pointer);

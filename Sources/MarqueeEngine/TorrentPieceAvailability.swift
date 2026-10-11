@@ -46,7 +46,7 @@ public final class TorrentPieceAvailability: PieceAvailabilityProvider {
             loop: for await event in events {
                 switch event {
                 case .pieceFinished(let t, let piece) where t == id: continuation.yield(piece)
-                case .removed(let t) where t == id: break loop
+                case .removed(let t, _) where t == id: break loop
                 default: break
                 }
             }

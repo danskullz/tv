@@ -63,7 +63,8 @@ extension TorrentEvent {
         default:
             guard let id else { return nil }
             switch type {
-            case MQ_EVENT_TORRENT_REMOVED: self = .removed(id)
+            case MQ_EVENT_TORRENT_REMOVED:
+                self = .removed(id, reason: TorrentRemovalReason(rawValue: Int32(value)) ?? .byEngine)
             case MQ_EVENT_METADATA_RECEIVED: self = .metadataReceived(id)
             case MQ_EVENT_METADATA_FAILED: self = .metadataFailed(id, message: message)
             case MQ_EVENT_TORRENT_CHECKED: self = .checked(id)
