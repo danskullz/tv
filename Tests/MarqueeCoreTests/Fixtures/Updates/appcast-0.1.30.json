@@ -1,0 +1,68 @@
+{
+  "app": "com.danskullz.marquee",
+  "generatedAt": "2026-10-11T09:00:00Z",
+  "releases": [
+    {
+      "builds": [
+        {
+          "arch": "arm64",
+          "minOS": "15.0",
+          "sha256": "76e5bf9d9fb90bb7b23b0e0a315e8436eac551b5af9a34a72c30105d02fd55ab",
+          "size": 181,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.30-macos-arm64.zip"
+        },
+        {
+          "arch": "x86_64",
+          "minOS": "15.0",
+          "sha256": "1ec5d15d9b71ba48c6d33254ee9ec57504077f63162a2d53c02bc47beaaf592b",
+          "size": 182,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.30-macos-x86_64.zip"
+        },
+        {
+          "arch": "universal",
+          "minOS": "15.0",
+          "sha256": "68f4f2392c560aa8342129d00b3dbfba36ce61e5d34706f41ae765827a658d57",
+          "size": 185,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.30-macos-universal.zip"
+        }
+      ],
+      "channel": "beta",
+      "notes": "- First build with the in-app updater.\n- Activity screen fixes.",
+      "publishedAt": "2026-10-11T09:00:00Z",
+      "version": "0.1.30",
+      "yanked": false
+    },
+    {
+      "builds": [
+        {
+          "arch": "arm64",
+          "minOS": "15.0",
+          "sha256": "5c8d03cc01059d793570c86acc5f7ccf67f6bb2fad7218ac0ce2f7744f6ea53e",
+          "size": 181,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.29-macos-arm64.zip"
+        },
+        {
+          "arch": "x86_64",
+          "minOS": "15.0",
+          "sha256": "13e86382080d1505c25b650e9b6ed68a2ab9ed8ef562f00f13f39754b7ed3a8f",
+          "size": 182,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.29-macos-x86_64.zip"
+        },
+        {
+          "arch": "universal",
+          "minOS": "15.0",
+          "sha256": "798d5a0b46ef3f90a41f18f8a2184b0c7c95aa2215844ebcbe86c59da1870016",
+          "size": 185,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.29-macos-universal.zip"
+        }
+      ],
+      "channel": "beta",
+      "notes": "- Library fixes.",
+      "publishedAt": "2026-10-10T09:00:00Z",
+      "version": "0.1.29",
+      "yanked": false
+    }
+  ],
+  "schema": 1,
+  "signatureURL": "https://tv.guihot.net/appcast-0.1.30.sig"
+}

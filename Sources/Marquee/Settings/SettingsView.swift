@@ -1,5 +1,7 @@
-import SwiftUI
+import Foundation
+import MarqueeCore
 import MarqueeUI
+import SwiftUI
 
 /// Settings scene (⌘,). Panes are placeholders that show the structure: sensible defaults up top,
 /// deep controls behind the "Show advanced settings" switch (SCOPE §5.2 progressive disclosure).
@@ -73,6 +75,63 @@ struct GeneralPane: View {
                     NotificationCenter.default.post(name: .showWelcome, object: nil)
                 }
             }
+            SoftwareUpdateSection()
+        }
+    }
+}
+
+/// Update status and the actions it implies. Inline rather than a sheet: a settings pane that opens
+/// another window to tell you the app is current is worse than a row.
+struct SoftwareUpdateSection: View {
+    @Environment(AppModel.self) private var model
+    private var updater: AppUpdater { model.updater }
+
+    var body: some View {
+        Section("Software Update") {
+            LabeledContent("Version") {
+                Text("Marquee \(updater.currentVersion)").foregroundStyle(.secondary)
+            }
+            if let status {
+                LabeledContent(status.title) {
+                    Text(status.detail).foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                if case .available = updater.state {
+                    Button("Install Update…") { Task { await updater.install() } }
+                        .buttonStyle(.borderedProminent)
+                    Button("Skip This Version") { Task { await updater.skipOfferedVersion() } }
+                } else {
+                    Button("Check for Updates…") { Task { await updater.checkNow() } }
+                        .disabled(updater.state.isBusy)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private struct Status {
+        var title: String
+        var detail: String
+    }
+
+    private var status: Status? {
+        switch updater.state {
+        case .idle, .upToDate: nil
+        case .checking: Status(
+            title: "Status",
+            detail: updater.lastCheckedAt.map { "Checked \($0.formatted(date: .abbreviated, time: .shortened))." }
+                ?? "Not checked yet.")
+        case .available(let version): Status(
+            title: "Update",
+            detail: "\(version) is available.")
+        case .downloading(let fraction): Status(
+            title: "Downloading",
+            detail: "\(Int(fraction * 100))%")
+        case .preparing: Status(title: "Update", detail: "Verifying the download…")
+        case .installing: Status(title: "Update", detail: "Installing; Marquee will restart.")
+        case .downloaded: Status(title: "Update", detail: "Ready in Finder.")
+        case .failed(let error): Status(title: "Last check", detail: error.userMessage)
         }
     }
 }

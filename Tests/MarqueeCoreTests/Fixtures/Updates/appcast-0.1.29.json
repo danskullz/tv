@@ -1,0 +1,38 @@
+{
+  "app": "com.danskullz.marquee",
+  "generatedAt": "2026-10-10T09:00:00Z",
+  "releases": [
+    {
+      "builds": [
+        {
+          "arch": "arm64",
+          "minOS": "15.0",
+          "sha256": "5c8d03cc01059d793570c86acc5f7ccf67f6bb2fad7218ac0ce2f7744f6ea53e",
+          "size": 181,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.29-macos-arm64.zip"
+        },
+        {
+          "arch": "x86_64",
+          "minOS": "15.0",
+          "sha256": "13e86382080d1505c25b650e9b6ed68a2ab9ed8ef562f00f13f39754b7ed3a8f",
+          "size": 182,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.29-macos-x86_64.zip"
+        },
+        {
+          "arch": "universal",
+          "minOS": "15.0",
+          "sha256": "798d5a0b46ef3f90a41f18f8a2184b0c7c95aa2215844ebcbe86c59da1870016",
+          "size": 185,
+          "url": "https://tv.guihot.net/downloads/Marquee-0.1.29-macos-universal.zip"
+        }
+      ],
+      "channel": "beta",
+      "notes": "- Library fixes.",
+      "publishedAt": "2026-10-10T09:00:00Z",
+      "version": "0.1.29",
+      "yanked": false
+    }
+  ],
+  "schema": 1,
+  "signatureURL": "https://tv.guihot.net/appcast-0.1.29.sig"
+}

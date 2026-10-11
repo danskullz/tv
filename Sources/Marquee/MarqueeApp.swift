@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import MarqueeCore
 import MarqueeUI
@@ -5,6 +6,17 @@ import MarqueeUI
 @main
 struct MarqueeApp: App {
     @State private var model = AppModel.forLaunch()
+
+    init() {
+        // An installer only leaves its marker behind when the app it just replaced started; being
+        // here is that proof, so the old bundle can go.
+        AppUpdater.clearPendingInstallIfNeeded()
+        guard UserDefaults.standard.bool(forKey: "openSettings") else { return }
+        // Dev hook: `Marquee -openSettings YES` for looking at a pane without a human at the keyboard.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -59,6 +71,11 @@ struct AppCommands: Commands {
         CommandGroup(after: .textEditing) {
             Button("Command Palette…") { withMotion { model.isPaletteShown.toggle() } }
                 .keyboardShortcut("k", modifiers: .command)
+        }
+        CommandGroup(replacing: .appInfo) {
+            Button("Check for Updates…") { Task { await model.updater.checkNow() } }
+                .keyboardShortcut("u", modifiers: .command)
+                .disabled(model.updater.state.isBusy)
         }
         CommandGroup(after: .windowArrangement) {
             Button("Component Gallery") { openWindow(id: "gallery") }

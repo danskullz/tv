@@ -59,6 +59,8 @@ final class AppModel {
     let services: AppServices?
     let lifecycle = AppLifecycle()
     let tracker: DownloadTracker
+    /// Owns the in-app updater: the daily check, the download and the self-replace.
+    let updater = AppUpdater()
 
     var selection: SidebarItem? = .home
     var path: [PosterItem.ID] = []
@@ -189,6 +191,23 @@ final class AppModel {
             path = [id]
         }
         startTabWalkIfRequested()
+        scheduleUpdateCheck()
+    }
+
+    /// True while something is happening that an update must not interrupt: a download in progress
+    /// or a player window open.
+    var isBusyForUpdates: Bool {
+        activeDownloads > 0 || !(services?.activePlaybacks.isEmpty ?? true)
+    }
+
+    /// One daily check, a few seconds after launch, and never over a download or a playing title.
+    /// Not a timer: the updater keeps its own last-check time and this only ever asks.
+    private func scheduleUpdateCheck() {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard let self, !Task.isCancelled else { return }
+            await updater.checkInBackgroundIfNeeded(isBusy: isBusyForUpdates)
+        }
     }
 
     /// Dev harness: `MARQUEE_TABS=2` walks the sidebar that many times after launch, so tab-switch

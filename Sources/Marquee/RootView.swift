@@ -9,6 +9,7 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var model = model
+        @Bindable var updater = model.updater
         NavigationSplitView(columnVisibility: $model.columnVisibility) {
             SidebarView(
                 selection: Binding(get: { model.selection }, set: {
@@ -46,6 +47,7 @@ struct RootView: View {
         .overlay { CommandPalette() }
         .overlay(alignment: .bottom) { ToastView(toast: model.toast) }
         .sheet(isPresented: $model.isAddSheetShown) { AddTitleSheet() }
+        .sheet(isPresented: $updater.isSheetShown) { UpdateSheet() }
         .sheet(isPresented: $showWelcome, onDismiss: { hasSeenWelcome = true }) {
             WelcomeSheet { showWelcome = false }
         }
