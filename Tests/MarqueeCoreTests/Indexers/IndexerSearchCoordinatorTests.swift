@@ -84,12 +84,27 @@ struct IndexerSearchCoordinatorTests {
                 return ok("empty-results.xml")
             })
         })
-        let coordinator = await makeCoordinator(defs, transport: routedTransport(routes))
+        let transport = routedTransport(routes)
+
+        // What one search costs on *this* runner, measured here rather than assumed. A shared CI box
+        // can run several times slower than a laptop, and a fixed millisecond budget turns that
+        // into a coin flip — four nominal 300 ms searches serialized are 1200 ms, leaving under
+        // 100 ms of headroom to distinguish them from overlapping.
+        let single = await makeCoordinator([defs[0]], transport: transport)
+        let baselineStart = ContinuousClock.now
+        _ = await single.search(.generic("baseline"))
+        let oneSearch = ContinuousClock.now - baselineStart
+
+        let coordinator = await makeCoordinator(defs, transport: transport)
         let start = ContinuousClock.now
         let result = await coordinator.search(.generic("x"))
         let elapsed = ContinuousClock.now - start
+
         #expect(result.succeededCount == 4)
-        #expect(elapsed < .milliseconds(1100), "four 300ms searches should overlap, took \(elapsed)")
+        // Overlapping costs about one search; running them in turn costs about four. Three sits
+        // between the two with room for a slow runner on either side.
+        #expect(elapsed < oneSearch * 3,
+                "four searches should overlap: took \(elapsed) against \(oneSearch) for one")
     }
 
     @Test func slowIndexerTimesOutWithoutBlockingOthers() async throws {
