@@ -1,0 +1,91 @@
+/* Shoal — one screen, one stylesheet, no framework, no JavaScript. */
+
+:root {
+  --bg: #ffffff;
+  --fg: #14161a;
+  --muted: #5b6270;
+  --rule: #e2e5ea;
+  --accent: #0a66d0;
+  --measure: 44rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0d10;
+    --fg: #eceef2;
+    --muted: #9aa2b1;
+    --rule: #23262c;
+    --accent: #6fb3ff;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--bg);
+  color: var(--fg);
+  /* System font: SF Pro on macOS. No webfont, no request. */
+  font: 400 16px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+header { padding: 1.25rem 1.5rem; }
+
+.wordmark {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+main {
+  align-self: center;
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+
+p {
+  margin: 0;
+  max-width: 32em;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.6rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--fg);
+  /* No rounded edges anywhere in this document. */
+  border-radius: 0;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.button:hover { text-decoration: none; opacity: 0.85; }
+
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.meta {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (max-width: 30rem) {
+  .actions .button { flex: 1 1 auto; text-align: center; }
+}
