@@ -43,14 +43,51 @@ else
   rmdir "$APP/Contents/Frameworks"
 fi
 
+# Compile the brand asset catalog into the bundle. actool emits the Assets.car the Dock, Finder and
+# the About panel read, an AppIcon.icns, and a partial Info.plist carrying CFBundleIconName.
+CATALOG="$ROOT/brand/Assets.xcassets"
+ACTUAL="$(xcode-select -p 2>/dev/null || true)"
+if [ ! -x "${DEVELOPER_DIR:-$ACTUAL}/usr/bin/actool" ] && [ -x /Applications/Xcode.app/Contents/Developer/usr/bin/actool ]; then
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+fi
+if [ -d "$CATALOG" ]; then
+  if [ -x "${DEVELOPER_DIR:-/nonexistent}/usr/bin/actool" ]; then
+    TMP="$(mktemp -d)"
+    mkdir -p "$TMP/out"
+    DEVELOPER_DIR="$DEVELOPER_DIR" actool \
+      --compile "$TMP/out" --output-format human-readable-text \
+      --app-icon AppIcon --output-partial-info-plist "$TMP/partial.plist" \
+      --minimum-deployment-target 15.0 --target-device mac --platform macosx "$CATALOG"
+    # Xcode's layout: a compiled Assets.car file and a sibling .icns, both flat in Resources.
+    mv "$TMP/out/Assets.car" "$APP/Contents/Resources/Assets.car"
+    mv "$TMP/out/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+    ICON_PLIST="$(cat "$TMP/partial.plist")"
+    rm -rf "$TMP"
+  else
+    echo "warning: actool not found; bundling without a compiled asset catalog (icon will be the generic one)" >&2
+    ICON_PLIST=""
+  fi
+else
+  echo "error: $CATALOG is missing; run scripts/make-icons.sh" >&2; exit 1
+fi
+
 # Tiny pre-encoded clip the demo mode (-demoSwarm YES) falls back to on Macs with no video encoder.
 [ -f "$ROOT/Tests/MarqueePlayerTests/Fixtures/test-clip.mp4" ] && cp "$ROOT/Tests/MarqueePlayerTests/Fixtures/test-clip.mp4" "$APP/Contents/Resources/demo-clip.mp4"
+
+# actool hands back the icon keys; splice them in so a hand-written Info.plist can't drift from
+# what the catalog actually produced.
+PLIST_BODY="${ICON_PLIST:-<dict/>}"
+PLIST_BODY="${PLIST_BODY#*<dict>}"
+PLIST_BODY="${PLIST_BODY%%</dict>*}"
+PLIST_BODY="$(printf '%s' "$PLIST_BODY" | sed '/^[[:space:]]*$/d')"
+if [ -n "$PLIST_BODY" ]; then PLIST_BODY="$PLIST_BODY
+"; fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleName</key><string>Marquee</string>
+$PLIST_BODY  <key>CFBundleName</key><string>Marquee</string>
   <key>CFBundleDisplayName</key><string>Marquee</string>
   <key>CFBundleIdentifier</key><string>com.danskullz.marquee</string>
   <key>CFBundleExecutable</key><string>Marquee</string>
