@@ -253,6 +253,7 @@ jobs:
           retention-days: 30
       - name: Remove deploy credentials
         if: ${{ always() }}
-        run: rm -f "${{ runner.temp }}/marquee-deploy-key" \
-                  "${{ runner.temp }}/marquee-appcast-key.pem" \
-                  "${{ runner.temp }}/marquee-known-hosts"
+        run: |
+          rm -f "${RUNNER_TEMP}/marquee-deploy-key" \
+                "${RUNNER_TEMP}/marquee-appcast-key.pem" \
+                "${RUNNER_TEMP}/marquee-known-hosts"
