@@ -584,7 +584,8 @@ struct DownloadsPane: View {
             }
             Section("Speed") {
                 LabeledContent("Download limit") {
-                    Slider(value: $limit, in: 0...100) { Text("Limit") }.frame(width: 180)
+                    MarqueeSlider(value: $limit, in: 0...100, width: 180)
+                        .accessibilityLabel(Text("Download limit"))
                     Text(limit == 0 ? "Unlimited" : "\(Int(limit)) MB/s").monospacedDigit().frame(width: 76, alignment: .trailing)
                 }
                 Toggle("Pause while on battery", isOn: .constant(false))
