@@ -155,6 +155,10 @@ jobs:
             BUNDLE_ARCH="$arch" scripts/bundle.sh "$bin" "dist/Marquee-$v/Marquee.app" "$VERSION"
             ditto -c -k --keepParent "dist/Marquee-$v/Marquee.app" "dist/Marquee-$VERSION-macos-$v.zip"
           done
+      - name: Checksum the release artifacts
+        run: |
+          shasum -a 256 dist/*.zip > dist/SHASUMS.txt
+          cat dist/SHASUMS.txt
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -163,3 +167,95 @@ jobs:
             --title "Marquee $VERSION" \
             --generate-notes \
             --prerelease
+
+      # --- In-app updater feed (scripts/make-appcast.sh + scripts/publish-updates.sh) ----------
+      # The GitHub Release above is already public by this point, so a failure here must not turn
+      # the job red: a red X on every push buries real breakage. Every step below continues on
+      # error, annotates the run, and leaves the generated manifest as a workflow artifact that
+      # can be deployed by hand. Nothing is committed or pushed back to the repo -- the feed
+      # lives only on the VPS.
+      - name: Generate the signed appcast
+        id: appcast
+        continue-on-error: true
+        env:
+          APPCAST_PEM: ${{ secrets.MARQUEE_APPCAST_KEY_PEM }}
+          APPCAST_KEY_FILE: ${{ runner.temp }}/marquee-appcast-key.pem
+          RELEASE_CHANNEL: ${{ vars.MARQUEE_RELEASE_CHANNEL || 'beta' }}
+        run: |
+          set -uo pipefail
+          # macOS runners have LibreSSL at /usr/bin/openssl and no Ed25519 in it. Homebrew's
+          # OpenSSL 3 is not installed by default, so signing would fail with a message that reads
+          # like a key problem. Install it and put it first on PATH.
+          if ! openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/probe.pem" >/dev/null 2>&1; then
+            echo "installing openssl@3 (the default openssl has no Ed25519)"
+            brew install openssl@3
+            echo "::add-path::$(brew --prefix openssl@3)/bin"
+            export PATH="$(brew --prefix openssl@3)/bin:$PATH"
+          fi
+          rm -f "$RUNNER_TEMP/probe.pem"
+          if [ -z "${APPCAST_PEM:-}" ]; then
+            echo "::warning title=Appcast::MARQUEE_APPCAST_KEY_PEM is unset; update feed skipped"
+            exit 0
+          fi
+          umask 077
+          printf '%s\n' "$APPCAST_PEM" > "$APPCAST_KEY_FILE"
+          mkdir -p site
+          if scripts/make-appcast.sh --version "$VERSION" --dir dist --base https://tv.guihot.net \
+              --out site --channel "$RELEASE_CHANNEL" --key "$APPCAST_KEY_FILE"; then
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning title=Appcast::could not generate the manifest; the feed is unchanged"
+          fi
+      - name: Deploy the appcast to the update host
+        id: deploy
+        # No `needs:` here: that key is job-level only and GitHub rejects the whole workflow file
+        # if it appears on a step. Steps already run in order, and `steps.appcast.outputs` below is
+        # what actually gates this one.
+        if: ${{ success() && steps.appcast.outputs.generated == 'true' }}
+        continue-on-error: true
+        env:
+          DEPLOY_KEY: ${{ secrets.MARQUEE_DEPLOY_KEY }}
+          PINNED_HOSTS: ${{ secrets.MARQUEE_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.MARQUEE_DEPLOY_HOST }}
+          DEPLOY_KEY_FILE: ${{ runner.temp }}/marquee-deploy-key
+          PINNED_HOSTS_FILE: ${{ runner.temp }}/marquee-known-hosts
+        run: |
+          set -uo pipefail
+          warn() { echo "::warning title=Appcast::$1"; }
+          if [ -z "${DEPLOY_KEY:-}" ]; then
+            warn "MARQUEE_DEPLOY_KEY is unset; the manifest is in this run's appcast artifact"
+            exit 0
+          fi
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$DEPLOY_KEY_FILE"
+          # The pinned host key comes from the repo when it is committed and from a secret
+          # otherwise. publish-updates.sh has no way to disable host key checking, by design.
+          if [ -f scripts/site/known_hosts ]; then
+            known=scripts/site/known_hosts
+          elif [ -n "${PINNED_HOSTS:-}" ]; then
+            printf '%s\n' "$PINNED_HOSTS" > "$PINNED_HOSTS_FILE"
+            known="$PINNED_HOSTS_FILE"
+          else
+            warn "no pinned host key (scripts/site/known_hosts or MARQUEE_KNOWN_HOSTS); not deploying"
+            exit 0
+          fi
+          if scripts/publish-updates.sh --host "${DEPLOY_HOST:-85.155.188.130}" --local site \
+              --version "$VERSION" --known-hosts "$known" --identity "$DEPLOY_KEY_FILE"; then
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
+          else
+            warn "deploy of $VERSION failed; the GitHub Release is unaffected. Publish it by hand with:
+              scripts/publish-updates.sh --host <host> --local site --version $VERSION"
+          fi
+      - name: Upload the appcast artifact
+        if: ${{ always() && steps.appcast.outputs.generated == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: appcast-${{ env.VERSION }}
+          path: site/appcast-*
+          retention-days: 30
+      - name: Remove deploy credentials
+        if: ${{ always() }}
+        run: |
+          rm -f "${RUNNER_TEMP}/marquee-deploy-key" \
+                "${RUNNER_TEMP}/marquee-appcast-key.pem" \
+                "${RUNNER_TEMP}/marquee-known-hosts"
