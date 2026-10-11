@@ -8,8 +8,6 @@ Date: 2026-10-10 · Status: Draft v1
 
 ## 1. Vision & principles
 
-**One sentence:** Find something, press Play, watch it in seconds, and have it end up perfectly named and organized in your library — with no config files, no browser tabs, no five-app stack.
-
 **Principles**
 
 1. **Play is the primary verb.** Every screen leads to one big Play button. Downloading, upgrading, subtitling and organizing are things that happen *because* you pressed Play or Add, not chores you manage.

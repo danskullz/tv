@@ -39,9 +39,6 @@ struct WelcomeSheet: View {
                 Text("Welcome to Marquee")
                     .font(.largeTitle.weight(.bold))
                     .accessibilityAddTraits(.isHeader)
-                Text("Find it. Press play. It's already downloading.")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
                 Spacer()
                 readiness
                 Text("Marquee ships with no content or sources. You add your own and are responsible for what you access.")

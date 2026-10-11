@@ -9,3 +9,9 @@ dist/
 .deps-cache/
 Vendor/
 scripts/.windowid
+
+# Build output and scratch from the icon/design work
+build/
+icon-shoal-iconset/
+icon-shoal.html
+icon-shoal.png
